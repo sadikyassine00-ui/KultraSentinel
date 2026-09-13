@@ -6,6 +6,7 @@ import { Button } from '@heroui/react';
 
 export function Header() {
   const [scrolled, setScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -16,17 +17,25 @@ export function Header() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const navLinks = [
+    { label: 'How It Works', href: '#features' },
+    { label: 'Architecture', href: '#architecture' },
+    { label: 'Integrations', href: '#integrations' },
+    { label: 'Pricing', href: '#pricing' },
+    { label: 'FAQ', href: '#faq' },
+  ];
+
   return (
     <header
-      className={`sticky top-0 left-0 w-full h-[68px] z-50 transition-all duration-250 border-b-0 ${
-        scrolled
-          ? 'bg-[#0a0b1dff]/85 backdrop-blur-md'
+      className={`sticky top-0 left-0 w-full z-50 transition-colors duration-250 ${
+        scrolled || mobileMenuOpen
+          ? 'bg-[#0a0b1dff]/90 backdrop-blur-md border-b border-[#1E293B]/60'
           : 'bg-transparent'
       }`}
     >
-      <div className="max-w-[1200px] h-full mx-auto px-6 flex items-center justify-between gap-6">
+      <div className="max-w-[1200px] h-[68px] mx-auto px-4 sm:px-6 flex items-center justify-between gap-4 sm:gap-6">
         {/* Brand Group */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           <a
             href="#"
             className="flex items-center rounded-[2px] outline-none focus-visible:ring-2 focus-visible:ring-[#94A3B8] focus-visible:ring-offset-4 focus-visible:ring-offset-[#0a0b1dff] group"
@@ -37,44 +46,35 @@ export function Header() {
               alt="Kultra"
               width={140}
               height={30}
-              className="h-[28px] sm:h-[30px] w-auto object-contain transition-opacity duration-180 group-hover:opacity-90"
+              className="h-[26px] sm:h-[30px] w-auto object-contain transition-opacity duration-180 group-hover:opacity-90"
               priority
             />
           </a>
-          <span className="hidden sm:inline-block text-[0.8125rem] font-medium text-[#94A3B8] whitespace-nowrap pl-3 border-l border-[#1E293B]">
+          <span className="hidden lg:inline-block text-[0.8125rem] font-medium text-[#94A3B8] whitespace-nowrap pl-3 border-l border-[#1E293B]">
             Built on Merchant API v1
           </span>
         </div>
 
-        {/* Navigation Links */}
-        <nav className="hidden md:flex items-center gap-8" aria-label="Main Navigation">
-          <a
-            href="#features"
-            className="text-[0.875rem] font-medium text-[#94A3B8] hover:text-[#FDF4D2] transition-colors duration-180 relative py-1 after:content-[''] after:absolute after:bottom-[-2px] after:left-0 after:w-0 hover:after:w-full after:h-[1.5px] after:bg-[#FF788D] after:transition-all after:duration-200 outline-none focus-visible:ring-2 focus-visible:ring-[#94A3B8] focus-visible:ring-offset-4 focus-visible:ring-offset-[#0a0b1dff] rounded-[2px]"
-          >
-            Features
-          </a>
-          <a
-            href="#architecture"
-            className="text-[0.875rem] font-medium text-[#94A3B8] hover:text-[#FDF4D2] transition-colors duration-180 relative py-1 after:content-[''] after:absolute after:bottom-[-2px] after:left-0 after:w-0 hover:after:w-full after:h-[1.5px] after:bg-[#FF788D] after:transition-all after:duration-200 outline-none focus-visible:ring-2 focus-visible:ring-[#94A3B8] focus-visible:ring-offset-4 focus-visible:ring-offset-[#0a0b1dff] rounded-[2px]"
-          >
-            Architecture
-          </a>
-          <a
-            href="#integrations"
-            className="text-[0.875rem] font-medium text-[#94A3B8] hover:text-[#FDF4D2] transition-colors duration-180 relative py-1 after:content-[''] after:absolute after:bottom-[-2px] after:left-0 after:w-0 hover:after:w-full after:h-[1.5px] after:bg-[#FF788D] after:transition-all after:duration-200 outline-none focus-visible:ring-2 focus-visible:ring-[#94A3B8] focus-visible:ring-offset-4 focus-visible:ring-offset-[#0a0b1dff] rounded-[2px]"
-          >
-            Integrations
-          </a>
+        {/* Desktop Navigation Links */}
+        <nav className="hidden md:flex items-center gap-6 lg:gap-8" aria-label="Main Navigation">
+          {navLinks.map((link) => (
+            <a
+              key={link.label}
+              href={link.href}
+              className="text-[0.875rem] font-medium text-[#94A3B8] hover:text-[#FDF4D2] transition-colors duration-180 relative py-1 after:content-[''] after:absolute after:bottom-[-2px] after:left-0 after:w-0 hover:after:w-full after:h-[1.5px] after:bg-[#FF788D] after:transition-all after:duration-200 outline-none focus-visible:ring-2 focus-visible:ring-[#94A3B8] focus-visible:ring-offset-4 focus-visible:ring-offset-[#0a0b1dff] rounded-[2px]"
+            >
+              {link.label}
+            </a>
+          ))}
         </nav>
 
-        {/* Header Action using HeroUI Button with Accent Color and Hover Sequences */}
-        <div>
+        {/* Header Action & Mobile Menu Toggle */}
+        <div className="flex items-center gap-2.5 sm:gap-3">
           <Button
             as="a"
             href="#beta"
             size="sm"
-            className="group relative overflow-hidden bg-[#FF788D] hover:bg-[#FF8FA2] active:scale-[0.98] text-[#0a0b1dff] text-[0.84rem] font-bold px-[1.15rem] py-[0.5rem] rounded-[4px] border border-[#FF788D] hover:border-white/90 shadow-none transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2 outline-none focus-visible:ring-2 focus-visible:ring-[#FF788D] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0b1dff]"
+            className="group relative overflow-hidden bg-[#FF788D] hover:bg-[#FF8FA2] active:scale-[0.98] text-[#0a0b1dff] text-[0.82rem] sm:text-[0.84rem] font-bold px-3.5 sm:px-[1.15rem] py-[0.5rem] rounded-[4px] border border-[#FF788D] hover:border-white/90 shadow-none transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-1.5 sm:gap-2 outline-none focus-visible:ring-2 focus-visible:ring-[#FF788D] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0b1dff]"
           >
             {/* Ambient Angled Sheen Sweep on Hover */}
             <span className="absolute inset-0 pointer-events-none overflow-hidden rounded-[4px]">
@@ -107,8 +107,43 @@ export function Header() {
               →
             </span>
           </Button>
+
+          {/* Mobile Hamburger Toggle */}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden p-2 text-[#94A3B8] hover:text-[#FDF4D2] transition-colors rounded-[4px] border border-[#1E293B] bg-[#0F1522] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#94A3B8]"
+            aria-label="Toggle navigation menu"
+            aria-expanded={mobileMenuOpen}
+          >
+            {mobileMenuOpen ? (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            )}
+          </button>
         </div>
       </div>
+
+      {/* Mobile Navigation Dropdown */}
+      {mobileMenuOpen && (
+        <div className="md:hidden bg-[#0F1522] border-b border-[#1E293B] px-5 py-3 space-y-1">
+          {navLinks.map((link) => (
+            <a
+              key={link.label}
+              href={link.href}
+              onClick={() => setMobileMenuOpen(false)}
+              className="block text-[0.9rem] font-medium text-[#94A3B8] hover:text-[#FDF4D2] py-2 transition-colors border-b border-[#1E293B]/40 last:border-none"
+            >
+              {link.label}
+            </a>
+          ))}
+        </div>
+      )}
     </header>
   );
 }
