@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import { findAdminByEmail, createOrUpdateAdmin } from '@/lib/db';
-import { verifyPassword, hashPassword, createSessionToken, getSessionCookieHeader } from '@/lib/auth';
+import { verifyPassword, hashPassword, createSessionToken, getSessionCookieHeader, isAllowedAdminEmail, ALLOWED_ADMIN_EMAILS } from '@/lib/auth';
 
-const DEFAULT_ADMIN_EMAIL = process.env.ADMIN_DEFAULT_EMAIL || 'admin@kultra.ai';
 const DEFAULT_ADMIN_PASSWORD = process.env.ADMIN_DEFAULT_PASSWORD || 'KultraSentinel2026!';
 
 export async function POST(request: Request) {
@@ -18,16 +17,25 @@ export async function POST(request: Request) {
     }
 
     const cleanEmail = email.trim().toLowerCase();
+
+    // Strict Admin Authorization Check: Only whitelisted admin emails are allowed
+    if (!isAllowedAdminEmail(cleanEmail)) {
+      return NextResponse.json(
+        { error: `Access restricted: ${cleanEmail} is registered as a regular user. The user dashboard is currently in private pilot.` },
+        { status: 403 }
+      );
+    }
+
     let admin = await findAdminByEmail(cleanEmail);
 
-    // Initial Bootstrap Admin: If this is the default admin email and no admin exists yet
-    if (!admin && cleanEmail === DEFAULT_ADMIN_EMAIL.toLowerCase()) {
+    // Initial Bootstrap for whitelisted admin accounts
+    if (!admin || !admin.password_hash) {
       const passwordHash = await hashPassword(DEFAULT_ADMIN_PASSWORD);
       admin = await createOrUpdateAdmin({
-        email: DEFAULT_ADMIN_EMAIL.toLowerCase(),
+        email: cleanEmail,
         passwordHash,
-        name: 'Kultra Sentinel Admin',
-        role: 'superadmin',
+        name: cleanEmail.split('@')[0],
+        role: 'admin',
       });
     }
 

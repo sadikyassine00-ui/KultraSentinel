@@ -47,6 +47,16 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
   }
 }
 
+export const ALLOWED_ADMIN_EMAILS: string[] = [
+  'yassinesadik0@gmail.com',
+  'contact@usekultra.com',
+];
+
+export function isAllowedAdminEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  return ALLOWED_ADMIN_EMAILS.includes(email.toLowerCase().trim());
+}
+
 export function parseCookie(cookieHeader: string | null, name: string): string | null {
   if (!cookieHeader) return null;
   const match = cookieHeader
@@ -57,20 +67,32 @@ export function parseCookie(cookieHeader: string | null, name: string): string |
 }
 
 export async function getAuthSession(request: Request): Promise<SessionPayload | null> {
+  let session: SessionPayload | null = null;
+
   // 1. Check Authorization Bearer header
   const authHeader = request.headers.get('authorization');
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.substring(7);
-    const session = await verifySessionToken(token);
-    if (session) return session;
+    session = await verifySessionToken(token);
   }
 
-  // 2. Check Cookie
-  const cookieHeader = request.headers.get('cookie');
-  const token = parseCookie(cookieHeader, COOKIE_NAME);
-  if (!token) return null;
+  // 2. Check Cookie if no bearer session
+  if (!session) {
+    const cookieHeader = request.headers.get('cookie');
+    const token = parseCookie(cookieHeader, COOKIE_NAME);
+    if (token) {
+      session = await verifySessionToken(token);
+    }
+  }
 
-  return verifySessionToken(token);
+  if (!session) return null;
+
+  // Strict Admin Gate: Only whitelisted admin emails are allowed into Mission Control
+  if (!isAllowedAdminEmail(session.email)) {
+    return null;
+  }
+
+  return session;
 }
 
 export function getSessionCookieHeader(token: string, maxAgeSeconds: number = 60 * 60 * 24 * 7): string {

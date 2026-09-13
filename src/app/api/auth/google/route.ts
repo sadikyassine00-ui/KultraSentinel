@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { findAdminByEmail, createOrUpdateAdmin } from '@/lib/db';
-import { createSessionToken, getSessionCookieHeader } from '@/lib/auth';
+import { createSessionToken, getSessionCookieHeader, isAllowedAdminEmail } from '@/lib/auth';
 
 export async function POST(request: Request) {
   try {
@@ -81,6 +81,13 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: 'Unable to extract email from Google identity profile.' },
         { status: 400 }
+      );
+    }
+
+    if (!isAllowedAdminEmail(email)) {
+      return NextResponse.json(
+        { error: `Access restricted: ${email} is registered as a regular user. The user dashboard is currently in private pilot.` },
+        { status: 403 }
       );
     }
 

@@ -116,26 +116,34 @@ async function runSuite() {
     failed++;
   }
 
-  // TEST 3: Admin Login & Session Cookie Issuance
+  // TEST 3: Admin Login & Session Management
   console.log('\n[TEST GROUP 3] Admin Login & Session Management');
   let sessionCookie = '';
   try {
     // 3.1 Invalid password rejection
     const badLogin = await makeRequest('/api/auth/login', {
       method: 'POST',
-      body: { email: 'admin@kultra.ai', password: 'WrongPassword999!' },
+      body: { email: 'yassinesadik0@gmail.com', password: 'WrongPassword999!' },
     });
     assert(badLogin.status === 401, 'Rejects invalid password with 401 Unauthorized');
     passed++;
 
-    // 3.2 Valid bootstrap admin login
+    // 3.2 Non-whitelisted regular user rejection
+    const nonAdminLogin = await makeRequest('/api/auth/login', {
+      method: 'POST',
+      body: { email: 'regularuser@gmail.com', password: 'AnyPassword123!' },
+    });
+    assert(nonAdminLogin.status === 403, 'Rejects non-admin user email with 403 Forbidden');
+    passed++;
+
+    // 3.3 Valid authorized admin login (yassinesadik0@gmail.com)
     const goodLogin = await makeRequest('/api/auth/login', {
       method: 'POST',
-      body: { email: 'admin@kultra.ai', password: 'KultraSentinel2026!' },
+      body: { email: 'yassinesadik0@gmail.com', password: 'KultraSentinel2026!' },
     });
-    assert(goodLogin.status === 200, 'Authenticates valid admin credentials with 200 OK');
+    assert(goodLogin.status === 200, 'Authenticates authorized admin (yassinesadik0@gmail.com) with 200 OK');
     assert(goodLogin.data.success === true, 'Returns success: true payload');
-    assert(goodLogin.data.user.email === 'admin@kultra.ai', 'Returns correct admin user object');
+    assert(goodLogin.data.user.email === 'yassinesadik0@gmail.com', 'Returns correct admin user object');
     assert(Boolean(goodLogin.setCookie), 'Issues HttpOnly kultra_admin_session cookie');
     sessionCookie = goodLogin.setCookie.split(';')[0];
     passed += 4;
@@ -210,13 +218,21 @@ async function runSuite() {
     assert(emptyGoogle.status === 400, 'Rejects empty Google OAuth request with 400 Bad Request');
     passed++;
 
-    // 5.2 Accepts development/verified identity in demo mode
-    const devGoogle = await makeRequest('/api/auth/google', {
+    // 5.2 Rejects non-admin Google identity with 403 Forbidden
+    const nonAdminGoogle = await makeRequest('/api/auth/google', {
       method: 'POST',
-      body: { demoEmail: 'founder@kultra.ai', demoName: 'Founder Admin' },
+      body: { demoEmail: 'unauthorized-shopper@gmail.com', demoName: 'Regular User' },
     });
-    assert(devGoogle.status === 200, 'Authenticates verified Google identity with 200 OK');
-    assert(Boolean(devGoogle.setCookie), 'Issues session cookie on Google authentication');
+    assert(nonAdminGoogle.status === 403, 'Rejects non-admin Google account with 403 Forbidden');
+    passed++;
+
+    // 5.3 Accepts authorized administrator Google identity (contact@usekultra.com)
+    const adminGoogle = await makeRequest('/api/auth/google', {
+      method: 'POST',
+      body: { demoEmail: 'contact@usekultra.com', demoName: 'Kultra Founder' },
+    });
+    assert(adminGoogle.status === 200, 'Authenticates authorized admin Google identity (contact@usekultra.com) with 200 OK');
+    assert(Boolean(adminGoogle.setCookie), 'Issues session cookie on authorized Google sign-in');
     passed += 2;
   } catch (err) {
     console.error('Test Group 5 Error:', err.message);

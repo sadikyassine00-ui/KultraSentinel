@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createOrUpdateAdmin } from '@/lib/db';
-import { createSessionToken, getSessionCookieHeader } from '@/lib/auth';
+import { createSessionToken, getSessionCookieHeader, isAllowedAdminEmail } from '@/lib/auth';
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -67,6 +67,15 @@ export async function GET(request: Request) {
 
     if (!email) {
       loginUrl.searchParams.set('error', 'Google account did not return a verified email address.');
+      return NextResponse.redirect(loginUrl);
+    }
+
+    // Strict Admin Authorization Check
+    if (!isAllowedAdminEmail(email)) {
+      loginUrl.searchParams.set(
+        'error',
+        `Access restricted: ${email} is registered as a regular user. The user dashboard is currently in private pilot.`
+      );
       return NextResponse.redirect(loginUrl);
     }
 

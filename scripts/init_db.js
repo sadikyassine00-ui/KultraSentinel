@@ -89,18 +89,20 @@ To connect your real Neon Postgres database:
       );
     `;
 
-    // 4. Seed default admin if not already present
-    const defaultEmail = process.env.ADMIN_DEFAULT_EMAIL || 'admin@kultra.ai';
+    // 4. Seed sole authorized administrators
+    const adminEmails = ['yassinesadik0@gmail.com', 'contact@usekultra.com'];
     const defaultPassword = process.env.ADMIN_DEFAULT_PASSWORD || 'KultraSentinel2026!';
     const passwordHash = await bcrypt.hash(defaultPassword, 10);
 
-    console.log(`[Init DB] Seeding default admin (${defaultEmail})...`);
-    await sql`
-      INSERT INTO admins (email, password_hash, name, role)
-      VALUES (${defaultEmail.toLowerCase()}, ${passwordHash}, 'Kultra Sentinel Admin', 'superadmin')
-      ON CONFLICT (email) DO UPDATE
-      SET password_hash = EXCLUDED.password_hash;
-    `;
+    for (const email of adminEmails) {
+      console.log(`[Init DB] Seeding administrator (${email})...`);
+      await sql`
+        INSERT INTO admins (email, password_hash, name, role)
+        VALUES (${email.toLowerCase()}, ${passwordHash}, ${email.split('@')[0]}, 'admin')
+        ON CONFLICT (email) DO UPDATE
+        SET role = 'admin', password_hash = COALESCE(admins.password_hash, EXCLUDED.password_hash);
+      `;
+    }
 
     // 5. Seed initial telemetry events if empty
     const countRes = await sql`SELECT COUNT(*)::int as count FROM telemetry_events;`;
