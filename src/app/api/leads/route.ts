@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { createLead } from '@/lib/db';
 
 export async function POST(request: Request) {
   try {
@@ -21,17 +22,27 @@ export async function POST(request: Request) {
       );
     }
 
-    // Log the lead for telemetry & record
-    console.log('[Kultra Pilot Lead]', {
-      email,
-      accountType: accountType || 'merchant',
-      website,
+    // Persist to Neon Postgres DB
+    const savedLead = await createLead({
+      email: email.trim().toLowerCase(),
+      accountType: accountType === 'agency' ? 'agency' : 'merchant',
+      website: website.trim(),
       catalogSize: catalogSize || 'Not specified',
-      receivedAt: new Date().toISOString(),
+    });
+
+    // Log the lead for telemetry & server record
+    console.log('[Kultra Pilot Lead Recorded]', {
+      id: savedLead.id,
+      email: savedLead.email,
+      accountType: savedLead.account_type,
+      website: savedLead.website,
+      catalogSize: savedLead.catalog_size,
+      receivedAt: savedLead.created_at,
     });
 
     return NextResponse.json({
       success: true,
+      leadId: savedLead.id,
       message: 'Pilot application recorded successfully.',
       bookingUrl: 'https://cal.com/kultra/15min-audit',
     });
@@ -43,3 +54,4 @@ export async function POST(request: Request) {
     );
   }
 }
+

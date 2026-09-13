@@ -7,12 +7,17 @@
     "build": "next build",
     "start": "next start -p 3000",
     "lint": "next lint",
-    "generate-favicons": "node scripts/generate_favicons.js"
+    "generate-favicons": "node scripts/generate_favicons.js",
+    "db:init": "node scripts/init_db.js",
+    "test:admin": "node scripts/test_admin_suite.js"
   },
   "dependencies": {
     "@heroui/react": "^2.8.10",
+    "@neondatabase/serverless": "^1.1.0",
+    "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "framer-motion": "^11.18.2",
+    "jose": "^6.2.12",
     "lucide-react": "^1.45.0",
     "next": "^15.1.7",
     "react": "^19.0.0",
@@ -20,6 +25,7 @@
     "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.13.4",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
