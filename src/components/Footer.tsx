@@ -59,6 +59,11 @@ export function Footer() {
                 </a>
               </li>
               <li>
+                <a href="/login" className="hover:text-[#FDF4D2] transition-colors duration-180">
+                  Portal Login
+                </a>
+              </li>
+              <li>
                 <a href="mailto:support@usekultra.com" className="hover:text-[#FDF4D2] transition-colors duration-180">
                   Contact & Support
                 </a>

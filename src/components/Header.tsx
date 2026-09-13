@@ -69,7 +69,15 @@ export function Header() {
         </nav>
 
         {/* Header Action & Mobile Menu Toggle */}
-        <div className="flex items-center gap-2.5 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Sign In / Log in Button */}
+          <a
+            href="/admin/login"
+            className="text-[0.84rem] font-semibold text-[#94A3B8] hover:text-[#FDF4D2] px-2.5 sm:px-3 py-1.5 rounded-[4px] border border-transparent hover:border-[#1E293B] hover:bg-[#141C2B] transition-colors"
+          >
+            Log in
+          </a>
+
           <Button
             as="a"
             href="#beta"
@@ -142,6 +150,15 @@ export function Header() {
               {link.label}
             </a>
           ))}
+          <div className="pt-2">
+            <a
+              href="/admin/login"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block text-center text-[0.85rem] font-bold text-[#FDF4D2] bg-[#141C2B] hover:bg-[#1E293B] border border-[#1E293B] hover:border-[#FF788D]/40 py-2 rounded-[4px] transition-colors"
+            >
+              Log in
+            </a>
+          </div>
         </div>
       )}
     </header>
