@@ -1,0 +1,63 @@
+@import './satoshi-font.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-canvas: #0a0b1dff;
+  --bg-surface: #0F1522;
+  --bg-surface-elevated: #141C2B;
+  --border-stroke: #1E293B;
+  --accent-amber: #FF788D;
+  --accent-color: #FF788D;
+  --status-green: #10B981;
+  --color-typography: #FDF4D2;
+}
+
+/* Base typography: Universal Satoshi font throughout every text in the app */
+*, html, body, h1, h2, h3, h4, h5, h6, p, a, button, input, textarea, span, div, text, code, pre, table, th, td {
+  font-family: 'Satoshi', sans-serif !important;
+}
+
+/* Dashboard frame progressive bottom fade mask */
+.dashboard-frame-mask {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 60%,
+    rgba(0, 0, 0, 0.85) 74%,
+    rgba(0, 0, 0, 0.25) 88%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 60%,
+    rgba(0, 0, 0, 0.85) 74%,
+    rgba(0, 0, 0, 0.25) 88%,
+    transparent 100%
+  );
+}
+
+.dashboard-frame-scrim {
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    transparent 55%,
+    rgba(10, 11, 29, 0.45) 75%,
+    #0a0b1d 100%
+  );
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

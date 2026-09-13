@@ -1,0 +1,32 @@
+{
+  "name": "Kultra: Google Merchant Center Disapproval Watchdog",
+  "short_name": "Kultra",
+  "description": "Instant alerts before policy changes kill your bestselling Google Merchant ads.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0b1d",
+  "theme_color": "#FF788D",
+  "icons": [
+    {
+      "src": "/favicon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/maskable-icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

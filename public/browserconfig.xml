@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<browserconfig>
+    <msapplication>
+        <notification>
+            <polling-frequency-in-minutes>1440</polling-frequency-in-minutes>
+        </notification>
+        <windows>
+            <square70x70logo src="/mstile-70x70.png"/>
+            <square150x150logo src="/mstile-150x150.png"/>
+            <square310x310logo src="/mstile-310x310.png"/>
+            <TileColor>#0a0b1d</TileColor>
+        </windows>
+    </msapplication>
+</browserconfig>
