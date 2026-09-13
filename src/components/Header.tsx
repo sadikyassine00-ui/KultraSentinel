@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { Button } from '@heroui/react';
 
 export function Header() {
   const [scrolled, setScrolled] = useState(false);
@@ -73,48 +72,11 @@ export function Header() {
           {/* Sign In / Log in Button */}
           <a
             href="/admin/login"
-            className="text-[0.84rem] font-semibold text-[#94A3B8] hover:text-[#FDF4D2] px-2.5 sm:px-3 py-1.5 rounded-[4px] border border-transparent hover:border-[#1E293B] hover:bg-[#141C2B] transition-colors"
+            className="text-[0.84rem] font-bold text-[#FDF4D2] hover:text-[#0a0b1dff] bg-[#141C2B] hover:bg-[#FF788D] border border-[#1E293B] hover:border-[#FF788D] px-3.5 sm:px-4 py-1.5 rounded-[4px] transition-all duration-180 flex items-center gap-1.5"
           >
-            Log in
+            <span>Log in</span>
+            <span aria-hidden="true" className="text-[0.85rem]">→</span>
           </a>
-
-          <Button
-            as="a"
-            href="#beta"
-            size="sm"
-            className="group relative overflow-hidden bg-[#FF788D] hover:bg-[#FF8FA2] active:scale-[0.98] text-[#0a0b1dff] text-[0.82rem] sm:text-[0.84rem] font-bold px-3.5 sm:px-[1.15rem] py-[0.5rem] rounded-[4px] border border-[#FF788D] hover:border-white/90 shadow-none transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-1.5 sm:gap-2 outline-none focus-visible:ring-2 focus-visible:ring-[#FF788D] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0b1dff]"
-          >
-            {/* Ambient Angled Sheen Sweep on Hover */}
-            <span className="absolute inset-0 pointer-events-none overflow-hidden rounded-[4px]">
-              <span className="absolute top-0 bottom-0 -left-12 w-20 bg-gradient-to-r from-transparent via-white/40 to-transparent -skew-x-12 opacity-0 group-hover:opacity-100 group-hover:translate-x-[220px] transition-all duration-600 ease-out" />
-            </span>
-
-            {/* Steady Telemetry Glyph (Zero radar/pulse) */}
-            <svg
-              className="w-3.5 h-3.5 shrink-0 transition-transform duration-200 group-hover:scale-110"
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="#0a0b1dff"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <circle cx="8" cy="8" r="5.5" />
-              <circle cx="8" cy="8" r="1.75" fill="#0a0b1dff" />
-            </svg>
-
-            <span className="relative z-10 transition-transform duration-200 group-hover:translate-x-0.5">
-              Join priority beta
-            </span>
-
-            <span
-              aria-hidden="true"
-              className="relative z-10 text-[0.9rem] font-bold transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:translate-x-1"
-            >
-              →
-            </span>
-          </Button>
 
           {/* Mobile Hamburger Toggle */}
           <button
