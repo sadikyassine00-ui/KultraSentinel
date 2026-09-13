@@ -212,23 +212,35 @@ export async function getLeads(filter?: { status?: string; search?: string }): P
   if (sql) {
     try {
       await ensureSchema();
-      let query = `SELECT * FROM leads WHERE 1=1`;
-      const params: (string | number)[] = [];
+      const status = filter?.status && filter.status !== 'all' ? filter.status : null;
+      const search = filter?.search ? `%${filter.search.toLowerCase()}%` : null;
 
-      if (filter?.status && filter.status !== 'all') {
-        params.push(filter.status);
-        query += ` AND status = $${params.length}`;
+      let rows: Lead[];
+      if (status && search) {
+        rows = (await sql`
+          SELECT * FROM leads 
+          WHERE status = ${status} 
+            AND (LOWER(email) LIKE ${search} OR LOWER(website) LIKE ${search})
+          ORDER BY created_at DESC;
+        `) as unknown as Lead[];
+      } else if (status) {
+        rows = (await sql`
+          SELECT * FROM leads 
+          WHERE status = ${status}
+          ORDER BY created_at DESC;
+        `) as unknown as Lead[];
+      } else if (search) {
+        rows = (await sql`
+          SELECT * FROM leads 
+          WHERE (LOWER(email) LIKE ${search} OR LOWER(website) LIKE ${search})
+          ORDER BY created_at DESC;
+        `) as unknown as Lead[];
+      } else {
+        rows = (await sql`
+          SELECT * FROM leads 
+          ORDER BY created_at DESC;
+        `) as unknown as Lead[];
       }
-
-      if (filter?.search) {
-        params.push(`%${filter.search.toLowerCase()}%`);
-        query += ` AND (LOWER(email) LIKE $${params.length} OR LOWER(website) LIKE $${params.length})`;
-      }
-
-      query += ` ORDER BY created_at DESC;`;
-
-      // Use raw SQL with parameters
-      const rows = (await sql(query, params)) as unknown as Lead[];
       return rows;
     } catch (error) {
       console.warn('[Neon DB] Error querying leads, using memory fallback:', error);
