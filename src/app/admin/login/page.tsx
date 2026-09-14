@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Lock, Mail, ArrowRight, ShieldCheck } from 'lucide-react';
+import { sanitizeRedirectUrl } from '@/lib/security';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -29,10 +30,13 @@ export default function AdminLoginPage() {
     setError(null);
 
     try {
+      const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+      const redirectParam = params ? params.get('redirect') : null;
+
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, redirect: redirectParam }),
       });
 
       const data = await res.json();
@@ -43,7 +47,10 @@ export default function AdminLoginPage() {
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new Event('auth-change'));
       }
-      router.push('/admin/dashboard');
+
+      // Sanitize destination to strictly prevent open redirect vulnerabilities
+      const safeDestination = sanitizeRedirectUrl(data.redirectUrl || redirectParam, '/admin/dashboard');
+      router.push(safeDestination);
       router.refresh();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Invalid credentials provided.');

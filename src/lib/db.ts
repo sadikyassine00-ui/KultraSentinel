@@ -835,6 +835,122 @@ export async function cleanupOrphanStores(): Promise<{ purgedCount: number }> {
   return { purgedCount: before - inMemoryStores.length };
 }
 
+// -----------------------------------------------------------------------------
+// Tenant-Scoped Store Operations (Anti-IDOR Compound Verification)
+// -----------------------------------------------------------------------------
+
+export async function getStoreByIdAndTenant(id: number, tenantEmail: string): Promise<Store | null> {
+  const cleanEmail = tenantEmail.toLowerCase().trim();
+  const sql = getDb();
+  if (sql) {
+    try {
+      await ensureSchema();
+      const rows = await sql`
+        SELECT * FROM stores 
+        WHERE id = ${id} AND LOWER(tenant_email) = ${cleanEmail}
+        LIMIT 1;
+      `;
+      if (rows.length > 0) return rows[0] as unknown as Store;
+      return null;
+    } catch (err) {
+      console.warn('[Neon DB] Error querying store by id and tenant:', err);
+    }
+  }
+
+  const store = inMemoryStores.find(
+    (s) => s.id === id && s.tenant_email.toLowerCase().trim() === cleanEmail
+  );
+  return store || null;
+}
+
+export async function getStoresForTenant(tenantEmail: string): Promise<Store[]> {
+  const cleanEmail = tenantEmail.toLowerCase().trim();
+  const sql = getDb();
+  if (sql) {
+    try {
+      await ensureSchema();
+      const rows = await sql`
+        SELECT * FROM stores 
+        WHERE LOWER(tenant_email) = ${cleanEmail}
+        ORDER BY created_at DESC;
+      `;
+      return rows as unknown as Store[];
+    } catch (err) {
+      console.warn('[Neon DB] Error querying stores for tenant:', err);
+    }
+  }
+
+  return inMemoryStores.filter(
+    (s) => s.tenant_email.toLowerCase().trim() === cleanEmail
+  );
+}
+
+export async function updateStoreForTenant(
+  id: number,
+  tenantEmail: string,
+  updates: Partial<Store>
+): Promise<Store | null> {
+  const cleanEmail = tenantEmail.toLowerCase().trim();
+  const sql = getDb();
+  if (sql) {
+    try {
+      await ensureSchema();
+      const rows = await sql`
+        UPDATE stores
+        SET
+          store_url = COALESCE(${updates.store_url || null}, store_url),
+          pubsub_topic = COALESCE(${updates.pubsub_topic || null}, pubsub_topic),
+          status = COALESCE(${updates.status || null}, status)
+        WHERE id = ${id} AND LOWER(tenant_email) = ${cleanEmail}
+        RETURNING *;
+      `;
+      if (rows.length > 0) return rows[0] as unknown as Store;
+      return null;
+    } catch (err) {
+      console.warn('[Neon DB] Error updating store for tenant:', err);
+    }
+  }
+
+  const store = inMemoryStores.find(
+    (s) => s.id === id && s.tenant_email.toLowerCase().trim() === cleanEmail
+  );
+  if (store) {
+    if (updates.store_url !== undefined) store.store_url = updates.store_url;
+    if (updates.pubsub_topic !== undefined) store.pubsub_topic = updates.pubsub_topic;
+    if (updates.status !== undefined) store.status = updates.status;
+    return store;
+  }
+  return null;
+}
+
+export async function deleteStoreForTenant(id: number, tenantEmail: string): Promise<boolean> {
+  const cleanEmail = tenantEmail.toLowerCase().trim();
+  const sql = getDb();
+  if (sql) {
+    try {
+      await ensureSchema();
+      const rows = await sql`
+        DELETE FROM stores
+        WHERE id = ${id} AND LOWER(tenant_email) = ${cleanEmail}
+        RETURNING id;
+      `;
+      return rows.length > 0;
+    } catch (err) {
+      console.warn('[Neon DB] Error deleting store for tenant:', err);
+    }
+  }
+
+  const idx = inMemoryStores.findIndex(
+    (s) => s.id === id && s.tenant_email.toLowerCase().trim() === cleanEmail
+  );
+  if (idx !== -1) {
+    inMemoryStores.splice(idx, 1);
+    return true;
+  }
+  return false;
+}
+
+
 export async function getDLQMessages(): Promise<DLQMessage[]> {
   const sql = getDb();
   if (sql) {

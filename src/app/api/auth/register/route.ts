@@ -1,8 +1,25 @@
 import { NextResponse } from 'next/server';
 import { hashPassword, isAllowedAdminEmail, createSessionToken, getSessionCookieHeader } from '@/lib/auth';
 import { findAdminByEmail, createOrUpdateAdmin, createTenant, createLead } from '@/lib/db';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 export async function POST(request: Request) {
+  const clientIp = getClientIp(request);
+  const rateLimit = checkRateLimit(`register:${clientIp}`, 10, 15 * 60);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        error: `Too many registration attempts. Please retry in ${Math.ceil(rateLimit.retryAfterSeconds / 60)} minute(s).`,
+      },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(rateLimit.retryAfterSeconds),
+        },
+      }
+    );
+  }
+
   try {
     const body = await request.json();
     const { email, password, companyName, accountType, website } = body;
