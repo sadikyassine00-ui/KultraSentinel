@@ -711,7 +711,7 @@ export default function AdminDashboardPage() {
           </div>
         )}
 
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
+        <main className="flex-1 max-w-7xl w-full mx-auto px-3.5 sm:px-6 lg:px-8 py-5 sm:py-6 lg:py-8 space-y-5 sm:space-y-6 lg:space-y-8">
           {/* Feedback Notification */}
           {feedback && (
             <div
@@ -733,23 +733,23 @@ export default function AdminDashboardPage() {
 
           {/* SECTION 1: Top-Level Platform Telemetry (Global KPIs) */}
           <section className="space-y-4">
-            <div className="flex items-center justify-between pb-1 flex-wrap gap-4 border-b border-[#1E293B]/70 pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-[#1E293B]/70 gap-4">
               <div>
-                <div className="flex items-center gap-2 text-[11px] text-[#94A3B8] font-medium mb-1">
+                <div className="flex items-center gap-2 text-[11px] text-[#94A3B8] font-medium mb-1 flex-wrap">
                   <span>Platform Intelligence</span>
                   <span className="text-[#64748B]">/</span>
                   <span className="text-[#CBD5E1]">Super Admin Console</span>
                   <span className="text-[#64748B]">/</span>
-                  <span className="text-[#10B981] font-mono text-[10px] px-1.5 py-0.2 rounded bg-[#10B981]/10 border border-[#10B981]/25">Production Fleet</span>
+                  <span className="text-[#10B981] font-mono text-[10px] px-2 py-0.5 rounded bg-[#10B981]/10 border border-[#10B981]/25">Production Fleet</span>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
                   <h1 className="text-base sm:text-lg font-bold text-[#FDF4D2] tracking-tight">Platform Telemetry & Fleet Health</h1>
                   <span className="text-[10px] font-mono font-medium text-[#94A3B8] px-2 py-0.5 rounded bg-[#0F1522] border border-[#1E293B]">GCP: us-central1</span>
                 </div>
                 <p className="text-xs text-[#94A3B8] mt-0.5">Real-time commercial volume and Google Cloud Pub/Sub QoS 1 streaming metrics</p>
               </div>
 
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2.5 shrink-0">
                 <div className="hidden sm:flex items-center gap-1.5 text-xs font-medium text-[#10B981] bg-[#10B981]/10 px-3 py-1.5 rounded-md border border-[#10B981]/30">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
                   <span>Pub/Sub Online ({telemetry.globalIngestionRate} msg/min)</span>
@@ -768,9 +768,9 @@ export default function AdminDashboardPage() {
             </div>
 
             {/* Tier 1: Commercial Volume Metrics (4 Cards) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               {/* Card 1: MRR */}
-              <div className="bg-[#0F1522] border border-[#1E293B] border-t-white/[0.04] hover:border-[#2B3D55] transition-all rounded-xl p-4.5 space-y-2.5 shadow-sm">
+              <div className="bg-[#0F1522] border border-[#1E293B] border-t-white/[0.04] hover:border-[#2B3D55] transition-all rounded-xl p-4 sm:p-5 space-y-3 shadow-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-[#94A3B8]">Monthly Recurring Revenue</span>
                   <div className="p-1.5 rounded-md bg-[#141C2B] text-[#94A3B8] border border-[#1E293B]">
@@ -780,7 +780,7 @@ export default function AdminDashboardPage() {
                 <div className="text-2xl sm:text-3xl font-bold text-[#FDF4D2] tracking-tight">
                   ${telemetry.mrr.toLocaleString()}
                 </div>
-                <div className="text-xs text-[#94A3B8] font-medium flex items-center justify-between pt-0.5">
+                <div className="text-xs text-[#94A3B8] font-medium flex items-center justify-between pt-0.5 gap-2">
                   <div className="flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
                     <span>Stripe recurring volume</span>
@@ -790,14 +790,14 @@ export default function AdminDashboardPage() {
               </div>
 
               {/* Card 2: Active Subs vs Trials */}
-              <div className="bg-[#0F1522] border border-[#1E293B] border-t-white/[0.04] hover:border-[#2B3D55] transition-all rounded-xl p-4.5 space-y-2.5 shadow-sm">
+              <div className="bg-[#0F1522] border border-[#1E293B] border-t-white/[0.04] hover:border-[#2B3D55] transition-all rounded-xl p-4 sm:p-5 space-y-3 shadow-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-[#94A3B8]">Active Accounts</span>
                   <div className="p-1.5 rounded-md bg-[#141C2B] text-[#94A3B8] border border-[#1E293B]">
                     <Users className="w-3.5 h-3.5" />
                   </div>
                 </div>
-                <div className="text-2xl sm:text-3xl font-bold text-[#FDF4D2] tracking-tight flex items-baseline gap-1.5">
+                <div className="text-2xl sm:text-3xl font-bold text-[#FDF4D2] tracking-tight flex items-baseline gap-1.5 flex-wrap">
                   <span>{telemetry.activeSubscriptions}</span>
                   <span className="text-xs font-semibold text-[#CBD5E1]">Paid</span>
                   <span className="text-xs text-[#64748B]">/</span>
@@ -834,7 +834,7 @@ export default function AdminDashboardPage() {
               </div>
 
               {/* Card 3: Monitored Stores */}
-              <div className="bg-[#0F1522] border border-[#1E293B] border-t-white/[0.04] hover:border-[#2B3D55] transition-all rounded-xl p-4.5 space-y-2.5 shadow-sm">
+              <div className="bg-[#0F1522] border border-[#1E293B] border-t-white/[0.04] hover:border-[#2B3D55] transition-all rounded-xl p-4 sm:p-5 space-y-3 shadow-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-[#94A3B8]">Monitored Stores</span>
                   <div className="p-1.5 rounded-md bg-[#141C2B] text-[#94A3B8] border border-[#1E293B]">
@@ -851,7 +851,7 @@ export default function AdminDashboardPage() {
               </div>
 
               {/* Card 4: Total SKUs Tracked */}
-              <div className="bg-[#0F1522] border border-[#1E293B] border-t-white/[0.04] hover:border-[#2B3D55] transition-all rounded-xl p-4.5 space-y-2.5 shadow-sm">
+              <div className="bg-[#0F1522] border border-[#1E293B] border-t-white/[0.04] hover:border-[#2B3D55] transition-all rounded-xl p-4 sm:p-5 space-y-3 shadow-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-[#94A3B8]">Observed SKUs</span>
                   <div className="p-1.5 rounded-md bg-[#141C2B] text-[#94A3B8] border border-[#1E293B]">
@@ -869,14 +869,14 @@ export default function AdminDashboardPage() {
             </div>
 
             {/* Tier 2: Real-Time Pipeline Health Console (Unified 4-Metric Surface) */}
-            <div className="bg-[#0F1522] border border-[#1E293B] rounded-xl divide-y sm:divide-y-0 sm:divide-x divide-[#1E293B] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 shadow-sm overflow-hidden">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-[#1E293B] border border-[#1E293B] rounded-xl overflow-hidden shadow-sm">
               {/* Metric 1: Ingestion */}
-              <div className="p-4.5 space-y-2">
+              <div className="bg-[#0F1522] p-4 sm:p-5 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">Ingestion Rate</span>
                   <Radio className="w-3.5 h-3.5 text-[#10B981]" />
                 </div>
-                <div className="text-xl font-bold text-[#FDF4D2] tracking-tight flex items-baseline gap-1.5">
+                <div className="text-xl sm:text-2xl font-bold text-[#FDF4D2] tracking-tight flex items-baseline gap-1.5">
                   <span>{telemetry.globalIngestionRate}</span>
                   <span className="text-xs font-semibold text-[#10B981]">msg/min</span>
                 </div>
@@ -892,12 +892,12 @@ export default function AdminDashboardPage() {
               </div>
 
               {/* Metric 2: Latency */}
-              <div className="p-4.5 space-y-2">
+              <div className="bg-[#0F1522] p-4 sm:p-5 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">Pipeline Latency</span>
                   <Zap className="w-3.5 h-3.5 text-[#94A3B8]" />
                 </div>
-                <div className="text-xl font-bold text-[#FDF4D2] tracking-tight flex items-baseline gap-1.5">
+                <div className="text-xl sm:text-2xl font-bold text-[#FDF4D2] tracking-tight flex items-baseline gap-1.5">
                   <span>{telemetry.averageLatencyMs}</span>
                   <span className="text-xs font-semibold text-[#94A3B8]">ms avg</span>
                 </div>
@@ -913,16 +913,16 @@ export default function AdminDashboardPage() {
               </div>
 
               {/* Metric 3: Dead Letter Queue */}
-              <div className="p-4.5 space-y-2">
+              <div className="bg-[#0F1522] p-4 sm:p-5 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">Dead Letter Queue</span>
                   <ShieldAlert className={`w-3.5 h-3.5 ${telemetry.dlqCount > 0 ? 'text-[#FF788D]' : 'text-[#10B981]'}`} />
                 </div>
-                <div className="text-xl font-bold tracking-tight flex items-baseline gap-2">
+                <div className="text-xl sm:text-2xl font-bold tracking-tight flex items-baseline gap-2">
                   <span className={telemetry.dlqCount > 0 ? 'text-[#FF788D]' : 'text-[#FDF4D2]'}>
                     {telemetry.dlqCount}
                   </span>
-                  <span className={`text-[10px] font-semibold px-1.5 py-0.2 rounded border ${
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${
                     telemetry.dlqCount > 0
                       ? 'bg-[#FF788D]/15 text-[#FF788D] border-[#FF788D]/30'
                       : 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/30'
@@ -936,12 +936,12 @@ export default function AdminDashboardPage() {
               </div>
 
               {/* Metric 4: Webhook Failure Rate */}
-              <div className="p-4.5 space-y-2">
+              <div className="bg-[#0F1522] p-4 sm:p-5 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">Slack Dispatch Success</span>
                   <Send className="w-3.5 h-3.5 text-[#94A3B8]" />
                 </div>
-                <div className="text-xl font-bold text-[#FDF4D2] tracking-tight flex items-baseline gap-1.5">
+                <div className="text-xl sm:text-2xl font-bold text-[#FDF4D2] tracking-tight flex items-baseline gap-1.5">
                   <span>{((1 - telemetry.webhookFailureRate) * 100).toFixed(1)}%</span>
                   <span className="text-xs font-semibold text-[#94A3B8]">deliverability</span>
                 </div>
@@ -970,8 +970,8 @@ export default function AdminDashboardPage() {
             {activeTab === 'tenants' && !tabLoading && (
               <div className="space-y-4">
                 {/* Search & Filter Bar */}
-                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-[#0F1522] border border-[#1E293B] p-3 rounded-xl shadow-sm">
-                  <div className="relative w-full sm:w-88">
+                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-[#0F1522] border border-[#1E293B] p-3 sm:p-3.5 rounded-xl shadow-sm">
+                  <div className="relative w-full sm:w-80 md:w-96">
                     <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
                     <input
                       type="text"
@@ -985,11 +985,11 @@ export default function AdminDashboardPage() {
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
                     <select
                       value={tenantPlanFilter}
                       onChange={(e) => setTenantPlanFilter(e.target.value)}
-                      className="w-1/2 sm:w-auto bg-[#0a0b1dff] border border-[#1E293B] rounded-lg text-xs text-[#FDF4D2] px-3 py-2 focus:outline-none focus:border-[#FF788D] font-medium transition-colors cursor-pointer"
+                      className="flex-1 sm:flex-initial bg-[#0a0b1dff] border border-[#1E293B] rounded-lg text-xs text-[#FDF4D2] px-3 py-2 focus:outline-none focus:border-[#FF788D] font-medium transition-colors cursor-pointer"
                     >
                       <option value="all">All Plans</option>
                       <option value="Trial">Trial</option>
@@ -1002,32 +1002,34 @@ export default function AdminDashboardPage() {
                     <select
                       value={tenantStatusFilter}
                       onChange={(e) => setTenantStatusFilter(e.target.value)}
-                      className="w-1/2 sm:w-auto bg-[#0a0b1dff] border border-[#1E293B] rounded-lg text-xs text-[#FDF4D2] px-3 py-2 focus:outline-none focus:border-[#FF788D] font-medium transition-colors cursor-pointer"
+                      className="flex-1 sm:flex-initial bg-[#0a0b1dff] border border-[#1E293B] rounded-lg text-xs text-[#FDF4D2] px-3 py-2 focus:outline-none focus:border-[#FF788D] font-medium transition-colors cursor-pointer"
                     >
                       <option value="all">All Statuses</option>
                       <option value="active">Active</option>
                       <option value="suspended">Suspended</option>
                     </select>
                   </div>
-                </div>                {/* Tenants Table */}
+                </div>
+
+                {/* Tenants Table */}
                 <div className="bg-[#0F1522] border border-[#1E293B] rounded-xl overflow-hidden shadow-sm">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs min-w-[720px]">
                       <thead className="bg-[#0c121e] text-[#64748B] border-b border-[#1E293B]">
                         <tr>
-                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Tenant Identity</th>
-                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Subscription Tier</th>
-                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Usage Footprint</th>
-                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">OAuth Status</th>
-                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Last Active</th>
-                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px] text-right">Actions</th>
+                          <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 font-semibold uppercase tracking-wider text-[10px]">Tenant Identity</th>
+                          <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 font-semibold uppercase tracking-wider text-[10px]">Subscription Tier</th>
+                          <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 font-semibold uppercase tracking-wider text-[10px]">Usage Footprint</th>
+                          <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 font-semibold uppercase tracking-wider text-[10px]">OAuth Status</th>
+                          <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 font-semibold uppercase tracking-wider text-[10px]">Last Active</th>
+                          <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 font-semibold uppercase tracking-wider text-[10px] text-right">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#1E293B]/60">
                         {tenants.map((tenant) => (
                           <tr key={tenant.id} className="hover:bg-[#141C2B]/50 transition-colors">
                             {/* Tenant Identity */}
-                            <td className="px-4 py-3.5">
+                            <td className="px-3.5 sm:px-4 py-3 sm:py-3.5">
                               <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-lg bg-[#141C2B] border border-[#1E293B] text-xs font-bold text-[#FDF4D2] flex items-center justify-center shrink-0">
                                   {getInitials(tenant.company_name)}
@@ -1041,7 +1043,7 @@ export default function AdminDashboardPage() {
                             </td>
 
                             {/* Plan Tier */}
-                            <td className="px-4 py-3.5">
+                            <td className="px-3.5 sm:px-4 py-3 sm:py-3.5">
                               <span
                                 className={`inline-block px-2.5 py-0.5 rounded text-[11px] font-medium border ${
                                   tenant.plan_tier === 'Active Pro' || tenant.plan_tier === 'Agency Pilot'
@@ -1059,7 +1061,7 @@ export default function AdminDashboardPage() {
                             </td>
 
                             {/* Usage Footprint */}
-                            <td className="px-4 py-3.5">
+                            <td className="px-3.5 sm:px-4 py-3 sm:py-3.5">
                               <div className="text-[#FDF4D2] font-semibold text-xs">
                                 {tenant.connected_stores} store{tenant.connected_stores > 1 ? 's' : ''}
                               </div>
@@ -1072,7 +1074,7 @@ export default function AdminDashboardPage() {
                             </td>
 
                             {/* OAuth Status */}
-                            <td className="px-4 py-3.5">
+                            <td className="px-3.5 sm:px-4 py-3 sm:py-3.5">
                               <span
                                 className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] font-medium border ${
                                   tenant.oauth_status === 'Valid'
@@ -1096,7 +1098,7 @@ export default function AdminDashboardPage() {
                             </td>
 
                             {/* Last Active */}
-                            <td className="px-4 py-3.5 text-[#94A3B8] text-xs font-medium whitespace-nowrap">
+                            <td className="px-3.5 sm:px-4 py-3 sm:py-3.5 text-[#94A3B8] text-xs font-medium whitespace-nowrap">
                               {new Date(tenant.last_active).toLocaleString(undefined, {
                                 month: 'short',
                                 day: 'numeric',
@@ -1106,7 +1108,7 @@ export default function AdminDashboardPage() {
                             </td>
 
                             {/* Operational Actions */}
-                            <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                            <td className="px-3.5 sm:px-4 py-3 sm:py-3.5 text-right whitespace-nowrap">
                               <div className="flex items-center justify-end gap-1.5">
                                 <button
                                   onClick={() => handleTenantAction(tenant.id, 'impersonate')}
@@ -1171,8 +1173,8 @@ export default function AdminDashboardPage() {
             {activeTab === 'stores' && tabLoading && <StoresTabSkeleton />}
             {activeTab === 'stores' && !tabLoading && (
               <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-[#0F1522] border border-[#1E293B] p-3 rounded-xl shadow-sm">
-                  <div className="relative w-full sm:w-88">
+                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-[#0F1522] border border-[#1E293B] p-3 sm:p-3.5 rounded-xl shadow-sm">
+                  <div className="relative w-full sm:w-80 md:w-96">
                     <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
                     <input
                       type="text"
@@ -1186,11 +1188,11 @@ export default function AdminDashboardPage() {
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2.5 sm:gap-3 w-full sm:w-auto">
                     <select
                       value={storeAccountFilter}
                       onChange={(e) => setStoreAccountFilter(e.target.value)}
-                      className="bg-[#0a0b1dff] border border-[#1E293B] rounded-lg text-xs text-[#FDF4D2] px-3 py-2 focus:outline-none focus:border-[#FF788D] font-medium transition-colors cursor-pointer"
+                      className="flex-1 sm:flex-initial bg-[#0a0b1dff] border border-[#1E293B] rounded-lg text-xs text-[#FDF4D2] px-3 py-2 focus:outline-none focus:border-[#FF788D] font-medium transition-colors cursor-pointer"
                     >
                       <option value="all">All Account Types</option>
                       <option value="Standalone Merchant">Standalone Merchant</option>
@@ -1212,31 +1214,31 @@ export default function AdminDashboardPage() {
                     <table className="w-full text-left text-xs min-w-[760px]">
                       <thead className="bg-[#0c121e] text-[#64748B] border-b border-[#1E293B]">
                         <tr>
-                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">GMC Merchant ID</th>
-                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Parent Tenant</th>
-                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Account Type</th>
-                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Store Domain</th>
-                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Pub/Sub State</th>
-                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Disapprovals</th>
-                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px] text-right">Actions</th>
+                          <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 font-semibold uppercase tracking-wider text-[10px]">GMC Merchant ID</th>
+                          <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 font-semibold uppercase tracking-wider text-[10px]">Parent Tenant</th>
+                          <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 font-semibold uppercase tracking-wider text-[10px]">Account Type</th>
+                          <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 font-semibold uppercase tracking-wider text-[10px]">Store Domain</th>
+                          <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 font-semibold uppercase tracking-wider text-[10px]">Pub/Sub State</th>
+                          <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 font-semibold uppercase tracking-wider text-[10px]">Disapprovals</th>
+                          <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 font-semibold uppercase tracking-wider text-[10px] text-right">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#1E293B]/60">
                         {stores.map((store) => (
                           <tr key={store.id} className="hover:bg-[#141C2B]/50 transition-colors">
                             {/* GMC ID */}
-                            <td className="px-4 py-3.5 font-mono text-xs font-bold text-[#FDF4D2]">
+                            <td className="px-3.5 sm:px-4 py-3 sm:py-3.5 font-mono text-xs font-bold text-[#FDF4D2]">
                               {store.gmc_id}
                             </td>
 
                             {/* Parent Tenant */}
-                            <td className="px-4 py-3.5">
+                            <td className="px-3.5 sm:px-4 py-3 sm:py-3.5">
                               <div className="font-semibold text-[#FDF4D2] text-xs">{store.tenant_email}</div>
                               <div className="text-[#64748B] text-[10px] font-mono">Tenant ID #{store.tenant_id}</div>
                             </td>
 
                             {/* Account Type */}
-                            <td className="px-4 py-3.5">
+                            <td className="px-3.5 sm:px-4 py-3 sm:py-3.5">
                               <span className="inline-block px-2 py-0.5 rounded text-[11px] font-medium border border-[#1E293B] bg-[#141C2B] text-[#CBD5E1]">
                                 {store.account_type}
                               </span>
@@ -1246,7 +1248,7 @@ export default function AdminDashboardPage() {
                             </td>
 
                             {/* URL */}
-                            <td className="px-4 py-3.5">
+                            <td className="px-3.5 sm:px-4 py-3 sm:py-3.5">
                               <a
                                 href={`https://${store.store_url}`}
                                 target="_blank"
@@ -1259,7 +1261,7 @@ export default function AdminDashboardPage() {
                             </td>
 
                             {/* Topic */}
-                            <td className="px-4 py-3.5">
+                            <td className="px-3.5 sm:px-4 py-3 sm:py-3.5">
                               <div className="text-xs text-[#94A3B8] font-mono truncate max-w-[200px]" title={store.pubsub_topic}>
                                 {store.pubsub_topic}
                               </div>
@@ -1269,7 +1271,7 @@ export default function AdminDashboardPage() {
                             </td>
 
                             {/* Disapprovals */}
-                            <td className="px-4 py-3.5">
+                            <td className="px-3.5 sm:px-4 py-3 sm:py-3.5">
                               <div className="flex items-center gap-2">
                                 <span
                                   className={`px-2 py-0.5 rounded text-[11px] font-medium border ${
@@ -1287,7 +1289,7 @@ export default function AdminDashboardPage() {
                             </td>
 
                             {/* Actions */}
-                            <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                            <td className="px-3.5 sm:px-4 py-3 sm:py-3.5 text-right whitespace-nowrap">
                               <button
                                 onClick={() => handleStoreSync(store.id)}
                                 className="px-2.5 py-1.5 bg-[#141C2B] border border-[#1E293B] hover:border-[#10B981] text-[#FDF4D2] font-semibold rounded-md text-xs transition-all active:translate-y-[0.5px] shadow-sm flex items-center gap-1.5"
@@ -1318,7 +1320,7 @@ export default function AdminDashboardPage() {
               <div className="space-y-6">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
                   {/* Live Ingestion Stream */}
-                  <div className="lg:col-span-2 bg-[#0F1522] border border-[#1E293B] rounded-xl p-5 space-y-4 shadow-sm">
+                  <div className="lg:col-span-2 bg-[#0F1522] border border-[#1E293B] rounded-xl p-4 sm:p-5 lg:p-6 space-y-4 shadow-sm">
                     <div className="flex items-center justify-between border-b border-[#1E293B] pb-3">
                       <div className="flex items-center gap-2">
                         <Terminal className="w-4 h-4 text-[#10B981]" />
@@ -1331,7 +1333,7 @@ export default function AdminDashboardPage() {
                     </div>
 
                     <div className="space-y-2 font-mono text-xs">
-                      <div className="p-3 rounded-lg bg-[#070A12] border border-[#1E293B] flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                      <div className="p-2.5 sm:p-3 rounded-lg bg-[#070A12] border border-[#1E293B] flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
                         <div className="flex items-center gap-2.5">
                           <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30">200 OK</span>
                           <span className="text-[#FDF4D2] font-mono break-all">item_disapproved: missing_required_attribute [gtin]</span>
@@ -1339,7 +1341,7 @@ export default function AdminDashboardPage() {
                         <span className="text-[#94A3B8] text-[11px] shrink-0 font-mono">104928192 | 14ms</span>
                       </div>
 
-                      <div className="p-3 rounded-lg bg-[#070A12] border border-[#1E293B] flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                      <div className="p-2.5 sm:p-3 rounded-lg bg-[#070A12] border border-[#1E293B] flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
                         <div className="flex items-center gap-2.5">
                           <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#1E293B] text-[#CBD5E1]">SKIPPED</span>
                           <span className="text-[#94A3B8] font-mono break-all">item_status_unchanged: product_id: sku_49810</span>
@@ -1347,7 +1349,7 @@ export default function AdminDashboardPage() {
                         <span className="text-[#94A3B8] text-[11px] shrink-0 font-mono">294018241 | 4ms</span>
                       </div>
 
-                      <div className="p-3 rounded-lg bg-[#070A12] border border-[#1E293B] flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                      <div className="p-2.5 sm:p-3 rounded-lg bg-[#070A12] border border-[#1E293B] flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
                         <div className="flex items-center gap-2.5">
                           <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30">200 OK</span>
                           <span className="text-[#FDF4D2] font-mono break-all">item_disapproved: pricing_mismatch [price]</span>
@@ -1355,7 +1357,7 @@ export default function AdminDashboardPage() {
                         <span className="text-[#94A3B8] text-[11px] shrink-0 font-mono">994817263 | 18ms</span>
                       </div>
 
-                      <div className="p-3 rounded-lg bg-[#070A12] border border-[#FF788D]/40 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                      <div className="p-2.5 sm:p-3 rounded-lg bg-[#070A12] border border-[#FF788D]/40 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
                         <div className="flex items-center gap-2.5">
                           <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#FF788D]/15 text-[#FF788D] border border-[#FF788D]/30">DLQ DROP</span>
                           <span className="text-[#FF788D] font-mono break-all">UNSUPPORTED_ISSUE_CODE: unexpected payload schema</span>
@@ -1366,7 +1368,7 @@ export default function AdminDashboardPage() {
                   </div>
 
                   {/* Latency Breakdown Console */}
-                  <div className="bg-[#0F1522] border border-[#1E293B] rounded-xl p-5 space-y-4 shadow-sm flex flex-col justify-between">
+                  <div className="bg-[#0F1522] border border-[#1E293B] rounded-xl p-4 sm:p-5 lg:p-6 space-y-4 shadow-sm flex flex-col justify-between">
                     <div>
                       <div className="flex items-center justify-between border-b border-[#1E293B] pb-3">
                         <h3 className="text-xs font-semibold uppercase tracking-wider text-[#FDF4D2]">Pipeline Latency Percentiles</h3>
@@ -1406,7 +1408,7 @@ export default function AdminDashboardPage() {
                       </div>
                     </div>
 
-                    <div className="p-3 bg-[#0a0b1dff] border border-[#1E293B] rounded-lg text-xs text-[#94A3B8] font-medium">
+                    <div className="p-3 sm:p-3.5 bg-[#0a0b1dff] border border-[#1E293B] rounded-lg text-xs text-[#94A3B8] font-medium mt-3">
                       <span className="text-[#10B981] font-semibold">SLA Guarantee: </span>
                       <span>Target is &lt; 500ms from GCP arrival to Slack alert dispatch. Current pipeline operating at 184ms average.</span>
                     </div>
@@ -1415,12 +1417,12 @@ export default function AdminDashboardPage() {
 
                 {/* Dead Letter Queue (DLQ) Triage Table */}
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div>
                       <h3 className="text-sm font-bold text-[#FDF4D2]">Dead Letter Queue (DLQ) Triage Table</h3>
                       <p className="text-xs text-[#94A3B8]">Inspect unhandled GCP payloads, inspect raw JSON, and replay after worker patches</p>
                     </div>
-                    <span className="text-xs text-[#FF788D] bg-[#FF788D]/15 border border-[#FF788D]/30 font-semibold px-2.5 py-1 rounded-md">
+                    <span className="text-xs text-[#FF788D] bg-[#FF788D]/15 border border-[#FF788D]/30 font-semibold px-2.5 py-1 rounded-md self-start sm:self-auto">
                       {dlqMessages.length} Unhandled DLQ Payloads
                     </span>
                   </div>
@@ -1430,37 +1432,37 @@ export default function AdminDashboardPage() {
                       <table className="w-full text-left text-xs min-w-[700px]">
                         <thead className="bg-[#0c121e] text-[#64748B] border-b border-[#1E293B]">
                           <tr>
-                            <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">GCP Message ID</th>
-                            <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Receipt Timestamp</th>
-                            <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Merchant ID</th>
-                            <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Failure Reason</th>
-                            <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Raw Payload</th>
-                            <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px] text-right">DLQ Actions</th>
+                            <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 font-semibold uppercase tracking-wider text-[10px]">GCP Message ID</th>
+                            <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 font-semibold uppercase tracking-wider text-[10px]">Receipt Timestamp</th>
+                            <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 font-semibold uppercase tracking-wider text-[10px]">Merchant ID</th>
+                            <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 font-semibold uppercase tracking-wider text-[10px]">Failure Reason</th>
+                            <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 font-semibold uppercase tracking-wider text-[10px]">Raw Payload</th>
+                            <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 font-semibold uppercase tracking-wider text-[10px] text-right">DLQ Actions</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[#1E293B]/60">
                           {dlqMessages.map((msg) => (
                             <React.Fragment key={msg.id}>
                               <tr className="hover:bg-[#141C2B]/60 transition-colors">
-                                <td className="px-4 py-3.5 font-mono text-xs font-bold text-[#FDF4D2]">
+                                <td className="px-3.5 sm:px-4 py-3 sm:py-3.5 font-mono text-xs font-bold text-[#FDF4D2]">
                                   {msg.message_id}
                                 </td>
 
-                                <td className="px-4 py-3.5 text-[#94A3B8] text-xs font-medium whitespace-nowrap">
+                                <td className="px-3.5 sm:px-4 py-3 sm:py-3.5 text-[#94A3B8] text-xs font-medium whitespace-nowrap">
                                   {new Date(msg.created_at).toLocaleTimeString()}
                                 </td>
 
-                                <td className="px-4 py-3.5 font-mono text-xs text-[#CBD5E1]">
+                                <td className="px-3.5 sm:px-4 py-3 sm:py-3.5 font-mono text-xs text-[#CBD5E1]">
                                   {msg.merchant_id}
                                 </td>
 
-                                <td className="px-4 py-3.5">
+                                <td className="px-3.5 sm:px-4 py-3 sm:py-3.5">
                                   <span className="px-2 py-0.5 rounded text-[11px] bg-[#FF788D]/10 text-[#FF788D] border border-[#FF788D]/30 font-semibold font-mono">
                                     {msg.failure_reason}
                                   </span>
                                 </td>
 
-                                <td className="px-4 py-3.5 whitespace-nowrap">
+                                <td className="px-3.5 sm:px-4 py-3 sm:py-3.5 whitespace-nowrap">
                                   <button
                                     onClick={() => setExpandedPayloadId(expandedPayloadId === msg.id ? null : msg.id)}
                                     className="text-xs text-[#CBD5E1] hover:text-[#FDF4D2] font-semibold flex items-center gap-1.5 transition-colors"
@@ -1470,7 +1472,7 @@ export default function AdminDashboardPage() {
                                   </button>
                                 </td>
 
-                                <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                                <td className="px-3.5 sm:px-4 py-3 sm:py-3.5 text-right whitespace-nowrap">
                                   <div className="flex items-center justify-end gap-2">
                                     <button
                                       onClick={() => handleDLQAction(msg.id, 'replay')}
@@ -1493,12 +1495,12 @@ export default function AdminDashboardPage() {
 
                               {expandedPayloadId === msg.id && (
                                 <tr className="bg-[#070A12]">
-                                  <td colSpan={6} className="px-4 py-4 border-t border-[#1E293B]">
+                                  <td colSpan={6} className="px-3.5 sm:px-4 py-4 border-t border-[#1E293B]">
                                     <div className="text-xs text-[#CBD5E1] mb-2 font-bold flex items-center gap-2">
                                       <Terminal className="w-4 h-4 text-[#FF788D]" />
                                       <span>GCP Pub/Sub Ingestion Raw Payload Details:</span>
                                     </div>
-                                    <pre className="p-4 bg-[#0a0b1dff] border border-[#1E293B] rounded-md text-xs font-mono text-[#CBD5E1] overflow-x-auto max-h-56 leading-relaxed">
+                                    <pre className="p-3 sm:p-4 bg-[#0a0b1dff] border border-[#1E293B] rounded-md text-xs font-mono text-[#CBD5E1] overflow-x-auto max-h-56 leading-relaxed">
                                       {JSON.stringify(msg.payload, null, 2)}
                                     </pre>
                                   </td>
@@ -1525,12 +1527,12 @@ export default function AdminDashboardPage() {
             {activeTab === 'dispatches' && tabLoading && <DispatchesTabSkeleton />}
             {activeTab === 'dispatches' && !tabLoading && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <h3 className="text-sm font-bold text-[#FDF4D2]">Slack & Outbound Dispatch Logs</h3>
                     <p className="text-xs text-[#94A3B8]">Verify that product disapproval incidents are delivered to client Slack channels</p>
                   </div>
-                  <span className="text-xs text-[#CBD5E1] bg-[#0F1522] border border-[#1E293B] px-3 py-1 rounded-md font-semibold">
+                  <span className="text-xs text-[#CBD5E1] bg-[#0F1522] border border-[#1E293B] px-3 py-1 rounded-md font-semibold self-start sm:self-auto">
                     {dispatchLogs.length} Recent Dispatches
                   </span>
                 </div>
@@ -1540,35 +1542,35 @@ export default function AdminDashboardPage() {
                     <table className="w-full text-left text-xs min-w-[760px]">
                       <thead className="bg-[#0c121e] text-[#64748B] border-b border-[#1E293B]">
                         <tr>
-                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Dispatch ID & Time</th>
-                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Tenant & Store</th>
-                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Destination Channel</th>
-                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Delivery Status</th>
-                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Payload Preview</th>
-                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px] text-right">Actions</th>
+                          <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 font-semibold uppercase tracking-wider text-[10px]">Dispatch ID & Time</th>
+                          <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 font-semibold uppercase tracking-wider text-[10px]">Tenant & Store</th>
+                          <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 font-semibold uppercase tracking-wider text-[10px]">Destination Channel</th>
+                          <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 font-semibold uppercase tracking-wider text-[10px]">Delivery Status</th>
+                          <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 font-semibold uppercase tracking-wider text-[10px]">Payload Preview</th>
+                          <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 font-semibold uppercase tracking-wider text-[10px] text-right">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#1E293B]/60">
                         {dispatchLogs.map((log) => (
                           <React.Fragment key={log.id}>
                             <tr className="hover:bg-[#141C2B]/50 transition-colors">
-                              <td className="px-4 py-3.5">
+                              <td className="px-3.5 sm:px-4 py-3 sm:py-3.5">
                                 <div className="font-mono text-xs font-bold text-[#FDF4D2]">{log.dispatch_id}</div>
                                 <div className="text-[11px] text-[#94A3B8] font-medium">{new Date(log.created_at).toLocaleTimeString()}</div>
                               </td>
 
-                              <td className="px-4 py-3.5">
+                              <td className="px-3.5 sm:px-4 py-3 sm:py-3.5">
                                 <div className="font-semibold text-[#FDF4D2] text-xs">{log.tenant_email}</div>
                                 <div className="text-[#94A3B8] text-xs">{log.store_url}</div>
                               </td>
 
-                              <td className="px-4 py-3.5">
+                              <td className="px-3.5 sm:px-4 py-3 sm:py-3.5">
                                 <div className="font-mono text-xs text-[#CBD5E1] truncate max-w-[220px]" title={log.destination}>
                                   {log.destination}
                                 </div>
                               </td>
 
-                              <td className="px-4 py-3.5 whitespace-nowrap">
+                              <td className="px-3.5 sm:px-4 py-3 sm:py-3.5 whitespace-nowrap">
                                 <span
                                   className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] font-medium border ${
                                     log.status_label === 'Delivered'
@@ -1583,7 +1585,7 @@ export default function AdminDashboardPage() {
                                 </span>
                               </td>
 
-                              <td className="px-4 py-3.5 whitespace-nowrap">
+                              <td className="px-3.5 sm:px-4 py-3 sm:py-3.5 whitespace-nowrap">
                                 <button
                                   onClick={() => setExpandedDispatchId(expandedDispatchId === log.id ? null : log.id)}
                                   className="text-xs text-[#CBD5E1] hover:text-[#FDF4D2] font-semibold flex items-center gap-1.5 transition-colors"
@@ -1593,7 +1595,7 @@ export default function AdminDashboardPage() {
                                 </button>
                               </td>
 
-                              <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                              <td className="px-3.5 sm:px-4 py-3 sm:py-3.5 text-right whitespace-nowrap">
                                 <div className="flex items-center justify-end gap-2">
                                   <button
                                     onClick={() => handleRetryDispatch(log.id)}
@@ -1614,12 +1616,12 @@ export default function AdminDashboardPage() {
 
                             {expandedDispatchId === log.id && (
                               <tr className="bg-[#070A12]">
-                                <td colSpan={6} className="px-4 py-4 border-t border-[#1E293B]">
+                                <td colSpan={6} className="px-3.5 sm:px-4 py-4 border-t border-[#1E293B]">
                                   <div className="text-xs text-[#CBD5E1] mb-2 font-bold flex items-center gap-2">
                                     <Terminal className="w-4 h-4 text-[#10B981]" />
                                     <span>Slack Block Kit JSON Dispatched to Customer:</span>
                                   </div>
-                                  <pre className="p-4 bg-[#0a0b1dff] border border-[#1E293B] rounded-lg text-xs font-mono text-[#CBD5E1] overflow-x-auto max-h-56 leading-relaxed">
+                                  <pre className="p-3 sm:p-4 bg-[#0a0b1dff] border border-[#1E293B] rounded-lg text-xs font-mono text-[#CBD5E1] overflow-x-auto max-h-56 leading-relaxed">
                                     {JSON.stringify(log.payload, null, 2)}
                                   </pre>
                                 </td>
@@ -1645,7 +1647,7 @@ export default function AdminDashboardPage() {
             {activeTab === 'config' && tabLoading && <ConfigTabSkeleton />}
             {activeTab === 'config' && !tabLoading && (
               <div className="max-w-3xl mx-auto space-y-6">
-                <div className="bg-[#0F1522] border border-[#1E293B] rounded-xl p-5 sm:p-7 space-y-6 shadow-sm">
+                <div className="bg-[#0F1522] border border-[#1E293B] rounded-xl p-4 sm:p-6 lg:p-7 space-y-5 sm:space-y-6 shadow-sm">
                   <div>
                     <h3 className="text-base sm:text-lg font-bold text-[#FDF4D2]">Platform Operational Controls & Feature Flags</h3>
                     <p className="text-xs text-[#94A3B8] mt-1 font-medium">
@@ -1655,7 +1657,7 @@ export default function AdminDashboardPage() {
 
                   <form onSubmit={handleSaveConfig} className="space-y-5">
                     {/* Maintenance Mode */}
-                    <div className="flex items-center justify-between p-4 bg-[#0a0b1dff] border border-[#1E293B] rounded-xl">
+                    <div className="flex items-center justify-between p-3.5 sm:p-4 bg-[#0a0b1dff] border border-[#1E293B] rounded-xl">
                       <div className="pr-4">
                         <div className="text-xs font-semibold text-[#FDF4D2]">Maintenance Mode</div>
                         <div className="text-[11px] text-[#94A3B8] mt-0.5">
@@ -1674,7 +1676,7 @@ export default function AdminDashboardPage() {
                     </div>
 
                     {/* Registration Gate */}
-                    <div className="p-4 bg-[#0a0b1dff] border border-[#1E293B] rounded-xl space-y-2">
+                    <div className="p-3.5 sm:p-4 bg-[#0a0b1dff] border border-[#1E293B] rounded-xl space-y-2">
                       <label className="block text-xs font-semibold text-[#FDF4D2]">Registration Gate</label>
                       <p className="text-[11px] text-[#94A3B8]">
                         Regulates pilot onboarding and access controls on the public landing page.
@@ -1693,12 +1695,12 @@ export default function AdminDashboardPage() {
                     </div>
 
                     {/* Global Rate Limiting */}
-                    <div className="p-4 bg-[#0a0b1dff] border border-[#1E293B] rounded-xl space-y-2">
+                    <div className="p-3.5 sm:p-4 bg-[#0a0b1dff] border border-[#1E293B] rounded-xl space-y-2">
                       <label className="block text-xs font-semibold text-[#FDF4D2]">Global Pub/Sub Ingestion Rate Limiter</label>
                       <p className="text-[11px] text-[#94A3B8]">
                         Maximum Google Cloud Pub/Sub and webhook transactions processed per minute per tenant namespace.
                       </p>
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3">
                         <input
                           type="number"
                           min="100"
@@ -1706,14 +1708,14 @@ export default function AdminDashboardPage() {
                           step="50"
                           value={config.rate_limit_per_min}
                           onChange={(e) => setConfig({ ...config, rate_limit_per_min: Number(e.target.value) })}
-                          className="w-48 bg-[#0F1522] border border-[#1E293B] rounded-lg p-2.5 text-xs text-[#FDF4D2] font-semibold focus:outline-none focus:border-[#FF788D] transition-colors"
+                          className="w-full sm:w-48 bg-[#0F1522] border border-[#1E293B] rounded-lg p-2.5 text-xs text-[#FDF4D2] font-semibold focus:outline-none focus:border-[#FF788D] transition-colors"
                         />
                         <span className="text-xs text-[#94A3B8] font-semibold">req / minute</span>
                       </div>
                     </div>
 
                     {/* Global Alert Banner */}
-                    <div className="p-4 bg-[#0a0b1dff] border border-[#1E293B] rounded-xl space-y-2">
+                    <div className="p-3.5 sm:p-4 bg-[#0a0b1dff] border border-[#1E293B] rounded-xl space-y-2">
                       <label className="block text-xs font-semibold text-[#FDF4D2]">Global Customer Dashboard Alert Banner</label>
                       <p className="text-[11px] text-[#94A3B8]">
                         Broadcasts a live banner across all authenticated customer dashboards. Leave blank to disable.

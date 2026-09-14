@@ -25,7 +25,7 @@ export function Skeleton({
  */
 export function KpiCardSkeleton() {
   return (
-    <div className="bg-[#0F1522] border border-[#1E293B] border-t-white/[0.04] rounded-xl p-4.5 space-y-2.5 shadow-sm">
+    <div className="bg-[#0F1522] border border-[#1E293B] border-t-white/[0.04] rounded-xl p-4 sm:p-5 space-y-3 shadow-sm">
       <div className="flex items-center justify-between">
         <Skeleton className="h-3 w-28 rounded-sm" />
         <Skeleton className="w-6 h-6 rounded-md" />
@@ -44,9 +44,9 @@ export function KpiCardSkeleton() {
  */
 export function TelemetryKpiGridSkeleton() {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
       {/* Card 1: MRR */}
-      <div className="bg-[#0F1522] border border-[#1E293B] border-t-white/[0.04] rounded-xl p-4.5 space-y-2.5 shadow-sm">
+      <div className="bg-[#0F1522] border border-[#1E293B] border-t-white/[0.04] rounded-xl p-4 sm:p-5 space-y-3 shadow-sm">
         <div className="flex items-center justify-between">
           <Skeleton className="h-3 w-32 rounded-sm" />
           <Skeleton className="w-6 h-6 rounded-md" />
@@ -62,7 +62,7 @@ export function TelemetryKpiGridSkeleton() {
       </div>
 
       {/* Card 2: Active Accounts */}
-      <div className="bg-[#0F1522] border border-[#1E293B] border-t-white/[0.04] rounded-xl p-4.5 space-y-2.5 shadow-sm">
+      <div className="bg-[#0F1522] border border-[#1E293B] border-t-white/[0.04] rounded-xl p-4 sm:p-5 space-y-3 shadow-sm">
         <div className="flex items-center justify-between">
           <Skeleton className="h-3 w-24 rounded-sm" />
           <Skeleton className="w-6 h-6 rounded-md" />
@@ -81,7 +81,7 @@ export function TelemetryKpiGridSkeleton() {
       </div>
 
       {/* Card 3: Monitored Stores */}
-      <div className="bg-[#0F1522] border border-[#1E293B] border-t-white/[0.04] rounded-xl p-4.5 space-y-2.5 shadow-sm">
+      <div className="bg-[#0F1522] border border-[#1E293B] border-t-white/[0.04] rounded-xl p-4 sm:p-5 space-y-3 shadow-sm">
         <div className="flex items-center justify-between">
           <Skeleton className="h-3 w-28 rounded-sm" />
           <Skeleton className="w-6 h-6 rounded-md" />
@@ -94,7 +94,7 @@ export function TelemetryKpiGridSkeleton() {
       </div>
 
       {/* Card 4: Observed SKUs */}
-      <div className="bg-[#0F1522] border border-[#1E293B] border-t-white/[0.04] rounded-xl p-4.5 space-y-2.5 shadow-sm">
+      <div className="bg-[#0F1522] border border-[#1E293B] border-t-white/[0.04] rounded-xl p-4 sm:p-5 space-y-3 shadow-sm">
         <div className="flex items-center justify-between">
           <Skeleton className="h-3 w-24 rounded-sm" />
           <Skeleton className="w-6 h-6 rounded-md" />
@@ -114,9 +114,9 @@ export function TelemetryKpiGridSkeleton() {
  */
 export function HealthConsoleSkeleton() {
   return (
-    <div className="bg-[#0F1522] border border-[#1E293B] rounded-xl divide-y sm:divide-y-0 sm:divide-x divide-[#1E293B] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 shadow-sm overflow-hidden">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-[#1E293B] border border-[#1E293B] rounded-xl overflow-hidden shadow-sm">
       {/* Metric 1: Ingestion */}
-      <div className="p-4.5 space-y-2">
+      <div className="bg-[#0F1522] p-4 sm:p-5 space-y-2.5">
         <div className="flex items-center justify-between">
           <Skeleton className="h-2.5 w-20 rounded-sm" />
           <Skeleton className="w-3.5 h-3.5 rounded-sm" />
@@ -134,7 +134,7 @@ export function HealthConsoleSkeleton() {
       </div>
 
       {/* Metric 2: Latency */}
-      <div className="p-4.5 space-y-2">
+      <div className="bg-[#0F1522] p-4 sm:p-5 space-y-2.5">
         <div className="flex items-center justify-between">
           <Skeleton className="h-2.5 w-24 rounded-sm" />
           <Skeleton className="w-3.5 h-3.5 rounded-sm" />
@@ -148,7 +148,7 @@ export function HealthConsoleSkeleton() {
       </div>
 
       {/* Metric 3: Dead Letter Queue */}
-      <div className="p-4.5 space-y-2">
+      <div className="bg-[#0F1522] p-4 sm:p-5 space-y-2.5">
         <div className="flex items-center justify-between">
           <Skeleton className="h-2.5 w-28 rounded-sm" />
           <Skeleton className="w-3.5 h-3.5 rounded-sm" />
@@ -161,7 +161,7 @@ export function HealthConsoleSkeleton() {
       </div>
 
       {/* Metric 4: Webhook Failure Rate */}
-      <div className="p-4.5 space-y-2">
+      <div className="bg-[#0F1522] p-4 sm:p-5 space-y-2.5">
         <div className="flex items-center justify-between">
           <Skeleton className="h-2.5 w-32 rounded-sm" />
           <Skeleton className="w-3.5 h-3.5 rounded-sm" />
@@ -183,11 +183,11 @@ export function TenantsTabSkeleton() {
   return (
     <div className="space-y-4">
       {/* Search & Filter Bar Skeleton */}
-      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-[#0F1522] border border-[#1E293B] p-3 rounded-xl shadow-sm">
-        <Skeleton className="w-full sm:w-88 h-9 rounded-lg" />
-        <div className="flex items-center gap-2.5">
-          <Skeleton className="w-1/2 sm:w-32 h-9 rounded-lg" />
-          <Skeleton className="w-1/2 sm:w-32 h-9 rounded-lg" />
+      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-[#0F1522] border border-[#1E293B] p-3 sm:p-3.5 rounded-xl shadow-sm">
+        <Skeleton className="w-full sm:w-80 md:w-96 h-9 rounded-lg" />
+        <div className="flex items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
+          <Skeleton className="flex-1 sm:flex-initial sm:w-32 h-9 rounded-lg" />
+          <Skeleton className="flex-1 sm:flex-initial sm:w-32 h-9 rounded-lg" />
         </div>
       </div>
 
@@ -197,18 +197,18 @@ export function TenantsTabSkeleton() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-[#1E293B] bg-[#0c121e]">
-                <th className="px-4 py-3"><Skeleton className="h-3 w-28 rounded-sm" /></th>
-                <th className="px-4 py-3 hidden md:table-cell"><Skeleton className="h-3 w-16 rounded-sm" /></th>
-                <th className="px-4 py-3"><Skeleton className="h-3 w-16 rounded-sm" /></th>
-                <th className="px-4 py-3"><Skeleton className="h-3 w-14 rounded-sm" /></th>
-                <th className="px-4 py-3 hidden lg:table-cell"><Skeleton className="h-3 w-14 rounded-sm" /></th>
-                <th className="px-4 py-3 text-right"><Skeleton className="h-3 w-20 ml-auto rounded-sm" /></th>
+                <th className="px-3.5 sm:px-4 py-3 sm:py-3.5"><Skeleton className="h-3 w-28 rounded-sm" /></th>
+                <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 hidden md:table-cell"><Skeleton className="h-3 w-16 rounded-sm" /></th>
+                <th className="px-3.5 sm:px-4 py-3 sm:py-3.5"><Skeleton className="h-3 w-16 rounded-sm" /></th>
+                <th className="px-3.5 sm:px-4 py-3 sm:py-3.5"><Skeleton className="h-3 w-14 rounded-sm" /></th>
+                <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 hidden lg:table-cell"><Skeleton className="h-3 w-14 rounded-sm" /></th>
+                <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 text-right"><Skeleton className="h-3 w-20 ml-auto rounded-sm" /></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#1E293B]/60">
               {[1, 2, 3, 4, 5].map((idx) => (
                 <tr key={idx} className="hover:bg-[#141C2B]/30 transition-colors">
-                  <td className="px-4 py-3.5">
+                  <td className="px-3.5 sm:px-4 py-3 sm:py-3.5">
                     <div className="flex items-center gap-3">
                       <Skeleton className="w-8 h-8 rounded-md shrink-0" />
                       <div className="space-y-1">
@@ -217,25 +217,25 @@ export function TenantsTabSkeleton() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3.5 hidden md:table-cell">
+                  <td className="px-3.5 sm:px-4 py-3 sm:py-3.5 hidden md:table-cell">
                     <div className="space-y-1">
                       <Skeleton className="h-3 w-36 rounded-sm" />
                       <Skeleton className="h-2.5 w-20 rounded-sm" />
                     </div>
                   </td>
-                  <td className="px-4 py-3.5">
+                  <td className="px-3.5 sm:px-4 py-3 sm:py-3.5">
                     <Skeleton className="h-5 w-20 rounded" />
                   </td>
-                  <td className="px-4 py-3.5">
+                  <td className="px-3.5 sm:px-4 py-3 sm:py-3.5">
                     <div className="flex items-center gap-1.5">
                       <Skeleton className="w-1.5 h-1.5 rounded-full" />
                       <Skeleton className="h-3 w-12 rounded-sm" />
                     </div>
                   </td>
-                  <td className="px-4 py-3.5 hidden lg:table-cell">
+                  <td className="px-3.5 sm:px-4 py-3 sm:py-3.5 hidden lg:table-cell">
                     <Skeleton className="h-3 w-20 rounded-sm" />
                   </td>
-                  <td className="px-4 py-3.5 text-right">
+                  <td className="px-3.5 sm:px-4 py-3 sm:py-3.5 text-right">
                     <div className="flex items-center justify-end gap-1.5">
                       <Skeleton className="w-7 h-7 rounded-md" />
                       <Skeleton className="w-7 h-7 rounded-md" />
@@ -260,11 +260,11 @@ export function StoresTabSkeleton() {
   return (
     <div className="space-y-4">
       {/* Search & Action Bar Skeleton */}
-      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-[#0F1522] border border-[#1E293B] p-3 rounded-xl shadow-sm">
-        <Skeleton className="w-full sm:w-88 h-9 rounded-lg" />
-        <div className="flex items-center gap-2.5">
-          <Skeleton className="w-1/2 sm:w-36 h-9 rounded-lg" />
-          <Skeleton className="w-1/2 sm:w-32 h-9 rounded-lg" />
+      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-[#0F1522] border border-[#1E293B] p-3 sm:p-3.5 rounded-xl shadow-sm">
+        <Skeleton className="w-full sm:w-80 md:w-96 h-9 rounded-lg" />
+        <div className="flex items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
+          <Skeleton className="flex-1 sm:flex-initial sm:w-36 h-9 rounded-lg" />
+          <Skeleton className="flex-1 sm:flex-initial sm:w-32 h-9 rounded-lg" />
         </div>
       </div>
 
@@ -274,39 +274,39 @@ export function StoresTabSkeleton() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-[#1E293B] bg-[#0c121e]">
-                <th className="px-4 py-3"><Skeleton className="h-3 w-28 rounded-sm" /></th>
-                <th className="px-4 py-3"><Skeleton className="h-3 w-32 rounded-sm" /></th>
-                <th className="px-4 py-3 hidden md:table-cell"><Skeleton className="h-3 w-24 rounded-sm" /></th>
-                <th className="px-4 py-3 hidden lg:table-cell"><Skeleton className="h-3 w-20 rounded-sm" /></th>
-                <th className="px-4 py-3"><Skeleton className="h-3 w-16 rounded-sm" /></th>
-                <th className="px-4 py-3 text-right"><Skeleton className="h-3 w-16 ml-auto rounded-sm" /></th>
+                <th className="px-3.5 sm:px-4 py-3 sm:py-3.5"><Skeleton className="h-3 w-28 rounded-sm" /></th>
+                <th className="px-3.5 sm:px-4 py-3 sm:py-3.5"><Skeleton className="h-3 w-32 rounded-sm" /></th>
+                <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 hidden md:table-cell"><Skeleton className="h-3 w-24 rounded-sm" /></th>
+                <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 hidden lg:table-cell"><Skeleton className="h-3 w-20 rounded-sm" /></th>
+                <th className="px-3.5 sm:px-4 py-3 sm:py-3.5"><Skeleton className="h-3 w-16 rounded-sm" /></th>
+                <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 text-right"><Skeleton className="h-3 w-16 ml-auto rounded-sm" /></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#1E293B]/60">
               {[1, 2, 3, 4, 5].map((idx) => (
                 <tr key={idx} className="hover:bg-[#141C2B]/30 transition-colors">
-                  <td className="px-4 py-3.5">
+                  <td className="px-3.5 sm:px-4 py-3 sm:py-3.5">
                     <Skeleton className="h-3.5 w-28 rounded-sm font-mono" />
                   </td>
-                  <td className="px-4 py-3.5">
+                  <td className="px-3.5 sm:px-4 py-3 sm:py-3.5">
                     <div className="space-y-1">
                       <Skeleton className="h-3.5 w-36 rounded-sm" />
                       <Skeleton className="h-2.5 w-28 rounded-sm" />
                     </div>
                   </td>
-                  <td className="px-4 py-3.5 hidden md:table-cell">
+                  <td className="px-3.5 sm:px-4 py-3 sm:py-3.5 hidden md:table-cell">
                     <Skeleton className="h-5 w-24 rounded" />
                   </td>
-                  <td className="px-4 py-3.5 hidden lg:table-cell">
+                  <td className="px-3.5 sm:px-4 py-3 sm:py-3.5 hidden lg:table-cell">
                     <div className="flex items-center gap-1.5">
                       <Skeleton className="w-1.5 h-1.5 rounded-full" />
                       <Skeleton className="h-3 w-16 rounded-sm" />
                     </div>
                   </td>
-                  <td className="px-4 py-3.5">
+                  <td className="px-3.5 sm:px-4 py-3 sm:py-3.5">
                     <Skeleton className="h-3.5 w-20 rounded-sm" />
                   </td>
-                  <td className="px-4 py-3.5 text-right">
+                  <td className="px-3.5 sm:px-4 py-3 sm:py-3.5 text-right">
                     <Skeleton className="w-16 h-7 ml-auto rounded-md" />
                   </td>
                 </tr>
@@ -328,7 +328,7 @@ export function PipelineDlqTabSkeleton() {
       {/* 2-Column Live Terminal + Latency Console */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Live Ingestion Stream Skeleton */}
-        <div className="lg:col-span-2 bg-[#0F1522] border border-[#1E293B] rounded-xl p-5 space-y-4 shadow-sm">
+        <div className="lg:col-span-2 bg-[#0F1522] border border-[#1E293B] rounded-xl p-4 sm:p-5 lg:p-6 space-y-4 shadow-sm">
           <div className="flex items-center justify-between border-b border-[#1E293B] pb-3">
             <div className="flex items-center gap-2">
               <Skeleton className="w-4 h-4 rounded-sm" />
@@ -342,7 +342,7 @@ export function PipelineDlqTabSkeleton() {
 
           <div className="space-y-2">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="p-3 rounded-lg bg-[#070A12] border border-[#1E293B] flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+              <div key={i} className="p-2.5 sm:p-3 rounded-lg bg-[#070A12] border border-[#1E293B] flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
                 <div className="flex items-center gap-2.5">
                   <Skeleton className="h-4 w-14 rounded font-mono" />
                   <Skeleton className="h-3.5 w-72 rounded-sm font-mono" />
@@ -354,7 +354,7 @@ export function PipelineDlqTabSkeleton() {
         </div>
 
         {/* Latency Breakdown Console Skeleton */}
-        <div className="bg-[#0F1522] border border-[#1E293B] rounded-xl p-5 space-y-4 shadow-sm flex flex-col justify-between">
+        <div className="bg-[#0F1522] border border-[#1E293B] rounded-xl p-4 sm:p-5 lg:p-6 space-y-4 shadow-sm flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between border-b border-[#1E293B] pb-3">
               <Skeleton className="h-3.5 w-40 rounded-sm" />
@@ -378,7 +378,7 @@ export function PipelineDlqTabSkeleton() {
             </div>
           </div>
 
-          <div className="p-3 bg-[#0a0b1dff] border border-[#1E293B] rounded-lg space-y-1">
+          <div className="p-3 sm:p-3.5 bg-[#0a0b1dff] border border-[#1E293B] rounded-lg space-y-1 mt-3">
             <Skeleton className="h-3 w-24 rounded-sm" />
             <Skeleton className="h-2.5 w-full rounded-sm" />
           </div>
@@ -387,12 +387,12 @@ export function PipelineDlqTabSkeleton() {
 
       {/* Dead Letter Queue (DLQ) Triage Table Skeleton */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="space-y-1">
             <Skeleton className="h-4 w-56 rounded-sm" />
             <Skeleton className="h-3 w-80 rounded-sm" />
           </div>
-          <Skeleton className="h-6 w-36 rounded-md" />
+          <Skeleton className="h-6 w-36 rounded-md self-start sm:self-auto" />
         </div>
 
         <div className="bg-[#0F1522] border border-[#1E293B] rounded-xl overflow-hidden shadow-sm">
@@ -400,23 +400,23 @@ export function PipelineDlqTabSkeleton() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-[#1E293B] bg-[#0c121e]">
-                  <th className="px-4 py-3"><Skeleton className="h-3 w-28 rounded-sm" /></th>
-                  <th className="px-4 py-3"><Skeleton className="h-3 w-24 rounded-sm" /></th>
-                  <th className="px-4 py-3"><Skeleton className="h-3 w-20 rounded-sm" /></th>
-                  <th className="px-4 py-3"><Skeleton className="h-3 w-24 rounded-sm" /></th>
-                  <th className="px-4 py-3"><Skeleton className="h-3 w-24 rounded-sm" /></th>
-                  <th className="px-4 py-3 text-right"><Skeleton className="h-3 w-16 ml-auto rounded-sm" /></th>
+                  <th className="px-3.5 sm:px-4 py-3 sm:py-3.5"><Skeleton className="h-3 w-28 rounded-sm" /></th>
+                  <th className="px-3.5 sm:px-4 py-3 sm:py-3.5"><Skeleton className="h-3 w-24 rounded-sm" /></th>
+                  <th className="px-3.5 sm:px-4 py-3 sm:py-3.5"><Skeleton className="h-3 w-20 rounded-sm" /></th>
+                  <th className="px-3.5 sm:px-4 py-3 sm:py-3.5"><Skeleton className="h-3 w-24 rounded-sm" /></th>
+                  <th className="px-3.5 sm:px-4 py-3 sm:py-3.5"><Skeleton className="h-3 w-24 rounded-sm" /></th>
+                  <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 text-right"><Skeleton className="h-3 w-16 ml-auto rounded-sm" /></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#1E293B]/60">
                 {[1, 2, 3].map((idx) => (
                   <tr key={idx} className="hover:bg-[#141C2B]/30 transition-colors">
-                    <td className="px-4 py-3.5"><Skeleton className="h-3.5 w-24 rounded-sm font-mono" /></td>
-                    <td className="px-4 py-3.5"><Skeleton className="h-3 w-16 rounded-sm" /></td>
-                    <td className="px-4 py-3.5"><Skeleton className="h-3.5 w-20 rounded-sm font-mono" /></td>
-                    <td className="px-4 py-3.5"><Skeleton className="h-5 w-36 rounded" /></td>
-                    <td className="px-4 py-3.5"><Skeleton className="h-3.5 w-28 rounded-sm" /></td>
-                    <td className="px-4 py-3.5 text-right">
+                    <td className="px-3.5 sm:px-4 py-3 sm:py-3.5"><Skeleton className="h-3.5 w-24 rounded-sm font-mono" /></td>
+                    <td className="px-3.5 sm:px-4 py-3 sm:py-3.5"><Skeleton className="h-3 w-16 rounded-sm" /></td>
+                    <td className="px-3.5 sm:px-4 py-3 sm:py-3.5"><Skeleton className="h-3.5 w-20 rounded-sm font-mono" /></td>
+                    <td className="px-3.5 sm:px-4 py-3 sm:py-3.5"><Skeleton className="h-5 w-36 rounded" /></td>
+                    <td className="px-3.5 sm:px-4 py-3 sm:py-3.5"><Skeleton className="h-3.5 w-28 rounded-sm" /></td>
+                    <td className="px-3.5 sm:px-4 py-3 sm:py-3.5 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Skeleton className="w-16 h-6 rounded-md" />
                         <Skeleton className="w-14 h-6 rounded-md" />
@@ -440,8 +440,8 @@ export function DispatchesTabSkeleton() {
   return (
     <div className="space-y-4">
       {/* Filter Toolbar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-[#0F1522] border border-[#1E293B] p-3 rounded-xl shadow-sm">
-        <Skeleton className="w-full sm:w-88 h-9 rounded-lg" />
+      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-[#0F1522] border border-[#1E293B] p-3 sm:p-3.5 rounded-xl shadow-sm">
+        <Skeleton className="w-full sm:w-80 md:w-96 h-9 rounded-lg" />
         <Skeleton className="w-full sm:w-36 h-9 rounded-lg" />
       </div>
 
@@ -451,36 +451,36 @@ export function DispatchesTabSkeleton() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-[#1E293B] bg-[#0c121e]">
-                <th className="px-4 py-3"><Skeleton className="h-3 w-20 rounded-sm" /></th>
-                <th className="px-4 py-3"><Skeleton className="h-3 w-28 rounded-sm" /></th>
-                <th className="px-4 py-3 hidden md:table-cell"><Skeleton className="h-3 w-32 rounded-sm" /></th>
-                <th className="px-4 py-3 hidden lg:table-cell"><Skeleton className="h-3 w-16 rounded-sm" /></th>
-                <th className="px-4 py-3"><Skeleton className="h-3 w-16 rounded-sm" /></th>
-                <th className="px-4 py-3 text-right"><Skeleton className="h-3 w-14 ml-auto rounded-sm" /></th>
+                <th className="px-3.5 sm:px-4 py-3 sm:py-3.5"><Skeleton className="h-3 w-20 rounded-sm" /></th>
+                <th className="px-3.5 sm:px-4 py-3 sm:py-3.5"><Skeleton className="h-3 w-28 rounded-sm" /></th>
+                <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 hidden md:table-cell"><Skeleton className="h-3 w-32 rounded-sm" /></th>
+                <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 hidden lg:table-cell"><Skeleton className="h-3 w-16 rounded-sm" /></th>
+                <th className="px-3.5 sm:px-4 py-3 sm:py-3.5"><Skeleton className="h-3 w-16 rounded-sm" /></th>
+                <th className="px-3.5 sm:px-4 py-3 sm:py-3.5 text-right"><Skeleton className="h-3 w-14 ml-auto rounded-sm" /></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#1E293B]/60">
               {[1, 2, 3, 4, 5].map((idx) => (
                 <tr key={idx} className="hover:bg-[#141C2B]/30 transition-colors">
-                  <td className="px-4 py-3.5">
+                  <td className="px-3.5 sm:px-4 py-3 sm:py-3.5">
                     <Skeleton className="h-3.5 w-16 rounded-sm font-mono" />
                   </td>
-                  <td className="px-4 py-3.5">
+                  <td className="px-3.5 sm:px-4 py-3 sm:py-3.5">
                     <div className="space-y-1">
                       <Skeleton className="h-3.5 w-32 rounded-sm" />
                       <Skeleton className="h-2.5 w-24 rounded-sm" />
                     </div>
                   </td>
-                  <td className="px-4 py-3.5 hidden md:table-cell">
+                  <td className="px-3.5 sm:px-4 py-3 sm:py-3.5 hidden md:table-cell">
                     <Skeleton className="h-3.5 w-28 rounded-sm" />
                   </td>
-                  <td className="px-4 py-3.5 hidden lg:table-cell">
+                  <td className="px-3.5 sm:px-4 py-3 sm:py-3.5 hidden lg:table-cell">
                     <Skeleton className="h-3.5 w-14 rounded-sm" />
                   </td>
-                  <td className="px-4 py-3.5">
+                  <td className="px-3.5 sm:px-4 py-3 sm:py-3.5">
                     <Skeleton className="h-5 w-20 rounded" />
                   </td>
-                  <td className="px-4 py-3.5 text-right">
+                  <td className="px-3.5 sm:px-4 py-3 sm:py-3.5 text-right">
                     <Skeleton className="w-16 h-7 ml-auto rounded-md" />
                   </td>
                 </tr>
@@ -498,15 +498,15 @@ export function DispatchesTabSkeleton() {
  */
 export function ConfigTabSkeleton() {
   return (
-    <div className="bg-[#0F1522] border border-[#1E293B] rounded-xl p-6 space-y-6 shadow-sm max-w-4xl">
+    <div className="bg-[#0F1522] border border-[#1E293B] rounded-xl p-4 sm:p-6 lg:p-7 space-y-5 sm:space-y-6 shadow-sm max-w-3xl mx-auto">
       <div className="space-y-1.5 pb-4 border-b border-[#1E293B]">
         <Skeleton className="h-5 w-48 rounded-sm" />
         <Skeleton className="h-3 w-80 rounded-sm" />
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-5">
         {/* Toggle 1: Maintenance Mode */}
-        <div className="flex items-center justify-between p-4 rounded-lg bg-[#0a0b1dff] border border-[#1E293B]">
+        <div className="flex items-center justify-between p-3.5 sm:p-4 rounded-xl bg-[#0a0b1dff] border border-[#1E293B]">
           <div className="space-y-1">
             <Skeleton className="h-4 w-36 rounded-sm" />
             <Skeleton className="h-3 w-64 rounded-sm" />
@@ -515,33 +515,26 @@ export function ConfigTabSkeleton() {
         </div>
 
         {/* Setting 2: Registration Gate */}
-        <div className="space-y-2">
+        <div className="p-3.5 sm:p-4 rounded-xl bg-[#0a0b1dff] border border-[#1E293B] space-y-2">
           <Skeleton className="h-3.5 w-32 rounded-sm" />
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="p-3.5 rounded-lg bg-[#0a0b1dff] border border-[#1E293B] space-y-1.5">
-                <Skeleton className="h-4 w-20 rounded-sm" />
-                <Skeleton className="h-2.5 w-full rounded-sm" />
-              </div>
-            ))}
-          </div>
+          <Skeleton className="h-9 w-full rounded-lg bg-[#0F1522]" />
         </div>
 
         {/* Setting 3: Rate Limiting */}
-        <div className="space-y-2">
+        <div className="p-3.5 sm:p-4 rounded-xl bg-[#0a0b1dff] border border-[#1E293B] space-y-2">
           <Skeleton className="h-3.5 w-44 rounded-sm" />
-          <Skeleton className="h-10 w-full rounded-lg bg-[#0a0b1dff]" />
+          <Skeleton className="h-9 w-full sm:w-48 rounded-lg bg-[#0F1522]" />
         </div>
 
         {/* Setting 4: Alert Banner */}
-        <div className="space-y-2">
+        <div className="p-3.5 sm:p-4 rounded-xl bg-[#0a0b1dff] border border-[#1E293B] space-y-2">
           <Skeleton className="h-3.5 w-40 rounded-sm" />
-          <Skeleton className="h-20 w-full rounded-lg bg-[#0a0b1dff]" />
+          <Skeleton className="h-20 w-full rounded-lg bg-[#0F1522]" />
         </div>
 
         {/* Save Button */}
-        <div className="pt-2">
-          <Skeleton className="w-36 h-9 rounded-md" />
+        <div className="flex justify-end pt-2">
+          <Skeleton className="w-full sm:w-36 h-9 rounded-md" />
         </div>
       </div>
     </div>
@@ -640,25 +633,25 @@ export function DashboardPageSkeleton() {
 
       {/* Main Content Area Skeleton */}
       <div className="flex-1 min-w-0 flex flex-col min-h-screen">
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
+        <main className="flex-1 max-w-7xl w-full mx-auto px-3.5 sm:px-6 lg:px-8 py-5 sm:py-6 lg:py-8 space-y-5 sm:space-y-6 lg:space-y-8">
           {/* Top Title & Telemetry Status Bar */}
-          <div className="flex items-center justify-between pb-4 border-b border-[#1E293B]/70 flex-wrap gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-[#1E293B]/70 gap-4">
             <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Skeleton className="h-2.5 w-24 rounded-sm" />
                 <Skeleton className="h-2.5 w-2 rounded-sm" />
                 <Skeleton className="h-2.5 w-28 rounded-sm" />
                 <Skeleton className="h-2.5 w-2 rounded-sm" />
                 <Skeleton className="h-4 w-20 rounded font-mono" />
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <Skeleton className="h-6 w-64 rounded-md" />
                 <Skeleton className="h-5 w-24 rounded font-mono" />
               </div>
               <Skeleton className="h-3 w-80 rounded-sm" />
             </div>
 
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2.5 shrink-0">
               <Skeleton className="hidden sm:block h-8 w-44 rounded-md" />
               <Skeleton className="h-8 w-20 rounded-md" />
             </div>
