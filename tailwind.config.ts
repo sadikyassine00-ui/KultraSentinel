@@ -1,12 +1,10 @@
 import type { Config } from "tailwindcss";
-import { heroui } from "@heroui/react";
 
 const config: Config = {
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
-    "./node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}"
   ],
   theme: {
     extend: {
@@ -28,7 +26,16 @@ const config: Config = {
         satoshi: ["'Satoshi'", "sans-serif"],
         sans: ["'Satoshi'", "sans-serif"],
         display: ["'Satoshi'", "sans-serif"],
-        mono: ["'Satoshi'", "sans-serif"],
+        mono: [
+          "ui-monospace",
+          "Geist Mono",
+          "JetBrains Mono",
+          "SFMono-Regular",
+          "Menlo",
+          "Monaco",
+          "Consolas",
+          "monospace",
+        ],
       },
       borderRadius: {
         xs: "2px",
@@ -39,23 +46,7 @@ const config: Config = {
     },
   },
   darkMode: "class",
-  plugins: [
-    heroui({
-      themes: {
-        dark: {
-          colors: {
-            background: "#0a0b1dff",
-            foreground: "#FDF4D2",
-            primary: {
-              DEFAULT: "#FF788D",
-              foreground: "#0a0b1dff",
-            },
-            focus: "#FF788D",
-          },
-        },
-      },
-    }),
-  ],
+  plugins: [],
 };
 
 export default config;

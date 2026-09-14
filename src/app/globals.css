@@ -55,6 +55,26 @@ html, body, button, input, textarea, select {
   );
 }
 
+/* Nocturne Sentinel Lightweight Skeleton Shimmer (GPU-accelerated, zero-pulse, zero-glow) */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    #141C2B 0%,
+    #1C2638 50%,
+    #141C2B 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.8s ease-in-out infinite;
+}
 
 @media (prefers-reduced-motion: reduce) {
   html {
@@ -65,4 +85,9 @@ html, body, button, input, textarea, select {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+  .skeleton-shimmer {
+    animation: none !important;
+    background: #141C2B !important;
+  }
 }
+

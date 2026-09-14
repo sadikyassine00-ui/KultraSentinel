@@ -40,6 +40,14 @@ import {
   DispatchLog,
   SystemConfig,
 } from '@/lib/db';
+import {
+  TenantsTabSkeleton,
+  StoresTabSkeleton,
+  PipelineDlqTabSkeleton,
+  DispatchesTabSkeleton,
+  ConfigTabSkeleton,
+  DashboardPageSkeleton,
+} from '@/components/Skeleton';
 
 type TabType = 'tenants' | 'stores' | 'pipeline' | 'dispatches' | 'config';
 
@@ -47,6 +55,8 @@ export default function AdminDashboardPage() {
   const router = useRouter();
   const [adminUser, setAdminUser] = useState<{ email: string; name?: string; role: string } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [tabLoading, setTabLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('tenants');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -159,7 +169,12 @@ export default function AdminDashboardPage() {
     }
   }, []);
 
-  const loadTabData = useCallback(async () => {
+  const loadTabData = useCallback(async (isManualRefresh = false) => {
+    if (isManualRefresh) {
+      setIsRefreshing(true);
+    } else {
+      setTabLoading(true);
+    }
     try {
       await loadTelemetry();
 
@@ -201,6 +216,9 @@ export default function AdminDashboardPage() {
     } catch (err) {
       console.error('Error loading tab data:', err);
       setFeedback({ type: 'error', message: 'Failed to communicate with platform services.' });
+    } finally {
+      setTabLoading(false);
+      setIsRefreshing(false);
     }
   }, [activeTab, tenantSearch, tenantPlanFilter, tenantStatusFilter, storeSearch, storeAccountFilter, loadTelemetry]);
 
@@ -397,14 +415,7 @@ export default function AdminDashboardPage() {
   ];
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0a0b1dff] text-[#FDF4D2] flex items-center justify-center">
-        <div className="text-xs text-[#94A3B8] flex items-center gap-2.5 font-medium">
-          <div className="w-2 h-2 rounded-full bg-[#10B981]" />
-          <span>Verifying platform owner credentials...</span>
-        </div>
-      </div>
-    );
+    return <DashboardPageSkeleton />;
   }
 
   // Get initials for tenant/user monogram
@@ -745,12 +756,13 @@ export default function AdminDashboardPage() {
                 </div>
 
                 <button
-                  onClick={() => loadTabData()}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#141C2B] hover:bg-[#1E293B] text-[#CBD5E1] hover:text-[#FDF4D2] border border-[#1E293B] hover:border-[#2B3D55] text-xs font-semibold transition-all active:translate-y-[0.5px] shadow-sm"
+                  onClick={() => loadTabData(true)}
+                  disabled={isRefreshing}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#141C2B] hover:bg-[#1E293B] text-[#CBD5E1] hover:text-[#FDF4D2] border border-[#1E293B] hover:border-[#2B3D55] text-xs font-semibold transition-all active:translate-y-[0.5px] shadow-sm disabled:opacity-60"
                   title="Refresh telemetry"
                 >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Refresh</span>
+                  <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-[#FF788D]' : ''}`} />
+                  <span>{isRefreshing ? 'Syncing...' : 'Refresh'}</span>
                 </button>
               </div>
             </div>
@@ -954,7 +966,8 @@ export default function AdminDashboardPage() {
             </div>
 
             {/* TAB 1: Tenant Management */}
-            {activeTab === 'tenants' && (
+            {activeTab === 'tenants' && tabLoading && <TenantsTabSkeleton />}
+            {activeTab === 'tenants' && !tabLoading && (
               <div className="space-y-4">
                 {/* Search & Filter Bar */}
                 <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-[#0F1522] border border-[#1E293B] p-3 rounded-xl shadow-sm">
@@ -1098,26 +1111,25 @@ export default function AdminDashboardPage() {
                                 <button
                                   onClick={() => handleTenantAction(tenant.id, 'impersonate')}
                                   title="Impersonate User"
-                                  className="px-2.5 py-1.5 bg-[#141C2B] border border-[#1E293B] hover:border-[#2B3D55] text-[#FDF4D2] font-semibold rounded-md text-xs transition-all active:translate-y-[0.5px] shadow-sm flex items-center gap-1"
+                                  className="p-1.5 bg-[#141C2B] border border-[#1E293B] hover:border-[#FF788D]/40 text-[#94A3B8] hover:text-[#FF788D] rounded-md transition-all active:translate-y-[0.5px] shadow-sm"
                                 >
-                                  <Eye className="w-3 h-3 text-[#94A3B8]" />
-                                  <span>Impersonate</span>
+                                  <Eye className="w-3.5 h-3.5" />
                                 </button>
 
                                 <button
-                                  onClick={() => handleTenantAction(tenant.id, 'extendTrial')}
-                                  title="Extend Trial / Grant Pilot"
-                                  className="px-2.5 py-1.5 bg-[#141C2B] border border-[#1E293B] hover:border-[#2B3D55] text-[#CBD5E1] hover:text-[#FDF4D2] font-medium rounded-md text-xs transition-all active:translate-y-[0.5px] shadow-sm"
+                                  onClick={() => handleTenantAction(tenant.id, 'extendTrial', 'Agency Pilot')}
+                                  title="Upgrade to Agency Pilot"
+                                  className="p-1.5 bg-[#141C2B] border border-[#1E293B] hover:border-[#10B981]/40 text-[#94A3B8] hover:text-[#10B981] rounded-md transition-all active:translate-y-[0.5px] shadow-sm"
                                 >
-                                  Pilot Grant
+                                  <Play className="w-3.5 h-3.5" />
                                 </button>
 
                                 <button
                                   onClick={() => handleTenantAction(tenant.id, 'forceReauth')}
-                                  title="Force OAuth Re-Auth"
-                                  className="px-2.5 py-1.5 bg-[#141C2B] border border-[#1E293B] hover:border-[#2B3D55] text-[#CBD5E1] hover:text-[#FDF4D2] font-medium rounded-md text-xs transition-all active:translate-y-[0.5px] shadow-sm"
+                                  title="Force OAuth Reauthorization"
+                                  className="p-1.5 bg-[#141C2B] border border-[#1E293B] hover:border-[#CBD5E1]/40 text-[#94A3B8] hover:text-[#CBD5E1] rounded-md transition-all active:translate-y-[0.5px] shadow-sm"
                                 >
-                                  Re-Auth
+                                  <RefreshCw className="w-3.5 h-3.5" />
                                 </button>
 
                                 {tenant.status === 'active' ? (
@@ -1156,7 +1168,8 @@ export default function AdminDashboardPage() {
             )}
 
             {/* TAB 2: Global Store Registry */}
-            {activeTab === 'stores' && (
+            {activeTab === 'stores' && tabLoading && <StoresTabSkeleton />}
+            {activeTab === 'stores' && !tabLoading && (
               <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-[#0F1522] border border-[#1E293B] p-3 rounded-xl shadow-sm">
                   <div className="relative w-full sm:w-88">
@@ -1300,7 +1313,8 @@ export default function AdminDashboardPage() {
             )}
 
             {/* TAB 3: Pub/Sub Ingestion Pipeline & Dead Letter Queue */}
-            {activeTab === 'pipeline' && (
+            {activeTab === 'pipeline' && tabLoading && <PipelineDlqTabSkeleton />}
+            {activeTab === 'pipeline' && !tabLoading && (
               <div className="space-y-6">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
                   {/* Live Ingestion Stream */}
@@ -1508,7 +1522,8 @@ export default function AdminDashboardPage() {
             )}
 
             {/* TAB 4: Outbound Dispatch Logs */}
-            {activeTab === 'dispatches' && (
+            {activeTab === 'dispatches' && tabLoading && <DispatchesTabSkeleton />}
+            {activeTab === 'dispatches' && !tabLoading && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -1627,7 +1642,8 @@ export default function AdminDashboardPage() {
             )}
 
             {/* TAB 5: System Configuration & Feature Flags */}
-            {activeTab === 'config' && (
+            {activeTab === 'config' && tabLoading && <ConfigTabSkeleton />}
+            {activeTab === 'config' && !tabLoading && (
               <div className="max-w-3xl mx-auto space-y-6">
                 <div className="bg-[#0F1522] border border-[#1E293B] rounded-xl p-5 sm:p-7 space-y-6 shadow-sm">
                   <div>
