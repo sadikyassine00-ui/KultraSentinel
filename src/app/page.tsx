@@ -1,5 +1,4 @@
 import React from 'react';
-import { Header } from '@/components/Header';
 import { Hero } from '@/components/Hero';
 import { NetworkCanvas } from '@/components/NetworkCanvas';
 import { SocialProof } from '@/components/SocialProof';
@@ -9,13 +8,10 @@ import { Footer } from '@/components/Footer';
 export default function HomePage() {
   return (
     <main className="relative min-h-screen bg-[#0a0b1dff] text-[#FDF4D2] flex flex-col selection:bg-[#FF788D]/25 selection:text-[#FDF4D2]">
-      {/* Hero Container with integrated header, network canvas, and centered hero */}
+      {/* Hero Container with network canvas and centered hero */}
       <div className="relative w-full overflow-hidden flex flex-col">
         {/* Interactive Topological Canvas Mesh (z-[1]) */}
         <NetworkCanvas />
-
-        {/* Sticky Header without dividing line (z-50) */}
-        <Header />
 
         {/* Hero Section (z-10) */}
         <Hero />

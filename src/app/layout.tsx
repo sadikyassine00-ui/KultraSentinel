@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './satoshi-font.css';
 import './globals.css';
 import { Providers } from './providers';
+import { Header } from '@/components/Header';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://kultra.ai'),
@@ -74,8 +75,13 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="bg-[#0a0b1dff] text-[#FDF4D2] antialiased overflow-x-hidden selection:bg-[#FF788D]/25 selection:text-[#FDF4D2]">
-        <Providers>{children}</Providers>
+      <body className="bg-[#0a0b1dff] text-[#FDF4D2] antialiased overflow-x-hidden selection:bg-[#FF788D]/25 selection:text-[#FDF4D2] min-h-screen flex flex-col">
+        <Providers>
+          <Header />
+          <div className="flex-1 flex flex-col min-h-0 w-full">
+            {children}
+          </div>
+        </Providers>
       </body>
     </html>
   );

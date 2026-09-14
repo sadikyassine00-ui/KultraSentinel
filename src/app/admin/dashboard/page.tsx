@@ -341,6 +341,9 @@ export default function AdminDashboardPage() {
   const handleLogout = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('auth-change'));
+      }
       router.push('/admin/login');
     } catch {
       router.push('/admin/login');
@@ -398,42 +401,23 @@ export default function AdminDashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0b1dff] text-[#FDF4D2] font-sans antialiased selection:bg-[#FF788D] selection:text-white flex flex-col lg:flex-row">
-      {/* Mobile Top Header Bar */}
-      <header className="lg:hidden h-16 border-b border-[#253347] bg-[#0c101c]/95 backdrop-blur-md sticky top-0 z-40 px-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 rounded border border-[#2B3B52] bg-[#142036] text-[#FDF4D2] hover:bg-[#1C2C4A] focus:outline-none transition-colors"
-            aria-label="Toggle navigation menu"
-          >
-            {mobileMenuOpen ? <X className="w-5 h-5 text-[#FF788D]" /> : <Menu className="w-5 h-5" />}
-          </button>
-          <a href="#" className="flex items-center">
-            <Image
-              src="/assets/logos/kultraLogo-trimmed.png"
-              alt="Kultra"
-              width={120}
-              height={26}
-              className="h-6 w-auto object-contain brightness-110"
-              priority
-            />
-          </a>
-        </div>
+    <div className="flex-1 w-full bg-[#0a0b1dff] text-[#FDF4D2] font-sans antialiased selection:bg-[#FF788D] selection:text-white flex flex-col lg:flex-row">
+      {/* Mobile Sub-Navigation Bar */}
+      <div className="lg:hidden h-12 border-b border-[#1f2c42] bg-[#0c101c]/95 backdrop-blur-md px-4 flex items-center justify-between sticky top-[68px] z-30">
+        <button
+          onClick={() => setMobileMenuOpen(true)}
+          className="flex items-center gap-2 px-2.5 py-1.5 rounded border border-[#2B3B52] bg-[#142036] text-[#FDF4D2] hover:bg-[#1C2C4A] text-xs font-semibold"
+          aria-label="Open dashboard navigation"
+        >
+          <Menu className="w-4 h-4 text-[#FF788D]" />
+          <span>{navGroups.flatMap((g) => g.items).find((n) => n.id === activeTab)?.label}</span>
+        </button>
 
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] px-2.5 py-1 rounded bg-[#10B981]/15 border border-[#10B981]/40 text-[#34D399] font-medium">
-            Platform Owner
-          </span>
-          <button
-            onClick={handleLogout}
-            title="Sign out"
-            className="p-2 rounded border border-[#2B3B52] bg-[#142036] text-[#CBD5E1] hover:text-[#FF788D] hover:border-[#FF788D]/40 transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
+        <div className="flex items-center gap-1.5 text-[11px] text-[#34D399] font-medium">
+          <span className="w-2 h-2 rounded-full bg-[#10B981]" />
+          <span>Pub/Sub Active</span>
         </div>
-      </header>
+      </div>
 
       {/* Mobile Backdrop Overlay */}
       {mobileMenuOpen && (
@@ -445,41 +429,36 @@ export default function AdminDashboardPage() {
 
       {/* Sidebar Navigation */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-72 bg-[#0c101c] border-r border-[#1f2c42] flex flex-col justify-between transition-transform duration-200 ease-in-out lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 w-72 bg-[#0c101c] border-r border-[#1f2c42] flex flex-col justify-between transition-transform duration-200 ease-in-out lg:static lg:translate-x-0 lg:sticky lg:top-[68px] lg:h-[calc(100vh-68px)] lg:overflow-y-auto shrink-0 ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="p-5 space-y-6">
-          {/* Brand Header */}
-          <div className="space-y-3 pb-4 border-b border-[#1f2c42]">
+          {/* Console Header */}
+          <div className="space-y-2 pb-4 border-b border-[#1f2c42]">
             <div className="flex items-center justify-between">
-              <a href="#" className="flex items-center">
-                <Image
-                  src="/assets/logos/kultraLogo-trimmed.png"
-                  alt="Kultra Sentinel"
-                  width={140}
-                  height={30}
-                  className="h-7 w-auto object-contain brightness-110"
-                  priority
-                />
-              </a>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-[#10B981]" />
+                <span className="text-xs font-bold text-[#FDF4D2] tracking-wide uppercase">
+                  Sentinel Console
+                </span>
+              </div>
               <button
                 onClick={() => setMobileMenuOpen(false)}
                 className="lg:hidden p-1.5 rounded text-[#CBD5E1] hover:text-[#FDF4D2]"
                 aria-label="Close sidebar"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="flex items-center justify-between pt-1">
+            <div className="flex items-center justify-between pt-0.5">
               <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-[#152033] text-[#34D399] border border-[#10B981]/30">
-                Platform Owner Console
+                Platform Owner
               </span>
-              <div className="flex items-center gap-1.5 text-[11px] text-[#34D399] font-medium">
-                <span className="w-2 h-2 rounded-full bg-[#10B981]" />
-                <span>Pub/Sub Active</span>
-              </div>
+              <span className="text-[11px] text-[#94A3B8]">
+                Merchant API v1
+              </span>
             </div>
           </div>
 
@@ -554,8 +533,8 @@ export default function AdminDashboardPage() {
 
       {/* Main Mission Control Area */}
       <div className="flex-1 min-w-0 flex flex-col min-h-screen">
-        {/* Desktop Mission Control Top Header Bar */}
-        <header className="hidden lg:flex h-16 border-b border-[#1f2c42] bg-[#0c101c]/90 backdrop-blur-md px-6 items-center justify-between sticky top-0 z-30">
+        {/* Desktop Mission Control Sub-Header Strip */}
+        <header className="hidden lg:flex h-12 border-b border-[#1f2c42] bg-[#0c101c]/90 backdrop-blur-md px-6 items-center justify-between sticky top-[68px] z-20">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-xs font-semibold text-[#CBD5E1]">
               <span className="text-[#94A3B8]">Mission Control</span>
@@ -567,43 +546,25 @@ export default function AdminDashboardPage() {
 
             <div className="h-4 w-px bg-[#223147]" />
 
-            <div className="flex items-center gap-1.5 text-xs font-medium text-[#34D399] bg-[#10B981]/15 px-2.5 py-1 rounded border border-[#10B981]/40">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-[#34D399] bg-[#10B981]/15 px-2.5 py-0.5 rounded border border-[#10B981]/40">
               <span className="w-2 h-2 rounded-full bg-[#10B981]" />
               <span>Pub/Sub Ingestion Online (420 msg/min)</span>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="text-xs text-[#94A3B8] font-mono font-medium px-2 py-1 rounded bg-[#111828] border border-[#223147]">
+            <div className="text-xs text-[#94A3B8] font-mono font-medium px-2 py-0.5 rounded bg-[#111828] border border-[#223147]">
               GCP: us-central1
             </div>
 
-            <a
-              href="/"
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#142036] hover:bg-[#1C2C4A] text-[#CBD5E1] hover:text-[#FDF4D2] border border-[#2B3B52] text-xs font-semibold transition-colors"
+            <button
+              onClick={() => loadTabData()}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#142036] hover:bg-[#1C2C4A] text-[#CBD5E1] hover:text-[#FDF4D2] border border-[#2B3B52] text-xs font-semibold transition-colors"
+              title="Refresh telemetry"
             >
-              <span>Landing Page</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </a>
-
-            <div className="h-4 w-px bg-[#223147]" />
-
-            <div className="flex items-center gap-2">
-              <div className="text-right">
-                <div className="text-xs font-bold text-[#FDF4D2]">{adminUser?.email}</div>
-                <div className="text-[10px] text-[#34D399] font-medium">Sole Platform Owner</div>
-              </div>
-
-              <button
-                onClick={handleLogout}
-                title="Sign out of console"
-                className="p-1.5 rounded border border-[#2B3B52] bg-[#142036] text-[#CBD5E1] hover:text-[#FF788D] hover:border-[#FF788D]/40 transition-colors"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Refresh</span>
+            </button>
           </div>
         </header>
 

@@ -66,6 +66,28 @@ export function parseCookie(cookieHeader: string | null, name: string): string |
   return match ? decodeURIComponent(match.split('=')[1]) : null;
 }
 
+export async function getAnySession(request: Request): Promise<SessionPayload | null> {
+  let session: SessionPayload | null = null;
+
+  // 1. Check Authorization Bearer header
+  const authHeader = request.headers.get('authorization');
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7);
+    session = await verifySessionToken(token);
+  }
+
+  // 2. Check Cookie if no bearer session
+  if (!session) {
+    const cookieHeader = request.headers.get('cookie');
+    const token = parseCookie(cookieHeader, COOKIE_NAME);
+    if (token) {
+      session = await verifySessionToken(token);
+    }
+  }
+
+  return session;
+}
+
 export async function getAuthSession(request: Request): Promise<SessionPayload | null> {
   let session: SessionPayload | null = null;
 

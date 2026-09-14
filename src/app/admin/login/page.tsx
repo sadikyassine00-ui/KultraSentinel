@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Lock, Mail, ArrowRight, ShieldCheck, ArrowLeft } from 'lucide-react';
+import { Lock, Mail, ArrowRight, ShieldCheck } from 'lucide-react';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -39,6 +39,9 @@ export default function AdminLoginPage() {
         throw new Error(data.error || 'Authentication failed.');
       }
 
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('auth-change'));
+      }
       router.push('/admin/dashboard');
       router.refresh();
     } catch (err: unknown) {
@@ -78,6 +81,9 @@ export default function AdminLoginPage() {
         throw new Error(data.error || 'Google authentication failed.');
       }
 
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('auth-change'));
+      }
       router.push('/admin/dashboard');
       router.refresh();
     } catch (err: unknown) {
@@ -88,43 +94,7 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#0a0b1dff] text-[#FDF4D2] flex flex-col justify-between selection:bg-[#FF788D] selection:text-white">
-      {/* Top Navigation Header Bar */}
-      <header className="w-full border-b border-[#1f2c42] bg-[#0c101c]/90 backdrop-blur-md sticky top-0 z-40 px-4 sm:px-8 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <a href="/" className="flex items-center gap-2">
-            <Image
-              src="/assets/logos/kultraLogo-trimmed.png"
-              alt="Kultra"
-              width={130}
-              height={28}
-              className="h-7 w-auto object-contain brightness-110"
-              priority
-            />
-          </a>
-          <span className="hidden sm:inline-block text-xs text-[#94A3B8] pl-3 border-l border-[#223147] font-medium">
-            Built on Merchant API v1
-          </span>
-        </div>
-
-        <div className="flex items-center gap-3 sm:gap-4">
-          <a
-            href="/"
-            className="text-xs text-[#CBD5E1] hover:text-[#FDF4D2] flex items-center gap-1.5 transition-colors font-medium"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Back to Website</span>
-          </a>
-
-          <a
-            href="/admin/register"
-            className="px-3.5 py-1.5 rounded bg-[#142036] hover:bg-[#1C2C4A] text-[#FDF4D2] border border-[#2B3B52] hover:border-slate-500 text-xs font-semibold transition-colors"
-          >
-            Register
-          </a>
-        </div>
-      </header>
-
+    <div className="flex-1 w-full bg-[#0a0b1dff] text-[#FDF4D2] flex flex-col justify-between selection:bg-[#FF788D] selection:text-white">
       {/* Main Login Card Area */}
       <main className="flex-1 flex flex-col justify-center items-center px-4 sm:px-6 py-10 relative">
         {/* Subtle Background Grid */}
