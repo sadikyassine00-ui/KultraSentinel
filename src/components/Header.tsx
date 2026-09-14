@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   ShieldCheck,
@@ -128,7 +129,7 @@ export function Header() {
       <div className="max-w-[1400px] h-[68px] mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4 sm:gap-6">
         {/* Brand Group */}
         <div className="flex items-center gap-3 sm:gap-4">
-          <a
+          <Link
             href="/"
             className="flex items-center rounded-[2px] outline-none focus-visible:ring-2 focus-visible:ring-[#94A3B8] focus-visible:ring-offset-4 focus-visible:ring-offset-[#0a0b1dff] group"
             aria-label="Kultra Home"
@@ -141,7 +142,7 @@ export function Header() {
               className="h-[26px] sm:h-[30px] w-auto object-contain transition-opacity duration-180 group-hover:opacity-95 brightness-110"
               priority
             />
-          </a>
+          </Link>
           <span className="hidden lg:inline-block text-[0.8125rem] font-medium text-[#94A3B8] whitespace-nowrap pl-3 border-l border-[#1E293B]">
             Built on Merchant API v1
           </span>
@@ -150,13 +151,13 @@ export function Header() {
         {/* Desktop Navigation Links */}
         <nav className="hidden md:flex items-center gap-6 lg:gap-8" aria-label="Main Navigation">
           {navLinks.map((link) => (
-            <a
+            <Link
               key={link.label}
               href={link.href}
               className="text-[0.875rem] font-medium text-[#CBD5E1] hover:text-[#FDF4D2] transition-colors duration-180 relative py-1 after:content-[''] after:absolute after:bottom-[-2px] after:left-0 after:w-0 hover:after:w-full after:h-[1.5px] after:bg-[#FF788D] after:transition-all after:duration-200 outline-none focus-visible:ring-2 focus-visible:ring-[#94A3B8] focus-visible:ring-offset-4 focus-visible:ring-offset-[#0a0b1dff] rounded-[2px]"
             >
               {link.label}
-            </a>
+            </Link>
           ))}
         </nav>
 
@@ -199,23 +200,23 @@ export function Header() {
 
                   {/* Menu Items */}
                   <div className="py-1 space-y-0.5">
-                    <a
+                    <Link
                       href="/admin/dashboard"
                       onClick={() => setDropdownOpen(false)}
                       className="flex items-center gap-2.5 px-3 py-2 rounded text-xs font-semibold text-[#CBD5E1] hover:text-[#FDF4D2] hover:bg-[#18263D] transition-colors"
                     >
                       <LayoutDashboard className="w-3.5 h-3.5 text-[#FF788D]" />
                       <span>Mission Control</span>
-                    </a>
+                    </Link>
 
-                    <a
+                    <Link
                       href="/"
                       onClick={() => setDropdownOpen(false)}
                       className="flex items-center gap-2.5 px-3 py-2 rounded text-xs font-semibold text-[#CBD5E1] hover:text-[#FDF4D2] hover:bg-[#18263D] transition-colors"
                     >
                       <Globe className="w-3.5 h-3.5 text-[#38BDF8]" />
                       <span>Public Website</span>
-                    </a>
+                    </Link>
                   </div>
 
                   {/* Sign Out Button */}
@@ -235,19 +236,19 @@ export function Header() {
           ) : (
             /* Logged-Out CTAs */
             <>
-              <a
+              <Link
                 href="/admin/login"
                 className="text-[0.84rem] font-bold text-[#CBD5E1] hover:text-[#FDF4D2] px-2.5 sm:px-3 py-1.5 transition-colors duration-180"
               >
                 Log in
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/admin/register"
                 className="text-[0.84rem] font-bold text-[#0a0b1dff] bg-[#FF788D] hover:bg-[#FF788D]/90 px-3.5 sm:px-4 py-1.5 rounded-[4px] transition-all duration-180 flex items-center gap-1.5 shadow-sm"
               >
                 <span>Register</span>
                 <span aria-hidden="true" className="text-[0.85rem]">→</span>
-              </a>
+              </Link>
             </>
           )}
 
@@ -276,14 +277,14 @@ export function Header() {
       {mobileMenuOpen && (
         <div className="md:hidden bg-[#0F1522] border-b border-[#1E293B] px-5 py-3 space-y-2">
           {navLinks.map((link) => (
-            <a
+            <Link
               key={link.label}
               href={link.href}
               onClick={() => setMobileMenuOpen(false)}
               className="block text-[0.9rem] font-medium text-[#CBD5E1] hover:text-[#FDF4D2] py-2 transition-colors border-b border-[#1E293B]/40 last:border-none"
             >
               {link.label}
-            </a>
+            </Link>
           ))}
 
           {user ? (
@@ -300,13 +301,13 @@ export function Header() {
                 </div>
               </div>
 
-              <a
+              <Link
                 href="/admin/dashboard"
                 onClick={() => setMobileMenuOpen(false)}
                 className="block text-center text-[0.85rem] font-bold text-[#0a0b1dff] bg-[#FF788D] hover:bg-[#FF788D]/90 py-2 rounded-[4px] transition-colors"
               >
                 Go to Mission Control
-              </a>
+              </Link>
 
               <button
                 type="button"
@@ -321,20 +322,20 @@ export function Header() {
             </div>
           ) : (
             <div className="pt-2 flex flex-col gap-2">
-              <a
+              <Link
                 href="/admin/login"
                 onClick={() => setMobileMenuOpen(false)}
                 className="block text-center text-[0.85rem] font-bold text-[#FDF4D2] bg-[#141C2B] hover:bg-[#1E293B] border border-[#1E293B] py-2 rounded-[4px] transition-colors"
               >
                 Log in
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/admin/register"
                 onClick={() => setMobileMenuOpen(false)}
                 className="block text-center text-[0.85rem] font-bold text-[#0a0b1dff] bg-[#FF788D] hover:bg-[#FF788D]/90 py-2 rounded-[4px] transition-colors"
               >
                 Register
-              </a>
+              </Link>
             </div>
           )}
         </div>

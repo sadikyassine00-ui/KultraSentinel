@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Lock, Mail, Building2, Globe, ArrowRight, CheckCircle2, ShieldCheck } from 'lucide-react';
 
@@ -331,12 +332,12 @@ export default function RegisterPage() {
             <div className="mt-6 pt-4 border-t border-[#223147] text-center">
               <span className="text-xs text-[#CBD5E1]">
                 Already have an account?{' '}
-                <a
+                <Link
                   href="/admin/login"
                   className="text-[#FF788D] hover:underline font-bold transition-colors ml-1"
                 >
                   Sign in to Mission Control
-                </a>
+                </Link>
               </span>
             </div>
           </div>
@@ -344,8 +345,8 @@ export default function RegisterPage() {
       </main>
 
       {/* Footer */}
-      <footer className="w-full py-4 border-t border-[#1f2c42] bg-[#0c101c] text-center text-xs text-[#94A3B8]">
-        <span>&copy; {new Date().getFullYear()} Kultra Sentinel. Mission Critical Google Merchant Center Defense.</span>
+      <footer className="w-full py-4 border-t border-[#1E293B] bg-[#0a0b1dff] text-center text-xs text-[#94A3B8]">
+        &copy; {new Date().getFullYear()} Kultra Sentinel. Dedicated Google Merchant Center Watchdog.
       </footer>
     </div>
   );

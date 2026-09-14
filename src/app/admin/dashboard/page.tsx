@@ -403,18 +403,18 @@ export default function AdminDashboardPage() {
   return (
     <div className="flex-1 w-full bg-[#0a0b1dff] text-[#FDF4D2] font-sans antialiased selection:bg-[#FF788D] selection:text-white flex flex-col lg:flex-row">
       {/* Mobile Sub-Navigation Bar */}
-      <div className="lg:hidden h-12 border-b border-[#1f2c42] bg-[#0c101c]/95 backdrop-blur-md px-4 flex items-center justify-between sticky top-[68px] z-30">
+      <div className="lg:hidden h-12 border-b border-[#1E293B] bg-[#0F1522] px-4 flex items-center justify-between sticky top-[68px] z-30">
         <button
           onClick={() => setMobileMenuOpen(true)}
-          className="flex items-center gap-2 px-2.5 py-1.5 rounded border border-[#2B3B52] bg-[#142036] text-[#FDF4D2] hover:bg-[#1C2C4A] text-xs font-semibold"
+          className="flex items-center gap-2 px-2.5 py-1.5 rounded border border-[#1E293B] bg-[#141C2B] text-[#FDF4D2] hover:bg-[#1E293B] text-xs font-semibold transition-colors"
           aria-label="Open dashboard navigation"
         >
           <Menu className="w-4 h-4 text-[#FF788D]" />
           <span>{navGroups.flatMap((g) => g.items).find((n) => n.id === activeTab)?.label}</span>
         </button>
 
-        <div className="flex items-center gap-1.5 text-[11px] text-[#34D399] font-medium">
-          <span className="w-2 h-2 rounded-full bg-[#10B981]" />
+        <div className="flex items-center gap-1.5 text-[11px] text-[#10B981] font-medium bg-[#10B981]/10 px-2 py-0.5 rounded border border-[#10B981]/25">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
           <span>Pub/Sub Active</span>
         </div>
       </div>
@@ -429,44 +429,42 @@ export default function AdminDashboardPage() {
 
       {/* Sidebar Navigation */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-72 bg-[#0c101c] border-r border-[#1f2c42] flex flex-col justify-between transition-transform duration-200 ease-in-out lg:static lg:translate-x-0 lg:sticky lg:top-[68px] lg:h-[calc(100vh-68px)] lg:overflow-y-auto shrink-0 ${
+        className={`fixed inset-y-0 left-0 z-50 w-72 bg-[#0F1522] border-r border-[#1E293B] flex flex-col justify-between transition-transform duration-200 ease-in-out lg:static lg:translate-x-0 lg:sticky lg:top-[68px] lg:h-[calc(100vh-68px)] lg:overflow-y-auto shrink-0 ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="p-5 space-y-6">
-          {/* Console Header */}
-          <div className="space-y-2 pb-4 border-b border-[#1f2c42]">
+        <div className="p-4 space-y-5">
+          {/* Sentinel Engine Status Card */}
+          <div className="p-3 rounded-lg bg-[#141C2B] border border-[#1E293B] space-y-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-[#10B981]" />
-                <span className="text-xs font-bold text-[#FDF4D2] tracking-wide uppercase">
-                  Sentinel Console
+                <span className="w-2 h-2 rounded-full bg-[#10B981] shrink-0" />
+                <span className="text-xs font-bold text-[#FDF4D2] tracking-wide">
+                  Sentinel Engine
                 </span>
               </div>
-              <button
-                onClick={() => setMobileMenuOpen(false)}
-                className="lg:hidden p-1.5 rounded text-[#CBD5E1] hover:text-[#FDF4D2]"
-                aria-label="Close sidebar"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <span className="text-[10px] font-semibold text-[#10B981] bg-[#10B981]/15 px-2 py-0.5 rounded border border-[#10B981]/30">
+                Live Active
+              </span>
             </div>
 
-            <div className="flex items-center justify-between pt-0.5">
-              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-[#152033] text-[#34D399] border border-[#10B981]/30">
-                Platform Owner
-              </span>
-              <span className="text-[11px] text-[#94A3B8]">
-                Merchant API v1
-              </span>
+            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#1E293B]/70 text-[11px]">
+              <div>
+                <span className="text-[10px] text-[#94A3B8] block">Ingestion</span>
+                <span className="font-semibold text-[#FDF4D2]">{telemetry.globalIngestionRate} msg/min</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-[#94A3B8] block">Latency</span>
+                <span className="font-semibold text-[#FDF4D2]">{telemetry.averageLatencyMs}ms</span>
+              </div>
             </div>
           </div>
 
           {/* Navigation Items Grouped */}
-          <nav className="space-y-5" aria-label="Sidebar Navigation">
+          <nav className="space-y-4" aria-label="Sidebar Navigation">
             {navGroups.map((grp) => (
               <div key={grp.group} className="space-y-1">
-                <div className="text-[10px] uppercase font-bold tracking-wider text-[#94A3B8] px-3 pb-1">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8] px-3 pb-1">
                   {grp.group}
                 </div>
                 {grp.items.map((item) => {
@@ -481,8 +479,8 @@ export default function AdminDashboardPage() {
                       }}
                       className={`w-full flex items-center justify-between px-3 py-2.5 rounded-md text-xs font-medium transition-all ${
                         isActive
-                          ? 'bg-[#182438] text-[#FDF4D2] border-l-[3px] border-[#FF788D] shadow-sm font-semibold'
-                          : 'text-[#CBD5E1] hover:bg-[#142033] hover:text-[#FDF4D2] border-l-[3px] border-transparent'
+                          ? 'bg-[#141C2B] text-[#FDF4D2] border-l-2 border-[#FF788D] shadow-sm font-semibold'
+                          : 'text-[#94A3B8] hover:bg-[#141C2B]/60 hover:text-[#FDF4D2] border-l-2 border-transparent'
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
@@ -500,20 +498,38 @@ export default function AdminDashboardPage() {
               </div>
             ))}
           </nav>
+
+          {/* Platform Quick Pulse Mini-Widget */}
+          <div className="p-3 rounded-lg bg-[#141C2B]/60 border border-[#1E293B] space-y-2">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8] flex items-center justify-between">
+              <span>Platform Pulse</span>
+              <span className="font-mono text-[10px] text-[#94A3B8]">GCP: us-central1</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="bg-[#0F1522] p-2 rounded border border-[#1E293B]">
+                <div className="text-[10px] text-[#94A3B8]">Live MRR</div>
+                <div className="text-xs font-bold text-[#FDF4D2] mt-0.5">${telemetry.mrr.toLocaleString()}</div>
+              </div>
+              <div className="bg-[#0F1522] p-2 rounded border border-[#1E293B]">
+                <div className="text-[10px] text-[#94A3B8]">Total SKUs</div>
+                <div className="text-xs font-bold text-[#FDF4D2] mt-0.5">{(telemetry.totalSkusTracked / 1000).toFixed(0)}k</div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Sidebar Footer (Admin Profile & Sign Out) */}
-        <div className="p-4 border-t border-[#1f2c42] bg-[#090d17] space-y-3">
+        <div className="p-3.5 border-t border-[#1E293B] bg-[#0a0b1dff]/50 space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-full bg-[#142036] border border-[#2B3B52] flex items-center justify-center text-xs font-bold text-[#FF788D] shrink-0">
+              <div className="w-8 h-8 rounded-full bg-[#141C2B] border border-[#1E293B] flex items-center justify-center text-xs font-bold text-[#FF788D] shrink-0">
                 YS
               </div>
               <div className="min-w-0">
                 <div className="text-xs text-[#FDF4D2] font-semibold truncate" title={adminUser?.email}>
                   {adminUser?.email}
                 </div>
-                <div className="text-[11px] text-[#34D399] flex items-center gap-1 font-medium">
+                <div className="text-[11px] text-[#10B981] flex items-center gap-1 font-medium">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
                   <span>Sole Owner</span>
                 </div>
@@ -523,7 +539,7 @@ export default function AdminDashboardPage() {
             <button
               onClick={handleLogout}
               title="Sign out of console"
-              className="p-2 rounded border border-[#2B3B52] bg-[#142036] text-[#CBD5E1] hover:text-[#FF788D] hover:border-[#FF788D]/50 transition-colors"
+              className="p-1.5 rounded border border-[#1E293B] bg-[#141C2B] text-[#94A3B8] hover:text-[#FF788D] hover:border-[#FF788D]/50 transition-colors"
             >
               <LogOut className="w-4 h-4" />
             </button>
@@ -533,40 +549,6 @@ export default function AdminDashboardPage() {
 
       {/* Main Mission Control Area */}
       <div className="flex-1 min-w-0 flex flex-col min-h-screen">
-        {/* Desktop Mission Control Sub-Header Strip */}
-        <header className="hidden lg:flex h-12 border-b border-[#1f2c42] bg-[#0c101c]/90 backdrop-blur-md px-6 items-center justify-between sticky top-[68px] z-20">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-xs font-semibold text-[#CBD5E1]">
-              <span className="text-[#94A3B8]">Mission Control</span>
-              <span className="text-[#475569]">/</span>
-              <span className="text-[#FDF4D2]">
-                {navGroups.flatMap((g) => g.items).find((n) => n.id === activeTab)?.label}
-              </span>
-            </div>
-
-            <div className="h-4 w-px bg-[#223147]" />
-
-            <div className="flex items-center gap-1.5 text-xs font-medium text-[#34D399] bg-[#10B981]/15 px-2.5 py-0.5 rounded border border-[#10B981]/40">
-              <span className="w-2 h-2 rounded-full bg-[#10B981]" />
-              <span>Pub/Sub Ingestion Online (420 msg/min)</span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="text-xs text-[#94A3B8] font-mono font-medium px-2 py-0.5 rounded bg-[#111828] border border-[#223147]">
-              GCP: us-central1
-            </div>
-
-            <button
-              onClick={() => loadTabData()}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#142036] hover:bg-[#1C2C4A] text-[#CBD5E1] hover:text-[#FDF4D2] border border-[#2B3B52] text-xs font-semibold transition-colors"
-              title="Refresh telemetry"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Refresh</span>
-            </button>
-          </div>
-        </header>
 
         {/* Impersonation Banner */}
         {impersonatingTenant && (
@@ -612,14 +594,29 @@ export default function AdminDashboardPage() {
 
           {/* SECTION 1: Top-Level Platform Telemetry (Global KPIs) */}
           <section className="space-y-4">
-            <div className="flex items-center justify-between pb-1">
+            <div className="flex items-center justify-between pb-1 flex-wrap gap-3">
               <div>
-                <h2 className="text-xs font-bold uppercase tracking-wider text-[#CBD5E1]">Platform Global Telemetry</h2>
-                <p className="text-xs text-[#94A3B8] mt-0.5">Real-time commercial volume and Google Cloud Pub/Sub pipeline health</p>
+                <div className="flex items-center gap-2.5">
+                  <h1 className="text-base sm:text-lg font-bold text-[#FDF4D2] tracking-tight">Platform Global Telemetry</h1>
+                  <span className="text-[10px] font-mono font-medium text-[#94A3B8] px-2 py-0.5 rounded bg-[#141C2B] border border-[#1E293B]">GCP: us-central1</span>
+                </div>
+                <p className="text-xs text-[#94A3B8] mt-1">Real-time commercial volume and Google Cloud Pub/Sub pipeline health</p>
               </div>
-              <div className="hidden sm:flex items-center gap-2 text-xs font-medium text-[#34D399] bg-[#10B981]/15 px-2.5 py-1 rounded border border-[#10B981]/40">
-                <span className="w-2 h-2 rounded-full bg-[#10B981]" />
-                <span>GCP Pipeline Synchronized</span>
+
+              <div className="flex items-center gap-2.5">
+                <div className="hidden sm:flex items-center gap-1.5 text-xs font-medium text-[#10B981] bg-[#10B981]/15 px-2.5 py-1 rounded border border-[#10B981]/40">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
+                  <span>Pipeline Active ({telemetry.globalIngestionRate} msg/min)</span>
+                </div>
+
+                <button
+                  onClick={() => loadTabData()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#141C2B] hover:bg-[#1E293B] text-[#CBD5E1] hover:text-[#FDF4D2] border border-[#1E293B] text-xs font-semibold transition-colors"
+                  title="Refresh telemetry"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Refresh</span>
+                </button>
               </div>
             </div>
 
