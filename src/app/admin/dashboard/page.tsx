@@ -554,6 +554,59 @@ export default function AdminDashboardPage() {
 
       {/* Main Mission Control Area */}
       <div className="flex-1 min-w-0 flex flex-col min-h-screen">
+        {/* Desktop Mission Control Top Header Bar */}
+        <header className="hidden lg:flex h-16 border-b border-[#1f2c42] bg-[#0c101c]/90 backdrop-blur-md px-6 items-center justify-between sticky top-0 z-30">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-xs font-semibold text-[#CBD5E1]">
+              <span className="text-[#94A3B8]">Mission Control</span>
+              <span className="text-[#475569]">/</span>
+              <span className="text-[#FDF4D2]">
+                {navGroups.flatMap((g) => g.items).find((n) => n.id === activeTab)?.label}
+              </span>
+            </div>
+
+            <div className="h-4 w-px bg-[#223147]" />
+
+            <div className="flex items-center gap-1.5 text-xs font-medium text-[#34D399] bg-[#10B981]/15 px-2.5 py-1 rounded border border-[#10B981]/40">
+              <span className="w-2 h-2 rounded-full bg-[#10B981]" />
+              <span>Pub/Sub Ingestion Online (420 msg/min)</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="text-xs text-[#94A3B8] font-mono font-medium px-2 py-1 rounded bg-[#111828] border border-[#223147]">
+              GCP: us-central1
+            </div>
+
+            <a
+              href="/"
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#142036] hover:bg-[#1C2C4A] text-[#CBD5E1] hover:text-[#FDF4D2] border border-[#2B3B52] text-xs font-semibold transition-colors"
+            >
+              <span>Landing Page</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+
+            <div className="h-4 w-px bg-[#223147]" />
+
+            <div className="flex items-center gap-2">
+              <div className="text-right">
+                <div className="text-xs font-bold text-[#FDF4D2]">{adminUser?.email}</div>
+                <div className="text-[10px] text-[#34D399] font-medium">Sole Platform Owner</div>
+              </div>
+
+              <button
+                onClick={handleLogout}
+                title="Sign out of console"
+                className="p-1.5 rounded border border-[#2B3B52] bg-[#142036] text-[#CBD5E1] hover:text-[#FF788D] hover:border-[#FF788D]/40 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </header>
+
         {/* Impersonation Banner */}
         {impersonatingTenant && (
           <div className="bg-[#1C2436] border-b-2 border-[#FF788D] px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">

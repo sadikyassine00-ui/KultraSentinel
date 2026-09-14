@@ -678,6 +678,50 @@ export async function getTenants(filter?: { search?: string; planTier?: string; 
   return result;
 }
 
+export async function createTenant(data: {
+  email: string;
+  companyName: string;
+  planTier?: 'Trial' | 'Agency Pilot' | 'Active Pro';
+  accountType?: string;
+  website?: string;
+}): Promise<Tenant> {
+  const userId = `usr_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
+  const planTier = data.planTier || 'Trial';
+  const now = new Date().toISOString();
+
+  const sql = getDb();
+  if (sql) {
+    try {
+      await ensureSchema();
+      const rows = await sql`
+        INSERT INTO tenants (user_id, email, company_name, plan_tier, connected_stores, total_skus, incidents_month, oauth_status, status)
+        VALUES (${userId}, ${data.email}, ${data.companyName}, ${planTier}, 1, 0, 0, 'Valid', 'active')
+        RETURNING *;
+      `;
+      if (rows.length > 0) return rows[0] as Tenant;
+    } catch (err) {
+      console.warn('[Neon DB] Error creating tenant:', err);
+    }
+  }
+
+  const newTenant: Tenant = {
+    id: inMemoryTenants.length + 1,
+    user_id: userId,
+    email: data.email,
+    company_name: data.companyName,
+    plan_tier: planTier,
+    connected_stores: 1,
+    total_skus: 0,
+    incidents_month: 0,
+    oauth_status: 'Valid',
+    last_active: now,
+    status: 'active',
+    created_at: now,
+  };
+  inMemoryTenants.unshift(newTenant);
+  return newTenant;
+}
+
 export async function updateTenant(id: number, updates: Partial<Tenant>): Promise<Tenant | null> {
   const sql = getDb();
   if (sql) {

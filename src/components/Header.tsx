@@ -72,9 +72,15 @@ export function Header() {
           {/* Sign In / Log in Button */}
           <a
             href="/admin/login"
-            className="text-[0.84rem] font-bold text-[#FDF4D2] hover:text-[#0a0b1dff] bg-[#141C2B] hover:bg-[#FF788D] border border-[#1E293B] hover:border-[#FF788D] px-3.5 sm:px-4 py-1.5 rounded-[4px] transition-all duration-180 flex items-center gap-1.5"
+            className="text-[0.84rem] font-bold text-[#CBD5E1] hover:text-[#FDF4D2] px-2.5 sm:px-3 py-1.5 transition-colors duration-180"
           >
-            <span>Log in</span>
+            Log in
+          </a>
+          <a
+            href="/admin/register"
+            className="text-[0.84rem] font-bold text-[#0a0b1dff] bg-[#FF788D] hover:bg-[#FF788D]/90 px-3.5 sm:px-4 py-1.5 rounded-[4px] transition-all duration-180 flex items-center gap-1.5 shadow-sm"
+          >
+            <span>Register</span>
             <span aria-hidden="true" className="text-[0.85rem]">→</span>
           </a>
 
@@ -112,13 +118,20 @@ export function Header() {
               {link.label}
             </a>
           ))}
-          <div className="pt-2">
+          <div className="pt-2 flex flex-col gap-2">
             <a
               href="/admin/login"
               onClick={() => setMobileMenuOpen(false)}
-              className="block text-center text-[0.85rem] font-bold text-[#FDF4D2] bg-[#141C2B] hover:bg-[#1E293B] border border-[#1E293B] hover:border-[#FF788D]/40 py-2 rounded-[4px] transition-colors"
+              className="block text-center text-[0.85rem] font-bold text-[#FDF4D2] bg-[#141C2B] hover:bg-[#1E293B] border border-[#1E293B] py-2 rounded-[4px] transition-colors"
             >
               Log in
+            </a>
+            <a
+              href="/admin/register"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block text-center text-[0.85rem] font-bold text-[#0a0b1dff] bg-[#FF788D] hover:bg-[#FF788D]/90 py-2 rounded-[4px] transition-colors"
+            >
+              Register
             </a>
           </div>
         </div>
