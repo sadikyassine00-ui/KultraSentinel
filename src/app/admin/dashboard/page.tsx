@@ -35,6 +35,8 @@ import {
   Zap,
   Globe,
   RefreshCw,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import {
   SuperTelemetry,
@@ -53,7 +55,28 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('tenants');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Initialize sidebar collapsed state from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('kultra_sidebar_collapsed');
+      if (saved === 'true') {
+        setSidebarCollapsed(true);
+      }
+    }
+  }, []);
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('kultra_sidebar_collapsed', String(next));
+      }
+      return next;
+    });
+  };
 
   // Impersonation state
   const [impersonatingTenant, setImpersonatingTenant] = useState<{ user_id: string; email: string; company_name: string } | null>(null);
@@ -429,39 +452,69 @@ export default function AdminDashboardPage() {
 
       {/* Sidebar Navigation */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-72 bg-[#0F1522] border-r border-[#1E293B] flex flex-col justify-between transition-transform duration-200 ease-in-out lg:static lg:translate-x-0 lg:sticky lg:top-[68px] lg:h-[calc(100vh-68px)] lg:overflow-y-auto shrink-0 ${
-          mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={`fixed inset-y-0 left-0 z-50 bg-[#0F1522] border-r border-[#1E293B] flex flex-col justify-between transition-all duration-300 ease-in-out lg:static lg:translate-x-0 lg:sticky lg:top-[68px] lg:h-[calc(100vh-68px)] lg:overflow-y-auto shrink-0 ${
+          mobileMenuOpen ? 'translate-x-0 w-72' : '-translate-x-full lg:translate-x-0'
+        } ${sidebarCollapsed ? 'lg:w-[68px]' : 'lg:w-64'}`}
       >
-        <div className="p-4 space-y-5">
-          {/* Sentinel Engine Status Card */}
-          <div className="p-3 rounded-lg bg-[#141C2B] border border-[#1E293B] space-y-2.5">
-            <div className="flex items-center justify-between">
+        <div className="p-3.5 space-y-4">
+          {/* Top Bar: Mobile Close or Desktop Collapse Toggle */}
+          <div className="flex items-center justify-between pb-3 border-b border-[#1E293B]/60">
+            {/* Mobile View: Title + Close Button */}
+            <div className="lg:hidden flex items-center justify-between w-full">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-[#10B981] shrink-0" />
                 <span className="text-xs font-bold text-[#FDF4D2] tracking-wide">
-                  Sentinel Engine
+                  Mission Control
                 </span>
               </div>
-              <span className="text-[10px] font-semibold text-[#10B981] bg-[#10B981]/15 px-2 py-0.5 rounded border border-[#10B981]/30">
-                Live Active
-              </span>
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-1.5 rounded border border-[#1E293B] bg-[#141C2B] text-[#94A3B8] hover:text-[#FDF4D2] transition-colors"
+                aria-label="Close navigation"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#1E293B]/70 text-[11px]">
-              <div>
-                <span className="text-[10px] text-[#94A3B8] block">Ingestion</span>
-                <span className="font-semibold text-[#FDF4D2]">{telemetry.globalIngestionRate} msg/min</span>
-              </div>
-              <div>
-                <span className="text-[10px] text-[#94A3B8] block">Latency</span>
-                <span className="font-semibold text-[#FDF4D2]">{telemetry.averageLatencyMs}ms</span>
-              </div>
+            {/* Desktop View: Expanded Mode */}
+            <div className="hidden lg:flex items-center justify-between w-full">
+              {!sidebarCollapsed ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#10B981] shrink-0" />
+                    <span className="text-xs font-bold text-[#FDF4D2] tracking-wide">
+                      Mission Control
+                    </span>
+                  </div>
+                  <button
+                    onClick={toggleSidebar}
+                    title="Collapse sidebar"
+                    className="p-1.5 rounded border border-[#1E293B] bg-[#141C2B] text-[#94A3B8] hover:text-[#FF788D] hover:border-[#FF788D]/40 transition-colors"
+                    aria-label="Collapse sidebar"
+                  >
+                    <PanelLeftClose className="w-3.5 h-3.5" />
+                  </button>
+                </>
+              ) : (
+                <div className="w-full flex justify-center">
+                  <button
+                    onClick={toggleSidebar}
+                    title="Expand sidebar"
+                    className="p-2 rounded border border-[#1E293B] bg-[#141C2B] text-[#94A3B8] hover:text-[#FF788D] hover:border-[#FF788D]/40 transition-colors"
+                    aria-label="Expand sidebar"
+                  >
+                    <PanelLeftOpen className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Navigation Items Grouped */}
-          <nav className="space-y-4" aria-label="Sidebar Navigation">
+          {/* Navigation Items (Expanded Mode & Mobile) */}
+          <nav
+            className={`space-y-4 ${sidebarCollapsed ? 'lg:hidden' : 'block'}`}
+            aria-label="Sidebar Navigation"
+          >
             {navGroups.map((grp) => (
               <div key={grp.group} className="space-y-1">
                 <div className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8] px-3 pb-1">
@@ -499,27 +552,57 @@ export default function AdminDashboardPage() {
             ))}
           </nav>
 
-          {/* Platform Quick Pulse Mini-Widget */}
-          <div className="p-3 rounded-lg bg-[#141C2B]/60 border border-[#1E293B] space-y-2">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8] flex items-center justify-between">
-              <span>Platform Pulse</span>
-              <span className="font-mono text-[10px] text-[#94A3B8]">GCP: us-central1</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="bg-[#0F1522] p-2 rounded border border-[#1E293B]">
-                <div className="text-[10px] text-[#94A3B8]">Live MRR</div>
-                <div className="text-xs font-bold text-[#FDF4D2] mt-0.5">${telemetry.mrr.toLocaleString()}</div>
+          {/* Navigation Items (Collapsed Rail Mode) */}
+          <nav
+            className={`space-y-3 hidden ${sidebarCollapsed ? 'lg:block' : 'lg:hidden'}`}
+            aria-label="Sidebar Navigation (Collapsed)"
+          >
+            {navGroups.map((grp, gIdx) => (
+              <div key={grp.group} className="space-y-1.5">
+                {gIdx > 0 && <div className="h-px bg-[#1E293B]/70 mx-1.5 my-2" />}
+                {grp.items.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+                  return (
+                    <div key={item.id} className="relative group flex justify-center">
+                      <button
+                        onClick={() => {
+                          setActiveTab(item.id);
+                          setMobileMenuOpen(false);
+                        }}
+                        title={item.label}
+                        className={`relative w-10 h-10 rounded-md flex items-center justify-center transition-all ${
+                          isActive
+                            ? 'bg-[#141C2B] text-[#FF788D] border border-[#FF788D]/50 shadow-sm'
+                            : 'text-[#94A3B8] hover:bg-[#141C2B]/60 hover:text-[#FDF4D2] border border-transparent'
+                        }`}
+                        aria-label={item.label}
+                      >
+                        <Icon className="w-4 h-4" />
+                        {item.badge !== null && (
+                          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#FF788D] border-2 border-[#0F1522]" />
+                        )}
+                      </button>
+
+                      {/* Tooltip on Hover */}
+                      <div className="hidden lg:group-hover:flex absolute left-full ml-3 px-2.5 py-1.5 rounded-md bg-[#141C2B] border border-[#1E293B] text-xs font-semibold text-[#FDF4D2] whitespace-nowrap z-50 shadow-xl items-center gap-2 pointer-events-none top-1/2 -translate-y-1/2">
+                        <span>{item.label}</span>
+                        {item.badge !== null && (
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] ${item.badgeColor}`}>
+                            {item.badge}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              <div className="bg-[#0F1522] p-2 rounded border border-[#1E293B]">
-                <div className="text-[10px] text-[#94A3B8]">Total SKUs</div>
-                <div className="text-xs font-bold text-[#FDF4D2] mt-0.5">{(telemetry.totalSkusTracked / 1000).toFixed(0)}k</div>
-              </div>
-            </div>
-          </div>
+            ))}
+          </nav>
         </div>
 
-        {/* Sidebar Footer (Admin Profile & Sign Out) */}
-        <div className="p-3.5 border-t border-[#1E293B] bg-[#0a0b1dff]/50 space-y-2">
+        {/* Sidebar Footer (Admin Profile & Sign Out - Expanded Mode) */}
+        <div className={`p-3.5 border-t border-[#1E293B] bg-[#0a0b1dff]/50 ${sidebarCollapsed ? 'lg:hidden' : 'block'}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-8 h-8 rounded-full bg-[#141C2B] border border-[#1E293B] flex items-center justify-center text-xs font-bold text-[#FF788D] shrink-0">
@@ -539,11 +622,28 @@ export default function AdminDashboardPage() {
             <button
               onClick={handleLogout}
               title="Sign out of console"
-              className="p-1.5 rounded border border-[#1E293B] bg-[#141C2B] text-[#94A3B8] hover:text-[#FF788D] hover:border-[#FF788D]/50 transition-colors"
+              className="p-1.5 rounded border border-[#1E293B] bg-[#141C2B] text-[#94A3B8] hover:text-[#FF788D] hover:border-[#FF788D]/50 transition-colors shrink-0"
             >
               <LogOut className="w-4 h-4" />
             </button>
           </div>
+        </div>
+
+        {/* Sidebar Footer (Collapsed Rail Mode) */}
+        <div className={`p-2.5 border-t border-[#1E293B] bg-[#0a0b1dff]/50 flex-col items-center gap-2.5 hidden ${sidebarCollapsed ? 'lg:flex' : 'lg:hidden'}`}>
+          <div
+            className="w-8 h-8 rounded-full bg-[#141C2B] border border-[#1E293B] flex items-center justify-center text-xs font-bold text-[#FF788D]"
+            title={`${adminUser?.email} (Sole Owner)`}
+          >
+            YS
+          </div>
+          <button
+            onClick={handleLogout}
+            title="Sign out of console"
+            className="p-2 rounded border border-[#1E293B] bg-[#141C2B] text-[#94A3B8] hover:text-[#FF788D] hover:border-[#FF788D]/50 transition-colors"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+          </button>
         </div>
       </aside>
 
