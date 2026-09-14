@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
   Users,
@@ -12,9 +11,7 @@ import {
   Search,
   ExternalLink,
   LogOut,
-  CheckCircle2,
   AlertTriangle,
-  Clock,
   Play,
   Trash2,
   Eye,
@@ -29,11 +26,8 @@ import {
   X,
   DollarSign,
   Layers,
-  Activity,
   ShieldAlert,
-  Server,
   Zap,
-  Globe,
   RefreshCw,
   PanelLeftClose,
   PanelLeftOpen,
@@ -274,31 +268,31 @@ export default function AdminDashboardPage() {
         setFeedback({ type: 'error', message: data.error || 'Cleanup failed.' });
       }
     } catch {
-      setFeedback({ type: 'error', message: 'Failed to purge orphan store records.' });
+      setFeedback({ type: 'error', message: 'Failed to clean orphan stores.' });
     }
   };
 
   // DLQ Actions
-  const handleDLQAction = async (messageId: number, action: 'replay' | 'purge') => {
+  const handleDLQAction = async (id: number, action: 'replay' | 'purge') => {
     try {
       const res = await fetch('/api/admin/super/dlq', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, messageId }),
+        body: JSON.stringify({ action, id }),
       });
       const data = await res.json();
       if (res.ok) {
-        setFeedback({ type: 'success', message: data.message });
+        setFeedback({ type: 'success', message: data.message || `Message #${id} processed successfully.` });
         loadTabData();
       } else {
-        setFeedback({ type: 'error', message: data.error || 'DLQ operation failed.' });
+        setFeedback({ type: 'error', message: data.error || 'Action failed.' });
       }
     } catch {
-      setFeedback({ type: 'error', message: 'Failed to execute DLQ action.' });
+      setFeedback({ type: 'error', message: 'Network exception during DLQ triage.' });
     }
   };
 
-  // Dispatch Actions
+  // Outbound Dispatch Actions
   const handleRetryDispatch = async (dispatchId: number) => {
     try {
       const res = await fetch('/api/admin/super/dispatches', {
@@ -377,8 +371,8 @@ export default function AdminDashboardPage() {
     {
       group: 'Platform Intelligence',
       items: [
-        { id: 'tenants' as TabType, label: 'Tenant Management', icon: Users, badge: tenants.length > 0 ? tenants.length : null, badgeColor: 'bg-[#1E293B] text-[#CBD5E1]' },
-        { id: 'stores' as TabType, label: 'Global Store Registry', icon: StoreIcon, badge: stores.length > 0 ? stores.length : null, badgeColor: 'bg-[#1E293B] text-[#CBD5E1]' },
+        { id: 'tenants' as TabType, label: 'Tenant Management', icon: Users, badge: tenants.length > 0 ? tenants.length : null, badgeColor: 'bg-[#1E293B]/70 text-[#94A3B8]' },
+        { id: 'stores' as TabType, label: 'Global Store Registry', icon: StoreIcon, badge: stores.length > 0 ? stores.length : null, badgeColor: 'bg-[#1E293B]/70 text-[#94A3B8]' },
       ],
     },
     {
@@ -389,9 +383,9 @@ export default function AdminDashboardPage() {
           label: 'Pub/Sub Pipeline & DLQ',
           icon: Radio,
           badge: telemetry.dlqCount > 0 ? `${telemetry.dlqCount} DLQ` : null,
-          badgeColor: 'bg-[#FF788D] text-[#0a0b1dff] font-bold',
+          badgeColor: 'bg-[#FF788D]/15 text-[#FF788D] border border-[#FF788D]/30 font-semibold',
         },
-        { id: 'dispatches' as TabType, label: 'Outbound Dispatch Logs', icon: Send, badge: dispatchLogs.length > 0 ? dispatchLogs.length : null, badgeColor: 'bg-[#1E293B] text-[#CBD5E1]' },
+        { id: 'dispatches' as TabType, label: 'Outbound Dispatch Logs', icon: Send, badge: dispatchLogs.length > 0 ? dispatchLogs.length : null, badgeColor: 'bg-[#1E293B]/70 text-[#94A3B8]' },
       ],
     },
     {
@@ -405,9 +399,9 @@ export default function AdminDashboardPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0a0b1dff] text-[#FDF4D2] flex items-center justify-center">
-        <div className="text-sm text-[#CBD5E1] flex items-center gap-2.5 font-medium">
-          <div className="w-2.5 h-2.5 rounded-full bg-[#10B981]" />
-          <span>Verifying sole owner authentication...</span>
+        <div className="text-xs text-[#94A3B8] flex items-center gap-2.5 font-medium">
+          <div className="w-2 h-2 rounded-full bg-[#10B981]" />
+          <span>Verifying platform owner credentials...</span>
         </div>
       </div>
     );
@@ -436,9 +430,9 @@ export default function AdminDashboardPage() {
           <span>{navGroups.flatMap((g) => g.items).find((n) => n.id === activeTab)?.label}</span>
         </button>
 
-        <div className="flex items-center gap-1.5 text-[11px] text-[#10B981] font-medium bg-[#10B981]/10 px-2 py-0.5 rounded border border-[#10B981]/25">
+        <div className="flex items-center gap-1.5 text-[11px] text-[#10B981] font-medium bg-[#10B981]/10 px-2.5 py-1 rounded border border-[#10B981]/25">
           <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
-          <span>Pub/Sub Active</span>
+          <span>Pub/Sub QoS 1 Online</span>
         </div>
       </div>
 
@@ -450,26 +444,34 @@ export default function AdminDashboardPage() {
         />
       )}
 
-      {/* Sidebar Navigation */}
+      {/* Refined Sidebar Navigation (Collapsible Rail) */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 bg-[#0F1522] border-r border-[#1E293B] flex flex-col justify-between transition-all duration-300 ease-in-out lg:static lg:translate-x-0 lg:sticky lg:top-[68px] lg:h-[calc(100vh-68px)] lg:overflow-y-auto shrink-0 ${
+        className={`fixed inset-y-0 left-0 z-50 bg-[#0c101a] border-r border-[#1a2333] flex flex-col justify-between transition-all duration-300 ease-in-out lg:static lg:translate-x-0 lg:sticky lg:top-[68px] lg:h-[calc(100vh-68px)] lg:overflow-y-auto shrink-0 ${
           mobileMenuOpen ? 'translate-x-0 w-72' : '-translate-x-full lg:translate-x-0'
         } ${sidebarCollapsed ? 'lg:w-[68px]' : 'lg:w-64'}`}
       >
-        <div className="p-3.5 space-y-4">
+        <div className="p-3.5 space-y-3">
           {/* Top Bar: Mobile Close or Desktop Collapse Toggle */}
           <div className="flex items-center justify-between pb-3 border-b border-[#1E293B]/60">
             {/* Mobile View: Title + Close Button */}
             <div className="lg:hidden flex items-center justify-between w-full">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[#10B981] shrink-0" />
-                <span className="text-xs font-bold text-[#FDF4D2] tracking-wide">
-                  Mission Control
-                </span>
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-md bg-[#141C2B] border border-[#1E293B] flex items-center justify-center text-[#FDF4D2] shrink-0">
+                  <ShieldAlert className="w-3.5 h-3.5 text-[#10B981]" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-[#FDF4D2] tracking-wide">
+                    Sentinel Mission Control
+                  </div>
+                  <div className="text-[10px] text-[#10B981] font-medium flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
+                    <span>Production Console</span>
+                  </div>
+                </div>
               </div>
               <button
                 onClick={() => setMobileMenuOpen(false)}
-                className="p-1.5 rounded border border-[#1E293B] bg-[#141C2B] text-[#94A3B8] hover:text-[#FDF4D2] transition-colors"
+                className="p-1.5 rounded-md border border-[#1E293B] bg-[#141C2B] text-[#94A3B8] hover:text-[#FDF4D2] transition-colors"
                 aria-label="Close navigation"
               >
                 <X className="w-4 h-4" />
@@ -480,16 +482,24 @@ export default function AdminDashboardPage() {
             <div className="hidden lg:flex items-center justify-between w-full">
               {!sidebarCollapsed ? (
                 <>
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-[#10B981] shrink-0" />
-                    <span className="text-xs font-bold text-[#FDF4D2] tracking-wide">
-                      Mission Control
-                    </span>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-md bg-[#141C2B] border border-[#1E293B] flex items-center justify-center text-[#FDF4D2] shrink-0">
+                      <ShieldAlert className="w-3.5 h-3.5 text-[#10B981]" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-[#FDF4D2] tracking-tight leading-none truncate">
+                        Kultra Sentinel
+                      </div>
+                      <div className="text-[10px] text-[#94A3B8] font-medium flex items-center gap-1.5 mt-1 leading-none">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
+                        <span>Fleet Console</span>
+                      </div>
+                    </div>
                   </div>
                   <button
                     onClick={toggleSidebar}
                     title="Collapse sidebar"
-                    className="p-1.5 rounded border border-[#1E293B] bg-[#141C2B] text-[#94A3B8] hover:text-[#FF788D] hover:border-[#FF788D]/40 transition-colors"
+                    className="p-1.5 rounded-md border border-[#1E293B] bg-[#141C2B] text-[#94A3B8] hover:text-[#FDF4D2] hover:border-[#2B3D55] transition-colors"
                     aria-label="Collapse sidebar"
                   >
                     <PanelLeftClose className="w-3.5 h-3.5" />
@@ -500,7 +510,7 @@ export default function AdminDashboardPage() {
                   <button
                     onClick={toggleSidebar}
                     title="Expand sidebar"
-                    className="p-2 rounded border border-[#1E293B] bg-[#141C2B] text-[#94A3B8] hover:text-[#FF788D] hover:border-[#FF788D]/40 transition-colors"
+                    className="p-2 rounded-md border border-[#1E293B] bg-[#141C2B] text-[#94A3B8] hover:text-[#FDF4D2] hover:border-[#2B3D55] transition-colors"
                     aria-label="Expand sidebar"
                   >
                     <PanelLeftOpen className="w-4 h-4" />
@@ -512,12 +522,12 @@ export default function AdminDashboardPage() {
 
           {/* Navigation Items (Expanded Mode & Mobile) */}
           <nav
-            className={`space-y-4 ${sidebarCollapsed ? 'lg:hidden' : 'block'}`}
+            className={`space-y-3 ${sidebarCollapsed ? 'lg:hidden' : 'block'}`}
             aria-label="Sidebar Navigation"
           >
             {navGroups.map((grp) => (
               <div key={grp.group} className="space-y-1">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8] px-3 pb-1">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-[#64748B] px-3 pb-1 pt-2 first:pt-0">
                   {grp.group}
                 </div>
                 {grp.items.map((item) => {
@@ -530,18 +540,21 @@ export default function AdminDashboardPage() {
                         setActiveTab(item.id);
                         setMobileMenuOpen(false);
                       }}
-                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-md text-xs font-medium transition-all ${
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-xs transition-all relative ${
                         isActive
-                          ? 'bg-[#141C2B] text-[#FDF4D2] border-l-2 border-[#FF788D] shadow-sm font-semibold'
-                          : 'text-[#94A3B8] hover:bg-[#141C2B]/60 hover:text-[#FDF4D2] border-l-2 border-transparent'
+                          ? 'bg-[#141C2B] text-[#FDF4D2] border border-[#1E293B] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] font-semibold'
+                          : 'text-[#94A3B8] hover:bg-[#141C2B]/60 hover:text-[#FDF4D2] border border-transparent font-medium'
                       }`}
                     >
+                      {isActive && (
+                        <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r bg-[#FF788D]" />
+                      )}
                       <div className="flex items-center gap-2.5">
                         <Icon className={`w-4 h-4 ${isActive ? 'text-[#FF788D]' : 'text-[#94A3B8]'}`} />
                         <span>{item.label}</span>
                       </div>
                       {item.badge !== null && (
-                        <span className={`px-2 py-0.5 rounded text-[10px] ${item.badgeColor}`}>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-mono ${item.badgeColor}`}>
                           {item.badge}
                         </span>
                       )}
@@ -554,12 +567,12 @@ export default function AdminDashboardPage() {
 
           {/* Navigation Items (Collapsed Rail Mode) */}
           <nav
-            className={`space-y-3 hidden ${sidebarCollapsed ? 'lg:block' : 'lg:hidden'}`}
+            className={`space-y-2 hidden ${sidebarCollapsed ? 'lg:block' : 'lg:hidden'}`}
             aria-label="Sidebar Navigation (Collapsed)"
           >
             {navGroups.map((grp, gIdx) => (
               <div key={grp.group} className="space-y-1.5">
-                {gIdx > 0 && <div className="h-px bg-[#1E293B]/70 mx-1.5 my-2" />}
+                {gIdx > 0 && <div className="h-px bg-[#1E293B]/60 mx-1.5 my-2" />}
                 {grp.items.map((item) => {
                   const Icon = item.icon;
                   const isActive = activeTab === item.id;
@@ -573,8 +586,8 @@ export default function AdminDashboardPage() {
                         title={item.label}
                         className={`relative w-10 h-10 rounded-md flex items-center justify-center transition-all ${
                           isActive
-                            ? 'bg-[#141C2B] text-[#FF788D] border border-[#FF788D]/50 shadow-sm'
-                            : 'text-[#94A3B8] hover:bg-[#141C2B]/60 hover:text-[#FDF4D2] border border-transparent'
+                            ? 'bg-[#141C2B] text-[#FF788D] border border-[#FF788D]/40 shadow-sm'
+                            : 'text-[#94A3B8] hover:bg-[#141C2B] hover:text-[#FDF4D2] border border-transparent'
                         }`}
                         aria-label={item.label}
                       >
@@ -585,10 +598,10 @@ export default function AdminDashboardPage() {
                       </button>
 
                       {/* Tooltip on Hover */}
-                      <div className="hidden lg:group-hover:flex absolute left-full ml-3 px-2.5 py-1.5 rounded-md bg-[#141C2B] border border-[#1E293B] text-xs font-semibold text-[#FDF4D2] whitespace-nowrap z-50 shadow-xl items-center gap-2 pointer-events-none top-1/2 -translate-y-1/2">
+                      <div className="hidden lg:group-hover:flex absolute left-full ml-3 px-3 py-1.5 rounded-md bg-[#0F1522] border border-[#1E293B] text-xs font-semibold text-[#FDF4D2] whitespace-nowrap z-50 shadow-2xl items-center gap-2 pointer-events-none top-1/2 -translate-y-1/2">
                         <span>{item.label}</span>
                         {item.badge !== null && (
-                          <span className={`px-1.5 py-0.5 rounded text-[10px] ${item.badgeColor}`}>
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${item.badgeColor}`}>
                             {item.badge}
                           </span>
                         )}
@@ -603,18 +616,33 @@ export default function AdminDashboardPage() {
 
         {/* Sidebar Footer (Admin Profile & Sign Out - Expanded Mode) */}
         <div className={`p-3.5 border-t border-[#1E293B] bg-[#0a0b1dff]/50 ${sidebarCollapsed ? 'lg:hidden' : 'block'}`}>
+          {/* Fleet Telemetry Heartbeat */}
+          <div className="px-3 py-2 rounded-md bg-[#0a0b1dff]/70 border border-[#1E293B]/70 mb-3 space-y-1.5">
+            <div className="flex items-center justify-between text-[11px]">
+              <div className="flex items-center gap-1.5 text-[#CBD5E1] font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
+                <span>QoS 1 Ingestion</span>
+              </div>
+              <span className="font-mono text-[#10B981] font-bold text-[10px]">{telemetry.globalIngestionRate} m/m</span>
+            </div>
+            <div className="flex items-center justify-between text-[10px] text-[#94A3B8]">
+              <span>Pipeline SLA</span>
+              <span className="font-mono text-[#CBD5E1]">{telemetry.averageLatencyMs} ms</span>
+            </div>
+          </div>
+
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-full bg-[#141C2B] border border-[#1E293B] flex items-center justify-center text-xs font-bold text-[#FF788D] shrink-0">
+              <div className="w-8 h-8 rounded-md bg-[#141C2B] border border-[#1E293B] flex items-center justify-center text-xs font-bold text-[#FDF4D2] shrink-0">
                 YS
               </div>
               <div className="min-w-0">
                 <div className="text-xs text-[#FDF4D2] font-semibold truncate" title={adminUser?.email}>
                   {adminUser?.email}
                 </div>
-                <div className="text-[11px] text-[#10B981] flex items-center gap-1 font-medium">
+                <div className="text-[10px] text-[#10B981] flex items-center gap-1 font-medium">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
-                  <span>Sole Owner</span>
+                  <span>Platform Owner</span>
                 </div>
               </div>
             </div>
@@ -622,7 +650,7 @@ export default function AdminDashboardPage() {
             <button
               onClick={handleLogout}
               title="Sign out of console"
-              className="p-1.5 rounded border border-[#1E293B] bg-[#141C2B] text-[#94A3B8] hover:text-[#FF788D] hover:border-[#FF788D]/50 transition-colors shrink-0"
+              className="p-1.5 rounded-md border border-[#1E293B] bg-[#141C2B] text-[#94A3B8] hover:text-[#FF788D] hover:border-[#FF788D]/40 transition-colors shrink-0"
             >
               <LogOut className="w-4 h-4" />
             </button>
@@ -632,15 +660,15 @@ export default function AdminDashboardPage() {
         {/* Sidebar Footer (Collapsed Rail Mode) */}
         <div className={`p-2.5 border-t border-[#1E293B] bg-[#0a0b1dff]/50 flex-col items-center gap-2.5 hidden ${sidebarCollapsed ? 'lg:flex' : 'lg:hidden'}`}>
           <div
-            className="w-8 h-8 rounded-full bg-[#141C2B] border border-[#1E293B] flex items-center justify-center text-xs font-bold text-[#FF788D]"
-            title={`${adminUser?.email} (Sole Owner)`}
+            className="w-8 h-8 rounded-md bg-[#141C2B] border border-[#1E293B] flex items-center justify-center text-xs font-bold text-[#FDF4D2]"
+            title={`${adminUser?.email} (Platform Owner)`}
           >
             YS
           </div>
           <button
             onClick={handleLogout}
             title="Sign out of console"
-            className="p-2 rounded border border-[#1E293B] bg-[#141C2B] text-[#94A3B8] hover:text-[#FF788D] hover:border-[#FF788D]/50 transition-colors"
+            className="p-2 rounded-md border border-[#1E293B] bg-[#141C2B] text-[#94A3B8] hover:text-[#FF788D] hover:border-[#FF788D]/40 transition-colors"
           >
             <LogOut className="w-3.5 h-3.5" />
           </button>
@@ -652,41 +680,41 @@ export default function AdminDashboardPage() {
 
         {/* Impersonation Banner */}
         {impersonatingTenant && (
-          <div className="bg-[#1C2436] border-b-2 border-[#FF788D] px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div className="bg-[#0F1522] border-b border-[#FF788D]/50 px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
             <div className="flex items-center gap-3">
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#FF788D] text-[#0a0b1dff] font-bold shrink-0">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-[#FF788D] text-[#0a0b1dff] font-bold shrink-0">
                 <Eye className="w-3.5 h-3.5" />
                 Impersonation Active
               </span>
-              <span className="text-[#E2E8F0]">
-                Viewing live tenant dashboard for <strong className="text-[#FDF4D2] underline decoration-[#FF788D] underline-offset-2">{impersonatingTenant.email}</strong> ({impersonatingTenant.company_name})
+              <span className="text-[#CBD5E1]">
+                Viewing live tenant dashboard for <strong className="text-[#FDF4D2]">{impersonatingTenant.email}</strong> ({impersonatingTenant.company_name})
               </span>
             </div>
             <button
               onClick={() => setImpersonatingTenant(null)}
-              className="inline-flex items-center justify-center gap-1 px-3 py-1 bg-[#142036] border border-[#2B3B52] hover:border-[#FF788D] text-[#FDF4D2] font-medium rounded transition-colors text-xs self-start sm:self-auto"
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-1 bg-[#141C2B] border border-[#1E293B] hover:border-[#FF788D] text-[#FDF4D2] font-semibold rounded text-xs transition-colors self-start sm:self-auto"
             >
               <EyeOff className="w-3.5 h-3.5" />
-              Exit Impersonation
+              <span>Exit Impersonation</span>
             </button>
           </div>
         )}
 
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
-          {/* Feedback Toast */}
+          {/* Feedback Notification */}
           {feedback && (
             <div
-              className={`px-4 py-3 rounded-md border text-sm flex items-center justify-between font-medium transition-all shadow-md ${
+              className={`px-4 py-3 rounded-md border text-xs flex items-center justify-between font-medium transition-all shadow-sm ${
                 feedback.type === 'success'
-                  ? 'bg-emerald-950/80 border-emerald-500/60 text-emerald-300'
-                  : 'bg-rose-950/80 border-rose-500/60 text-rose-300'
+                  ? 'bg-[#10B981]/10 border-[#10B981]/30 text-[#10B981]'
+                  : 'bg-[#FF788D]/10 border-[#FF788D]/30 text-[#FF788D]'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                {feedback.type === 'success' ? <Check className="w-4 h-4 text-emerald-400" /> : <AlertTriangle className="w-4 h-4 text-rose-400" />}
+                {feedback.type === 'success' ? <Check className="w-4 h-4 text-[#10B981]" /> : <AlertTriangle className="w-4 h-4 text-[#FF788D]" />}
                 <span>{feedback.message}</span>
               </div>
-              <button onClick={() => setFeedback(null)} className="text-xs opacity-80 hover:opacity-100 uppercase tracking-wider font-bold">
+              <button onClick={() => setFeedback(null)} className="text-[11px] opacity-80 hover:opacity-100 uppercase tracking-wider font-bold">
                 Dismiss
               </button>
             </div>
@@ -694,24 +722,31 @@ export default function AdminDashboardPage() {
 
           {/* SECTION 1: Top-Level Platform Telemetry (Global KPIs) */}
           <section className="space-y-4">
-            <div className="flex items-center justify-between pb-1 flex-wrap gap-3">
+            <div className="flex items-center justify-between pb-1 flex-wrap gap-4 border-b border-[#1E293B]/70 pb-4">
               <div>
-                <div className="flex items-center gap-2.5">
-                  <h1 className="text-base sm:text-lg font-bold text-[#FDF4D2] tracking-tight">Platform Global Telemetry</h1>
-                  <span className="text-[10px] font-mono font-medium text-[#94A3B8] px-2 py-0.5 rounded bg-[#141C2B] border border-[#1E293B]">GCP: us-central1</span>
+                <div className="flex items-center gap-2 text-[11px] text-[#94A3B8] font-medium mb-1">
+                  <span>Platform Intelligence</span>
+                  <span className="text-[#64748B]">/</span>
+                  <span className="text-[#CBD5E1]">Super Admin Console</span>
+                  <span className="text-[#64748B]">/</span>
+                  <span className="text-[#10B981] font-mono text-[10px] px-1.5 py-0.2 rounded bg-[#10B981]/10 border border-[#10B981]/25">Production Fleet</span>
                 </div>
-                <p className="text-xs text-[#94A3B8] mt-1">Real-time commercial volume and Google Cloud Pub/Sub pipeline health</p>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-base sm:text-lg font-bold text-[#FDF4D2] tracking-tight">Platform Telemetry & Fleet Health</h1>
+                  <span className="text-[10px] font-mono font-medium text-[#94A3B8] px-2 py-0.5 rounded bg-[#0F1522] border border-[#1E293B]">GCP: us-central1</span>
+                </div>
+                <p className="text-xs text-[#94A3B8] mt-0.5">Real-time commercial volume and Google Cloud Pub/Sub QoS 1 streaming metrics</p>
               </div>
 
               <div className="flex items-center gap-2.5">
-                <div className="hidden sm:flex items-center gap-1.5 text-xs font-medium text-[#10B981] bg-[#10B981]/15 px-2.5 py-1 rounded border border-[#10B981]/40">
+                <div className="hidden sm:flex items-center gap-1.5 text-xs font-medium text-[#10B981] bg-[#10B981]/10 px-3 py-1.5 rounded-md border border-[#10B981]/30">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
-                  <span>Pipeline Active ({telemetry.globalIngestionRate} msg/min)</span>
+                  <span>Pub/Sub Online ({telemetry.globalIngestionRate} msg/min)</span>
                 </div>
 
                 <button
                   onClick={() => loadTabData()}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#141C2B] hover:bg-[#1E293B] text-[#CBD5E1] hover:text-[#FDF4D2] border border-[#1E293B] text-xs font-semibold transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#141C2B] hover:bg-[#1E293B] text-[#CBD5E1] hover:text-[#FDF4D2] border border-[#1E293B] hover:border-[#2B3D55] text-xs font-semibold transition-all active:translate-y-[0.5px] shadow-sm"
                   title="Refresh telemetry"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
@@ -720,157 +755,200 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
-            {/* Commercial Telemetry Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {/* Tier 1: Commercial Volume Metrics (4 Cards) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
               {/* Card 1: MRR */}
-              <div className="bg-[#111828] border border-[#223147] border-t-2 border-t-sky-400 rounded-lg p-4 space-y-2">
+              <div className="bg-[#0F1522] border border-[#1E293B] border-t-white/[0.04] hover:border-[#2B3D55] transition-all rounded-xl p-4.5 space-y-2.5 shadow-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-[#CBD5E1]">Monthly Recurring Revenue</span>
-                  <div className="p-1.5 rounded bg-sky-500/15 text-sky-400 border border-sky-500/30">
-                    <DollarSign className="w-4 h-4" />
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-[#94A3B8]">Monthly Recurring Revenue</span>
+                  <div className="p-1.5 rounded-md bg-[#141C2B] text-[#94A3B8] border border-[#1E293B]">
+                    <DollarSign className="w-3.5 h-3.5" />
                   </div>
                 </div>
                 <div className="text-2xl sm:text-3xl font-bold text-[#FDF4D2] tracking-tight">
                   ${telemetry.mrr.toLocaleString()}
                 </div>
-                <div className="text-xs text-sky-400 font-medium flex items-center gap-1.5 pt-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
-                  <span>Stripe Live Recurring Volume</span>
+                <div className="text-xs text-[#94A3B8] font-medium flex items-center justify-between pt-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
+                    <span>Stripe recurring volume</span>
+                  </div>
+                  <span className="text-[11px] font-mono text-[#10B981] font-semibold">+14.2% MoM</span>
                 </div>
               </div>
 
               {/* Card 2: Active Subs vs Trials */}
-              <div className="bg-[#111828] border border-[#223147] border-t-2 border-t-indigo-400 rounded-lg p-4 space-y-2">
+              <div className="bg-[#0F1522] border border-[#1E293B] border-t-white/[0.04] hover:border-[#2B3D55] transition-all rounded-xl p-4.5 space-y-2.5 shadow-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-[#CBD5E1]">Active Tenants vs. Trials</span>
-                  <div className="p-1.5 rounded bg-indigo-500/15 text-indigo-400 border border-indigo-500/30">
-                    <Users className="w-4 h-4" />
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-[#94A3B8]">Active Accounts</span>
+                  <div className="p-1.5 rounded-md bg-[#141C2B] text-[#94A3B8] border border-[#1E293B]">
+                    <Users className="w-3.5 h-3.5" />
                   </div>
                 </div>
                 <div className="text-2xl sm:text-3xl font-bold text-[#FDF4D2] tracking-tight flex items-baseline gap-1.5">
                   <span>{telemetry.activeSubscriptions}</span>
-                  <span className="text-sm font-medium text-indigo-300">Paid</span>
-                  <span className="text-sm text-[#475569]">/</span>
-                  <span className="text-xl font-bold text-[#CBD5E1]">{telemetry.activeTrials}</span>
-                  <span className="text-sm font-medium text-[#94A3B8]">Trials</span>
+                  <span className="text-xs font-semibold text-[#CBD5E1]">Paid</span>
+                  <span className="text-xs text-[#64748B]">/</span>
+                  <span className="text-lg font-bold text-[#CBD5E1]">{telemetry.activeTrials}</span>
+                  <span className="text-xs text-[#94A3B8]">Trial</span>
                 </div>
-                <div className="text-xs text-indigo-300 font-medium pt-1">
-                  {telemetry.activeSubscriptions + telemetry.activeTrials} total platform accounts under contract
+                <div className="space-y-1.5 pt-0.5">
+                  <div className="w-full bg-[#141C2B] h-1.5 rounded-full overflow-hidden flex border border-[#1E293B]">
+                    <div
+                      className="bg-[#10B981] h-full"
+                      style={{
+                        width: `${Math.round(
+                          (telemetry.activeSubscriptions /
+                            Math.max(1, telemetry.activeSubscriptions + telemetry.activeTrials)) *
+                            100
+                        )}%`,
+                      }}
+                    />
+                    <div
+                      className="bg-[#94A3B8] h-full"
+                      style={{
+                        width: `${Math.round(
+                          (telemetry.activeTrials /
+                            Math.max(1, telemetry.activeSubscriptions + telemetry.activeTrials)) *
+                            100
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                  <div className="text-[11px] text-[#94A3B8] font-medium">
+                    {telemetry.activeSubscriptions + telemetry.activeTrials} platform accounts under contract
+                  </div>
                 </div>
               </div>
 
               {/* Card 3: Monitored Stores */}
-              <div className="bg-[#111828] border border-[#223147] border-t-2 border-t-emerald-400 rounded-lg p-4 space-y-2">
+              <div className="bg-[#0F1522] border border-[#1E293B] border-t-white/[0.04] hover:border-[#2B3D55] transition-all rounded-xl p-4.5 space-y-2.5 shadow-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-[#CBD5E1]">Total Monitored Stores</span>
-                  <div className="p-1.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                    <StoreIcon className="w-4 h-4" />
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-[#94A3B8]">Monitored Stores</span>
+                  <div className="p-1.5 rounded-md bg-[#141C2B] text-[#94A3B8] border border-[#1E293B]">
+                    <StoreIcon className="w-3.5 h-3.5" />
                   </div>
                 </div>
                 <div className="text-2xl sm:text-3xl font-bold text-[#FDF4D2] tracking-tight">
                   {telemetry.totalMonitoredStores}
                 </div>
-                <div className="text-xs text-emerald-400 font-medium flex items-center gap-1.5 pt-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                  <span>Standalone & MCA child stores</span>
+                <div className="text-xs text-[#94A3B8] font-medium flex items-center justify-between pt-0.5">
+                  <span>GMC Registry</span>
+                  <span className="text-[11px] font-mono text-[#CBD5E1]">Standalone & MCA</span>
                 </div>
               </div>
 
               {/* Card 4: Total SKUs Tracked */}
-              <div className="bg-[#111828] border border-[#223147] border-t-2 border-t-amber-400 rounded-lg p-4 space-y-2">
+              <div className="bg-[#0F1522] border border-[#1E293B] border-t-white/[0.04] hover:border-[#2B3D55] transition-all rounded-xl p-4.5 space-y-2.5 shadow-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-[#CBD5E1]">Total SKUs Under Defense</span>
-                  <div className="p-1.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30">
-                    <Layers className="w-4 h-4" />
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-[#94A3B8]">Observed SKUs</span>
+                  <div className="p-1.5 rounded-md bg-[#141C2B] text-[#94A3B8] border border-[#1E293B]">
+                    <Layers className="w-3.5 h-3.5" />
                   </div>
                 </div>
                 <div className="text-2xl sm:text-3xl font-bold text-[#FDF4D2] tracking-tight">
                   {telemetry.totalSkusTracked.toLocaleString()}
                 </div>
-                <div className="text-xs text-amber-400 font-medium flex items-center gap-1.5 pt-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                <div className="text-xs text-[#94A3B8] font-medium flex items-center justify-between pt-0.5">
                   <span>Continuous Pub/Sub monitoring</span>
+                  <span className="text-[11px] font-mono text-[#10B981]">100% Coverage</span>
                 </div>
               </div>
+            </div>
 
-              {/* Infrastructure & Pipeline Telemetry Row */}
-              {/* Card 5: Ingestion Rate */}
-              <div className="bg-[#111828] border border-[#223147] border-t-2 border-t-emerald-500 rounded-lg p-4 space-y-2">
+            {/* Tier 2: Real-Time Pipeline Health Console (Unified 4-Metric Surface) */}
+            <div className="bg-[#0F1522] border border-[#1E293B] rounded-xl divide-y sm:divide-y-0 sm:divide-x divide-[#1E293B] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 shadow-sm overflow-hidden">
+              {/* Metric 1: Ingestion */}
+              <div className="p-4.5 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-[#CBD5E1]">Global Ingestion Throughput</span>
-                  <div className="p-1.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                    <Radio className="w-4 h-4" />
-                  </div>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">Ingestion Rate</span>
+                  <Radio className="w-3.5 h-3.5 text-[#10B981]" />
                 </div>
-                <div className="text-2xl sm:text-3xl font-bold text-[#FDF4D2] tracking-tight flex items-baseline gap-1">
+                <div className="text-xl font-bold text-[#FDF4D2] tracking-tight flex items-baseline gap-1.5">
                   <span>{telemetry.globalIngestionRate}</span>
-                  <span className="text-sm font-semibold text-emerald-400">msg/min</span>
+                  <span className="text-xs font-semibold text-[#10B981]">msg/min</span>
                 </div>
-                <div className="text-xs text-[#CBD5E1] font-medium pt-1">
-                  Inbound Google Cloud Pub/Sub topic events
+                <div className="flex items-end gap-1 h-3 pt-0.5">
+                  <span className="w-1.5 h-1.5 bg-[#10B981]/50 rounded-[1px]" />
+                  <span className="w-1.5 h-2.5 bg-[#10B981]/70 rounded-[1px]" />
+                  <span className="w-1.5 h-2 bg-[#10B981]/60 rounded-[1px]" />
+                  <span className="w-1.5 h-3 bg-[#10B981]/80 rounded-[1px]" />
+                  <span className="w-1.5 h-2.5 bg-[#10B981]/70 rounded-[1px]" />
+                  <span className="w-1.5 h-3 bg-[#10B981] rounded-[1px]" />
                 </div>
+                <p className="text-[11px] text-[#94A3B8]">Google Cloud Pub/Sub QoS 1 streaming</p>
               </div>
 
-              {/* Card 6: Latency */}
-              <div className="bg-[#111828] border border-[#223147] border-t-2 border-t-emerald-400 rounded-lg p-4 space-y-2">
+              {/* Metric 2: Latency */}
+              <div className="p-4.5 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-[#CBD5E1]">Average End-to-End Latency</span>
-                  <div className="p-1.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                    <Zap className="w-4 h-4" />
-                  </div>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">Pipeline Latency</span>
+                  <Zap className="w-3.5 h-3.5 text-[#94A3B8]" />
                 </div>
-                <div className="text-2xl sm:text-3xl font-bold text-[#34D399] tracking-tight flex items-baseline gap-1">
+                <div className="text-xl font-bold text-[#FDF4D2] tracking-tight flex items-baseline gap-1.5">
                   <span>{telemetry.averageLatencyMs}</span>
-                  <span className="text-sm font-semibold text-emerald-400">ms</span>
+                  <span className="text-xs font-semibold text-[#94A3B8]">ms avg</span>
                 </div>
-                <div className="text-xs text-emerald-400 font-medium pt-1">
-                  GCP event arrival to Slack dispatch (SLA &lt; 500ms)
+                <div className="w-full bg-[#141C2B] h-1.5 rounded-full overflow-hidden border border-[#1E293B]">
+                  <div
+                    className="bg-[#10B981] h-full"
+                    style={{
+                      width: `${Math.min(100, Math.round((telemetry.averageLatencyMs / 500) * 100))}%`,
+                    }}
+                  />
                 </div>
+                <p className="text-[11px] text-[#94A3B8]">GCP arrival to Slack dispatch (SLA &lt; 500ms)</p>
               </div>
 
-              {/* Card 7: DLQ Count */}
-              <div className="bg-[#111828] border border-[#223147] border-t-2 border-t-[#FF788D] rounded-lg p-4 space-y-2">
+              {/* Metric 3: Dead Letter Queue */}
+              <div className="p-4.5 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-[#CBD5E1]">Dead Letter Queue (DLQ)</span>
-                  <div className="p-1.5 rounded bg-[#FF788D]/20 text-[#FF788D] border border-[#FF788D]/40">
-                    <ShieldAlert className="w-4 h-4" />
-                  </div>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">Dead Letter Queue</span>
+                  <ShieldAlert className={`w-3.5 h-3.5 ${telemetry.dlqCount > 0 ? 'text-[#FF788D]' : 'text-[#10B981]'}`} />
                 </div>
-                <div className={`text-2xl sm:text-3xl font-bold tracking-tight ${telemetry.dlqCount > 0 ? 'text-[#FF788D]' : 'text-[#34D399]'}`}>
-                  {telemetry.dlqCount}
+                <div className="text-xl font-bold tracking-tight flex items-baseline gap-2">
+                  <span className={telemetry.dlqCount > 0 ? 'text-[#FF788D]' : 'text-[#FDF4D2]'}>
+                    {telemetry.dlqCount}
+                  </span>
+                  <span className={`text-[10px] font-semibold px-1.5 py-0.2 rounded border ${
+                    telemetry.dlqCount > 0
+                      ? 'bg-[#FF788D]/15 text-[#FF788D] border-[#FF788D]/30'
+                      : 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/30'
+                  }`}>
+                    {telemetry.dlqCount > 0 ? 'Action Required' : 'Healthy'}
+                  </span>
                 </div>
-                <div className="text-xs text-[#CBD5E1] font-medium pt-1">
-                  {telemetry.dlqCount > 0 ? 'Payloads awaiting triage and replay' : 'Zero dropped payloads'}
-                </div>
+                <p className="text-[11px] text-[#94A3B8] pt-1">
+                  {telemetry.dlqCount > 0 ? 'Dropped payloads awaiting triage' : 'Zero dropped payloads'}
+                </p>
               </div>
 
-              {/* Card 8: Webhook Failure Rate */}
-              <div className="bg-[#111828] border border-[#223147] border-t-2 border-t-purple-400 rounded-lg p-4 space-y-2">
+              {/* Metric 4: Webhook Failure Rate */}
+              <div className="p-4.5 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-[#CBD5E1]">Slack Outbound Failure Rate</span>
-                  <div className="p-1.5 rounded bg-purple-500/15 text-purple-400 border border-purple-500/30">
-                    <Send className="w-4 h-4" />
-                  </div>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">Slack Dispatch Success</span>
+                  <Send className="w-3.5 h-3.5 text-[#94A3B8]" />
                 </div>
-                <div className="text-2xl sm:text-3xl font-bold text-[#FDF4D2] tracking-tight">
-                  {(telemetry.webhookFailureRate * 100).toFixed(2)}%
+                <div className="text-xl font-bold text-[#FDF4D2] tracking-tight flex items-baseline gap-1.5">
+                  <span>{((1 - telemetry.webhookFailureRate) * 100).toFixed(1)}%</span>
+                  <span className="text-xs font-semibold text-[#94A3B8]">deliverability</span>
                 </div>
-                <div className="text-xs text-purple-300 font-medium pt-1">
-                  Slack 4xx/5xx API rejection rate
-                </div>
+                <p className="text-[11px] text-[#94A3B8] pt-1">
+                  {(telemetry.webhookFailureRate * 100).toFixed(2)}% outbound 4xx/5xx errors
+                </p>
               </div>
             </div>
           </section>
 
           {/* SECTION 2: Active Management View */}
           <section className="space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-[#223147]">
+            <div className="flex items-center justify-between pb-2 border-b border-[#1E293B]">
               <div>
-                <h1 className="text-lg font-bold text-[#FDF4D2]">
+                <h2 className="text-base sm:text-lg font-bold text-[#FDF4D2] tracking-tight">
                   {navGroups.flatMap((g) => g.items).find((n) => n.id === activeTab)?.label}
-                </h1>
-                <p className="text-xs text-[#CBD5E1] mt-0.5">
-                  Operational control surface for platform administrators
+                </h2>
+                <p className="text-xs text-[#94A3B8] mt-0.5">
+                  Operational control surface for platform owner administration
                 </p>
               </div>
             </div>
@@ -879,23 +957,26 @@ export default function AdminDashboardPage() {
             {activeTab === 'tenants' && (
               <div className="space-y-4">
                 {/* Search & Filter Bar */}
-                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-[#111828] border border-[#223147] p-3 rounded-lg">
+                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-[#0F1522] border border-[#1E293B] p-3 rounded-xl shadow-sm">
                   <div className="relative w-full sm:w-88">
-                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#CBD5E1]" />
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
                     <input
                       type="text"
                       placeholder="Search User ID, company, email..."
                       value={tenantSearch}
                       onChange={(e) => setTenantSearch(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2 bg-[#152033] border border-[#2B3B52] rounded text-xs text-[#FDF4D2] placeholder-[#94A3B8] focus:outline-none focus:border-[#FF788D] font-medium"
+                      className="w-full pl-9 pr-12 py-2 bg-[#0a0b1dff] border border-[#1E293B] rounded-lg text-xs text-[#FDF4D2] placeholder-[#64748B] focus:outline-none focus:border-[#FF788D] font-medium transition-colors"
                     />
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono text-[#64748B] px-1.5 py-0.5 rounded bg-[#141C2B] border border-[#1E293B] pointer-events-none">
+                      ⌘K
+                    </span>
                   </div>
 
                   <div className="flex items-center gap-2.5">
                     <select
                       value={tenantPlanFilter}
                       onChange={(e) => setTenantPlanFilter(e.target.value)}
-                      className="w-1/2 sm:w-auto bg-[#152033] border border-[#2B3B52] rounded text-xs text-[#FDF4D2] px-3 py-2 focus:outline-none focus:border-[#FF788D] font-medium"
+                      className="w-1/2 sm:w-auto bg-[#0a0b1dff] border border-[#1E293B] rounded-lg text-xs text-[#FDF4D2] px-3 py-2 focus:outline-none focus:border-[#FF788D] font-medium transition-colors cursor-pointer"
                     >
                       <option value="all">All Plans</option>
                       <option value="Trial">Trial</option>
@@ -908,42 +989,40 @@ export default function AdminDashboardPage() {
                     <select
                       value={tenantStatusFilter}
                       onChange={(e) => setTenantStatusFilter(e.target.value)}
-                      className="w-1/2 sm:w-auto bg-[#152033] border border-[#2B3B52] rounded text-xs text-[#FDF4D2] px-3 py-2 focus:outline-none focus:border-[#FF788D] font-medium"
+                      className="w-1/2 sm:w-auto bg-[#0a0b1dff] border border-[#1E293B] rounded-lg text-xs text-[#FDF4D2] px-3 py-2 focus:outline-none focus:border-[#FF788D] font-medium transition-colors cursor-pointer"
                     >
                       <option value="all">All Statuses</option>
                       <option value="active">Active</option>
                       <option value="suspended">Suspended</option>
                     </select>
                   </div>
-                </div>
-
-                {/* Tenants Table */}
-                <div className="bg-[#111828] border border-[#223147] rounded-lg overflow-hidden shadow-lg">
+                </div>                {/* Tenants Table */}
+                <div className="bg-[#0F1522] border border-[#1E293B] rounded-xl overflow-hidden shadow-sm">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs min-w-[720px]">
-                      <thead className="bg-[#142036] text-[#CBD5E1] border-b border-[#223147]">
+                      <thead className="bg-[#0c121e] text-[#64748B] border-b border-[#1E293B]">
                         <tr>
-                          <th className="px-4 py-3.5 font-bold uppercase tracking-wider text-[10px]">Tenant Identity</th>
-                          <th className="px-4 py-3.5 font-bold uppercase tracking-wider text-[10px]">Subscription Tier</th>
-                          <th className="px-4 py-3.5 font-bold uppercase tracking-wider text-[10px]">Usage Footprint</th>
-                          <th className="px-4 py-3.5 font-bold uppercase tracking-wider text-[10px]">OAuth Status</th>
-                          <th className="px-4 py-3.5 font-bold uppercase tracking-wider text-[10px]">Last Active</th>
-                          <th className="px-4 py-3.5 font-bold uppercase tracking-wider text-[10px] text-right">Super-Admin Actions</th>
+                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Tenant Identity</th>
+                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Subscription Tier</th>
+                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Usage Footprint</th>
+                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">OAuth Status</th>
+                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Last Active</th>
+                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px] text-right">Actions</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-[#223147]">
+                      <tbody className="divide-y divide-[#1E293B]/60">
                         {tenants.map((tenant) => (
-                          <tr key={tenant.id} className="hover:bg-[#152238] transition-colors">
+                          <tr key={tenant.id} className="hover:bg-[#141C2B]/50 transition-colors">
                             {/* Tenant Identity */}
                             <td className="px-4 py-3.5">
                               <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-md bg-[#18263D] border border-[#2B3E5C] text-xs font-bold text-[#FDF4D2] flex items-center justify-center shrink-0">
+                                <div className="w-8 h-8 rounded-lg bg-[#141C2B] border border-[#1E293B] text-xs font-bold text-[#FDF4D2] flex items-center justify-center shrink-0">
                                   {getInitials(tenant.company_name)}
                                 </div>
                                 <div>
-                                  <div className="font-bold text-[#FDF4D2] text-sm">{tenant.company_name}</div>
-                                  <div className="text-[#CBD5E1] text-xs font-medium">{tenant.email}</div>
-                                  <div className="text-[#94A3B8] text-[10px] font-mono">{tenant.user_id}</div>
+                                  <div className="font-semibold text-[#FDF4D2] text-xs">{tenant.company_name}</div>
+                                  <div className="text-[#94A3B8] text-[11px] font-medium">{tenant.email}</div>
+                                  <div className="text-[#64748B] text-[10px] font-mono">{tenant.user_id}</div>
                                 </div>
                               </div>
                             </td>
@@ -951,45 +1030,43 @@ export default function AdminDashboardPage() {
                             {/* Plan Tier */}
                             <td className="px-4 py-3.5">
                               <span
-                                className={`inline-block px-2.5 py-1 rounded text-xs font-bold border ${
-                                  tenant.plan_tier === 'Active Pro'
-                                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50'
-                                    : tenant.plan_tier === 'Agency Pilot'
-                                    ? 'bg-blue-500/20 text-blue-300 border-blue-500/50'
+                                className={`inline-block px-2.5 py-0.5 rounded text-[11px] font-medium border ${
+                                  tenant.plan_tier === 'Active Pro' || tenant.plan_tier === 'Agency Pilot'
+                                    ? 'bg-[#141C2B] text-[#FDF4D2] border-[#1E293B]'
                                     : tenant.plan_tier === 'Trial'
-                                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/50'
-                                    : 'bg-rose-500/20 text-rose-300 border-rose-500/50'
+                                    ? 'bg-[#141C2B] text-[#CBD5E1] border-[#1E293B]'
+                                    : 'bg-[#FF788D]/10 text-[#FF788D] border-[#FF788D]/30'
                                 }`}
                               >
                                 {tenant.plan_tier}
                               </span>
                               {tenant.status === 'suspended' && (
-                                <div className="text-[11px] text-[#FF788D] mt-1 font-bold">Suspended Account</div>
+                                <div className="text-[10px] text-[#FF788D] mt-1 font-semibold">Suspended</div>
                               )}
                             </td>
 
                             {/* Usage Footprint */}
                             <td className="px-4 py-3.5">
                               <div className="text-[#FDF4D2] font-semibold text-xs">
-                                {tenant.connected_stores} connected store{tenant.connected_stores > 1 ? 's' : ''}
+                                {tenant.connected_stores} store{tenant.connected_stores > 1 ? 's' : ''}
                               </div>
-                              <div className="text-[#CBD5E1] text-xs font-medium">
-                                {tenant.total_skus.toLocaleString()} SKUs Tracked
+                              <div className="text-[#94A3B8] text-[11px]">
+                                {tenant.total_skus.toLocaleString()} SKUs
                               </div>
-                              <div className="text-[#34D399] text-[11px] font-semibold">
-                                {tenant.incidents_month} incidents caught this mo.
+                              <div className="text-[#10B981] text-[10px] font-medium">
+                                {tenant.incidents_month} incidents caught
                               </div>
                             </td>
 
                             {/* OAuth Status */}
                             <td className="px-4 py-3.5">
                               <span
-                                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold ${
+                                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] font-medium border ${
                                   tenant.oauth_status === 'Valid'
-                                    ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/40'
+                                    ? 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/30'
                                     : tenant.oauth_status === 'Expiring Soon'
-                                    ? 'bg-amber-500/15 text-amber-300 border border-amber-500/40'
-                                    : 'bg-rose-500/15 text-rose-300 border border-rose-500/40'
+                                    ? 'bg-[#141C2B] text-[#CBD5E1] border-[#1E293B]'
+                                    : 'bg-[#FF788D]/10 text-[#FF788D] border-[#FF788D]/30'
                                 }`}
                               >
                                 <span
@@ -997,7 +1074,7 @@ export default function AdminDashboardPage() {
                                     tenant.oauth_status === 'Valid'
                                       ? 'bg-[#10B981]'
                                       : tenant.oauth_status === 'Expiring Soon'
-                                      ? 'bg-amber-400'
+                                      ? 'bg-[#CBD5E1]'
                                       : 'bg-[#FF788D]'
                                   }`}
                                 />
@@ -1006,7 +1083,7 @@ export default function AdminDashboardPage() {
                             </td>
 
                             {/* Last Active */}
-                            <td className="px-4 py-3.5 text-[#CBD5E1] text-xs font-medium whitespace-nowrap">
+                            <td className="px-4 py-3.5 text-[#94A3B8] text-xs font-medium whitespace-nowrap">
                               {new Date(tenant.last_active).toLocaleString(undefined, {
                                 month: 'short',
                                 day: 'numeric',
@@ -1020,24 +1097,25 @@ export default function AdminDashboardPage() {
                               <div className="flex items-center justify-end gap-1.5">
                                 <button
                                   onClick={() => handleTenantAction(tenant.id, 'impersonate')}
-                                  title="Impersonate User (Log in as)"
-                                  className="px-2.5 py-1.5 bg-[#18263D] border border-[#2B3E5C] hover:border-[#FF788D] text-[#FDF4D2] font-semibold rounded text-xs transition-colors"
+                                  title="Impersonate User"
+                                  className="px-2.5 py-1.5 bg-[#141C2B] border border-[#1E293B] hover:border-[#2B3D55] text-[#FDF4D2] font-semibold rounded-md text-xs transition-all active:translate-y-[0.5px] shadow-sm flex items-center gap-1"
                                 >
-                                  Impersonate
+                                  <Eye className="w-3 h-3 text-[#94A3B8]" />
+                                  <span>Impersonate</span>
                                 </button>
 
                                 <button
                                   onClick={() => handleTenantAction(tenant.id, 'extendTrial')}
-                                  title="Extend Trial / Grant Agency Pilot"
-                                  className="px-2.5 py-1.5 bg-blue-500/15 border border-blue-500/40 hover:bg-blue-500/25 text-blue-300 font-semibold rounded text-xs transition-colors"
+                                  title="Extend Trial / Grant Pilot"
+                                  className="px-2.5 py-1.5 bg-[#141C2B] border border-[#1E293B] hover:border-[#2B3D55] text-[#CBD5E1] hover:text-[#FDF4D2] font-medium rounded-md text-xs transition-all active:translate-y-[0.5px] shadow-sm"
                                 >
                                   Pilot Grant
                                 </button>
 
                                 <button
                                   onClick={() => handleTenantAction(tenant.id, 'forceReauth')}
-                                  title="Force OAuth Re-Auth Request"
-                                  className="px-2.5 py-1.5 bg-amber-500/15 border border-amber-500/40 hover:bg-amber-500/25 text-amber-300 font-semibold rounded text-xs transition-colors"
+                                  title="Force OAuth Re-Auth"
+                                  className="px-2.5 py-1.5 bg-[#141C2B] border border-[#1E293B] hover:border-[#2B3D55] text-[#CBD5E1] hover:text-[#FDF4D2] font-medium rounded-md text-xs transition-all active:translate-y-[0.5px] shadow-sm"
                                 >
                                   Re-Auth
                                 </button>
@@ -1045,16 +1123,16 @@ export default function AdminDashboardPage() {
                                 {tenant.status === 'active' ? (
                                   <button
                                     onClick={() => handleTenantAction(tenant.id, 'suspend')}
-                                    title="Suspend Tenant (Halt Pub/Sub Ingestion)"
-                                    className="p-1.5 bg-rose-500/15 border border-rose-500/40 hover:bg-rose-500/25 text-[#FF788D] rounded transition-colors"
+                                    title="Suspend Tenant"
+                                    className="p-1.5 bg-[#141C2B] border border-[#1E293B] hover:border-[#FF788D]/40 text-[#94A3B8] hover:text-[#FF788D] rounded-md transition-all active:translate-y-[0.5px] shadow-sm"
                                   >
                                     <Lock className="w-3.5 h-3.5" />
                                   </button>
                                 ) : (
                                   <button
                                     onClick={() => handleTenantAction(tenant.id, 'unsuspend')}
-                                    title="Unsuspend Tenant (Restore Pub/Sub)"
-                                    className="p-1.5 bg-emerald-500/15 border border-emerald-500/40 hover:bg-emerald-500/25 text-[#10B981] rounded transition-colors"
+                                    title="Unsuspend Tenant"
+                                    className="p-1.5 bg-[#141C2B] border border-[#1E293B] hover:border-[#10B981]/40 text-[#94A3B8] hover:text-[#10B981] rounded-md transition-all active:translate-y-[0.5px] shadow-sm"
                                   >
                                     <Unlock className="w-3.5 h-3.5" />
                                   </button>
@@ -1065,7 +1143,7 @@ export default function AdminDashboardPage() {
                         ))}
                         {tenants.length === 0 && (
                           <tr>
-                            <td colSpan={6} className="px-4 py-12 text-center text-[#CBD5E1]">
+                            <td colSpan={6} className="px-4 py-12 text-center text-[#94A3B8]">
                               No customer accounts found matching filter criteria.
                             </td>
                           </tr>
@@ -1080,23 +1158,26 @@ export default function AdminDashboardPage() {
             {/* TAB 2: Global Store Registry */}
             {activeTab === 'stores' && (
               <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-[#111828] border border-[#223147] p-3 rounded-lg">
+                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-[#0F1522] border border-[#1E293B] p-3 rounded-xl shadow-sm">
                   <div className="relative w-full sm:w-88">
-                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#CBD5E1]" />
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
                     <input
                       type="text"
                       placeholder="Search GMC Merchant ID, store domain, tenant..."
                       value={storeSearch}
                       onChange={(e) => setStoreSearch(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2 bg-[#152033] border border-[#2B3B52] rounded text-xs text-[#FDF4D2] placeholder-[#94A3B8] focus:outline-none focus:border-[#FF788D] font-medium"
+                      className="w-full pl-9 pr-12 py-2 bg-[#0a0b1dff] border border-[#1E293B] rounded-lg text-xs text-[#FDF4D2] placeholder-[#64748B] focus:outline-none focus:border-[#FF788D] font-medium transition-colors"
                     />
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono text-[#64748B] px-1.5 py-0.5 rounded bg-[#141C2B] border border-[#1E293B] pointer-events-none">
+                      ⌘K
+                    </span>
                   </div>
 
                   <div className="flex items-center gap-3">
                     <select
                       value={storeAccountFilter}
                       onChange={(e) => setStoreAccountFilter(e.target.value)}
-                      className="bg-[#152033] border border-[#2B3B52] rounded text-xs text-[#FDF4D2] px-3 py-2 focus:outline-none focus:border-[#FF788D] font-medium"
+                      className="bg-[#0a0b1dff] border border-[#1E293B] rounded-lg text-xs text-[#FDF4D2] px-3 py-2 focus:outline-none focus:border-[#FF788D] font-medium transition-colors cursor-pointer"
                     >
                       <option value="all">All Account Types</option>
                       <option value="Standalone Merchant">Standalone Merchant</option>
@@ -1105,7 +1186,7 @@ export default function AdminDashboardPage() {
 
                     <button
                       onClick={handleOrphanCleanup}
-                      className="px-3.5 py-2 bg-[#18263D] border border-rose-500/40 hover:bg-rose-500/20 text-[#FF788D] rounded text-xs font-semibold transition-colors flex items-center gap-1.5 whitespace-nowrap"
+                      className="px-3 py-2 bg-[#141C2B] border border-[#1E293B] hover:border-[#FF788D]/50 text-[#CBD5E1] hover:text-[#FF788D] rounded-lg text-xs font-semibold transition-all active:translate-y-[0.5px] shadow-sm flex items-center gap-1.5 whitespace-nowrap"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       <span>Orphan Cleanup</span>
@@ -1113,23 +1194,23 @@ export default function AdminDashboardPage() {
                   </div>
                 </div>
 
-                <div className="bg-[#111828] border border-[#223147] rounded-lg overflow-hidden shadow-lg">
+                <div className="bg-[#0F1522] border border-[#1E293B] rounded-xl overflow-hidden shadow-sm">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs min-w-[760px]">
-                      <thead className="bg-[#142036] text-[#CBD5E1] border-b border-[#223147]">
+                      <thead className="bg-[#0c121e] text-[#64748B] border-b border-[#1E293B]">
                         <tr>
-                          <th className="px-4 py-3.5 font-bold uppercase tracking-wider text-[10px]">GMC Merchant ID</th>
-                          <th className="px-4 py-3.5 font-bold uppercase tracking-wider text-[10px]">Parent Tenant</th>
-                          <th className="px-4 py-3.5 font-bold uppercase tracking-wider text-[10px]">Account Type</th>
-                          <th className="px-4 py-3.5 font-bold uppercase tracking-wider text-[10px]">Store URL & Domain</th>
-                          <th className="px-4 py-3.5 font-bold uppercase tracking-wider text-[10px]">Pub/Sub Topic State</th>
-                          <th className="px-4 py-3.5 font-bold uppercase tracking-wider text-[10px]">Disapprovals</th>
-                          <th className="px-4 py-3.5 font-bold uppercase tracking-wider text-[10px] text-right">Actions</th>
+                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">GMC Merchant ID</th>
+                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Parent Tenant</th>
+                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Account Type</th>
+                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Store Domain</th>
+                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Pub/Sub State</th>
+                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Disapprovals</th>
+                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px] text-right">Actions</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-[#223147]">
+                      <tbody className="divide-y divide-[#1E293B]/60">
                         {stores.map((store) => (
-                          <tr key={store.id} className="hover:bg-[#152238] transition-colors">
+                          <tr key={store.id} className="hover:bg-[#141C2B]/50 transition-colors">
                             {/* GMC ID */}
                             <td className="px-4 py-3.5 font-mono text-xs font-bold text-[#FDF4D2]">
                               {store.gmc_id}
@@ -1137,23 +1218,17 @@ export default function AdminDashboardPage() {
 
                             {/* Parent Tenant */}
                             <td className="px-4 py-3.5">
-                              <div className="font-bold text-[#FDF4D2] text-xs">{store.tenant_email}</div>
-                              <div className="text-[#94A3B8] text-[11px] font-mono">Tenant ID #{store.tenant_id}</div>
+                              <div className="font-semibold text-[#FDF4D2] text-xs">{store.tenant_email}</div>
+                              <div className="text-[#64748B] text-[10px] font-mono">Tenant ID #{store.tenant_id}</div>
                             </td>
 
                             {/* Account Type */}
                             <td className="px-4 py-3.5">
-                              <span
-                                className={`inline-block px-2.5 py-0.5 rounded text-[11px] font-bold border ${
-                                  store.account_type === 'MCA Child'
-                                    ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/50'
-                                    : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50'
-                                }`}
-                              >
+                              <span className="inline-block px-2 py-0.5 rounded text-[11px] font-medium border border-[#1E293B] bg-[#141C2B] text-[#CBD5E1]">
                                 {store.account_type}
                               </span>
                               {store.status === 'orphaned' && (
-                                <div className="text-[11px] text-[#FF788D] mt-1 font-bold">Orphan Feed</div>
+                                <div className="text-[10px] text-[#FF788D] mt-1 font-semibold">Orphan Feed</div>
                               )}
                             </td>
 
@@ -1163,19 +1238,19 @@ export default function AdminDashboardPage() {
                                 href={`https://${store.store_url}`}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="text-[#FDF4D2] font-medium hover:text-[#FF788D] flex items-center gap-1.5 transition-colors underline decoration-[#2B3E5C] underline-offset-2"
+                                className="text-[#FDF4D2] font-medium hover:text-[#FF788D] flex items-center gap-1.5 transition-colors"
                               >
                                 <span>{store.store_url}</span>
-                                <ExternalLink className="w-3 h-3 text-[#CBD5E1]" />
+                                <ExternalLink className="w-3 h-3 text-[#94A3B8]" />
                               </a>
                             </td>
 
                             {/* Topic */}
                             <td className="px-4 py-3.5">
-                              <div className="text-xs text-[#CBD5E1] font-mono truncate max-w-[200px]" title={store.pubsub_topic}>
+                              <div className="text-xs text-[#94A3B8] font-mono truncate max-w-[200px]" title={store.pubsub_topic}>
                                 {store.pubsub_topic}
                               </div>
-                              <div className="text-[11px] text-[#34D399] font-medium mt-0.5">
+                              <div className="text-[10px] text-[#10B981] font-medium mt-0.5">
                                 Last push: {new Date(store.last_message_at).toLocaleTimeString()}
                               </div>
                             </td>
@@ -1184,16 +1259,16 @@ export default function AdminDashboardPage() {
                             <td className="px-4 py-3.5">
                               <div className="flex items-center gap-2">
                                 <span
-                                  className={`px-2 py-0.5 rounded text-xs font-bold ${
+                                  className={`px-2 py-0.5 rounded text-[11px] font-medium border ${
                                     store.open_disapprovals > 0
-                                      ? 'bg-rose-500/20 text-rose-300 border border-rose-500/50'
-                                      : 'text-[#34D399] font-semibold'
+                                      ? 'bg-[#FF788D]/10 text-[#FF788D] border-[#FF788D]/30'
+                                      : 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/30'
                                   }`}
                                 >
                                   {store.open_disapprovals} open
                                 </span>
-                                <span className="text-[#CBD5E1] text-xs font-medium">
-                                  ({store.total_caught} total)
+                                <span className="text-[#94A3B8] text-xs">
+                                  ({store.total_caught} caught)
                                 </span>
                               </div>
                             </td>
@@ -1202,8 +1277,9 @@ export default function AdminDashboardPage() {
                             <td className="px-4 py-3.5 text-right whitespace-nowrap">
                               <button
                                 onClick={() => handleStoreSync(store.id)}
-                                className="px-3 py-1.5 bg-[#18263D] border border-[#2B3E5C] hover:border-[#10B981] text-[#FDF4D2] font-semibold rounded text-xs transition-colors inline-flex items-center gap-1.5"
+                                className="px-2.5 py-1.5 bg-[#141C2B] border border-[#1E293B] hover:border-[#10B981] text-[#FDF4D2] font-semibold rounded-md text-xs transition-all active:translate-y-[0.5px] shadow-sm flex items-center gap-1.5"
                               >
+                                <RefreshCw className="w-3 h-3 text-[#10B981]" />
                                 <span>Trigger Full Sync</span>
                               </button>
                             </td>
@@ -1211,7 +1287,7 @@ export default function AdminDashboardPage() {
                         ))}
                         {stores.length === 0 && (
                           <tr>
-                            <td colSpan={7} className="px-4 py-12 text-center text-[#CBD5E1]">
+                            <td colSpan={7} className="px-4 py-12 text-center text-[#94A3B8]">
                               No Google Merchant Center stores registered.
                             </td>
                           </tr>
@@ -1228,96 +1304,96 @@ export default function AdminDashboardPage() {
               <div className="space-y-6">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
                   {/* Live Ingestion Stream */}
-                  <div className="lg:col-span-2 bg-[#111828] border border-[#223147] rounded-lg p-5 space-y-4 shadow-lg">
-                    <div className="flex items-center justify-between border-b border-[#223147] pb-3">
+                  <div className="lg:col-span-2 bg-[#0F1522] border border-[#1E293B] rounded-xl p-5 space-y-4 shadow-sm">
+                    <div className="flex items-center justify-between border-b border-[#1E293B] pb-3">
                       <div className="flex items-center gap-2">
-                        <Terminal className="w-4 h-4 text-[#34D399]" />
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-[#FDF4D2]">Live Pub/Sub Ingestion Terminal</h3>
+                        <Terminal className="w-4 h-4 text-[#10B981]" />
+                        <h3 className="text-xs font-semibold uppercase tracking-wider text-[#FDF4D2]">Live Pub/Sub Ingestion Terminal</h3>
                       </div>
-                      <span className="text-xs text-[#34D399] font-mono font-semibold flex items-center gap-1.5">
+                      <span className="text-xs text-[#10B981] font-mono font-medium flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-[#10B981]" />
-                        <span>Topic Stream Active</span>
+                        <span>Topic Stream Online</span>
                       </span>
                     </div>
 
-                    <div className="space-y-2.5 font-mono text-xs">
-                      <div className="p-3 rounded-md bg-[#152033] border border-[#2B3B52] flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                    <div className="space-y-2 font-mono text-xs">
+                      <div className="p-3 rounded-lg bg-[#070A12] border border-[#1E293B] flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
                         <div className="flex items-center gap-2.5">
-                          <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">200 OK</span>
-                          <span className="text-[#FDF4D2] font-medium break-all">item_disapproved: missing_required_attribute [gtin]</span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30">200 OK</span>
+                          <span className="text-[#FDF4D2] font-mono break-all">item_disapproved: missing_required_attribute [gtin]</span>
                         </div>
-                        <span className="text-[#CBD5E1] text-[11px] shrink-0 font-semibold">104928192 &bull; 14ms</span>
+                        <span className="text-[#94A3B8] text-[11px] shrink-0 font-mono">104928192 | 14ms</span>
                       </div>
 
-                      <div className="p-3 rounded-md bg-[#152033] border border-[#2B3B52] flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                      <div className="p-3 rounded-lg bg-[#070A12] border border-[#1E293B] flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
                         <div className="flex items-center gap-2.5">
-                          <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-slate-700 text-[#CBD5E1] border border-slate-600">SKIPPED</span>
-                          <span className="text-[#CBD5E1] font-medium break-all">item_status_unchanged: product_id: sku_49810</span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#1E293B] text-[#CBD5E1]">SKIPPED</span>
+                          <span className="text-[#94A3B8] font-mono break-all">item_status_unchanged: product_id: sku_49810</span>
                         </div>
-                        <span className="text-[#CBD5E1] text-[11px] shrink-0 font-semibold">294018241 &bull; 4ms</span>
+                        <span className="text-[#94A3B8] text-[11px] shrink-0 font-mono">294018241 | 4ms</span>
                       </div>
 
-                      <div className="p-3 rounded-md bg-[#152033] border border-[#2B3B52] flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                      <div className="p-3 rounded-lg bg-[#070A12] border border-[#1E293B] flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
                         <div className="flex items-center gap-2.5">
-                          <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">200 OK</span>
-                          <span className="text-[#FDF4D2] font-medium break-all">item_disapproved: pricing_mismatch [price]</span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30">200 OK</span>
+                          <span className="text-[#FDF4D2] font-mono break-all">item_disapproved: pricing_mismatch [price]</span>
                         </div>
-                        <span className="text-[#CBD5E1] text-[11px] shrink-0 font-semibold">994817263 &bull; 18ms</span>
+                        <span className="text-[#94A3B8] text-[11px] shrink-0 font-mono">994817263 | 18ms</span>
                       </div>
 
-                      <div className="p-3 rounded-md bg-[#152033] border border-rose-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                      <div className="p-3 rounded-lg bg-[#070A12] border border-[#FF788D]/40 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
                         <div className="flex items-center gap-2.5">
-                          <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-rose-500/20 text-[#FF788D] border border-rose-500/50">DLQ DROP</span>
-                          <span className="text-[#FF788D] font-medium break-all">UNSUPPORTED_ISSUE_CODE: unexpected payload schema</span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#FF788D]/15 text-[#FF788D] border border-[#FF788D]/30">DLQ DROP</span>
+                          <span className="text-[#FF788D] font-mono break-all">UNSUPPORTED_ISSUE_CODE: unexpected payload schema</span>
                         </div>
-                        <span className="text-[#FF788D] text-[11px] shrink-0 font-bold">msg_gcp_9901 &bull; DLQ</span>
+                        <span className="text-[#FF788D] text-[11px] shrink-0 font-mono">msg_gcp_9901 | DLQ</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Latency Tracker Chart */}
-                  <div className="bg-[#111828] border border-[#223147] rounded-lg p-5 space-y-4 shadow-lg flex flex-col justify-between">
+                  {/* Latency Breakdown Console */}
+                  <div className="bg-[#0F1522] border border-[#1E293B] rounded-xl p-5 space-y-4 shadow-sm flex flex-col justify-between">
                     <div>
-                      <div className="flex items-center justify-between border-b border-[#223147] pb-3">
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-[#FDF4D2]">Pipeline Latency Tracker</h3>
-                        <span className="text-xs text-[#34D399] font-medium">Last 24 Hours</span>
+                      <div className="flex items-center justify-between border-b border-[#1E293B] pb-3">
+                        <h3 className="text-xs font-semibold uppercase tracking-wider text-[#FDF4D2]">Pipeline Latency Percentiles</h3>
+                        <span className="text-[11px] text-[#94A3B8] font-medium">Last 24h</span>
                       </div>
 
                       <div className="mt-4 space-y-4">
                         <div>
                           <div className="flex justify-between text-xs mb-1.5">
-                            <span className="text-[#CBD5E1] font-semibold">Average Processing Latency</span>
-                            <span className="text-[#34D399] font-mono font-bold">184 ms</span>
+                            <span className="text-[#CBD5E1] font-medium">50th Percentile (Median)</span>
+                            <span className="text-[#FDF4D2] font-mono font-bold">184 ms</span>
                           </div>
-                          <div className="w-full bg-[#152033] h-2 rounded-full overflow-hidden border border-[#2B3B52]">
+                          <div className="w-full bg-[#0a0b1dff] h-1.5 rounded-full overflow-hidden border border-[#1E293B]">
                             <div className="bg-[#10B981] h-full" style={{ width: '42%' }} />
                           </div>
                         </div>
 
                         <div>
                           <div className="flex justify-between text-xs mb-1.5">
-                            <span className="text-[#CBD5E1] font-semibold">95th Percentile Latency</span>
-                            <span className="text-sky-400 font-mono font-bold">240 ms</span>
+                            <span className="text-[#CBD5E1] font-medium">95th Percentile Latency</span>
+                            <span className="text-[#CBD5E1] font-mono font-bold">240 ms</span>
                           </div>
-                          <div className="w-full bg-[#152033] h-2 rounded-full overflow-hidden border border-[#2B3B52]">
-                            <div className="bg-sky-400 h-full" style={{ width: '58%' }} />
+                          <div className="w-full bg-[#0a0b1dff] h-1.5 rounded-full overflow-hidden border border-[#1E293B]">
+                            <div className="bg-[#94A3B8] h-full" style={{ width: '58%' }} />
                           </div>
                         </div>
 
                         <div>
                           <div className="flex justify-between text-xs mb-1.5">
-                            <span className="text-[#CBD5E1] font-semibold">99th Percentile Latency</span>
-                            <span className="text-amber-400 font-mono font-bold">310 ms</span>
+                            <span className="text-[#CBD5E1] font-medium">99th Percentile Latency</span>
+                            <span className="text-[#CBD5E1] font-mono font-bold">310 ms</span>
                           </div>
-                          <div className="w-full bg-[#152033] h-2 rounded-full overflow-hidden border border-[#2B3B52]">
-                            <div className="bg-amber-400 h-full" style={{ width: '74%' }} />
+                          <div className="w-full bg-[#0a0b1dff] h-1.5 rounded-full overflow-hidden border border-[#1E293B]">
+                            <div className="bg-[#64748B] h-full" style={{ width: '74%' }} />
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    <div className="p-3 bg-[#152033] border border-[#2B3B52] rounded text-xs text-[#CBD5E1] font-medium">
-                      <span className="text-[#34D399] font-bold">SLA Guarantee: </span>
+                    <div className="p-3 bg-[#0a0b1dff] border border-[#1E293B] rounded-lg text-xs text-[#94A3B8] font-medium">
+                      <span className="text-[#10B981] font-semibold">SLA Guarantee: </span>
                       <span>Target is &lt; 500ms from GCP arrival to Slack alert dispatch. Current pipeline operating at 184ms average.</span>
                     </div>
                   </div>
@@ -1328,44 +1404,44 @@ export default function AdminDashboardPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="text-sm font-bold text-[#FDF4D2]">Dead Letter Queue (DLQ) Triage Table</h3>
-                      <p className="text-xs text-[#CBD5E1]">Inspect unhandled GCP payloads, inspect raw JSON, and replay after worker patches</p>
+                      <p className="text-xs text-[#94A3B8]">Inspect unhandled GCP payloads, inspect raw JSON, and replay after worker patches</p>
                     </div>
-                    <span className="text-xs text-[#0a0b1dff] bg-[#FF788D] font-bold px-2.5 py-1 rounded">
+                    <span className="text-xs text-[#FF788D] bg-[#FF788D]/15 border border-[#FF788D]/30 font-semibold px-2.5 py-1 rounded-md">
                       {dlqMessages.length} Unhandled DLQ Payloads
                     </span>
                   </div>
 
-                  <div className="bg-[#111828] border border-[#223147] rounded-lg overflow-hidden shadow-lg">
+                  <div className="bg-[#0F1522] border border-[#1E293B] rounded-xl overflow-hidden shadow-sm">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-xs min-w-[700px]">
-                        <thead className="bg-[#142036] text-[#CBD5E1] border-b border-[#223147]">
+                        <thead className="bg-[#0c121e] text-[#64748B] border-b border-[#1E293B]">
                           <tr>
-                            <th className="px-4 py-3.5 font-bold uppercase tracking-wider text-[10px]">GCP Message ID</th>
-                            <th className="px-4 py-3.5 font-bold uppercase tracking-wider text-[10px]">Receipt Timestamp</th>
-                            <th className="px-4 py-3.5 font-bold uppercase tracking-wider text-[10px]">Merchant ID</th>
-                            <th className="px-4 py-3.5 font-bold uppercase tracking-wider text-[10px]">Failure Reason</th>
-                            <th className="px-4 py-3.5 font-bold uppercase tracking-wider text-[10px]">Raw Payload</th>
-                            <th className="px-4 py-3.5 font-bold uppercase tracking-wider text-[10px] text-right">DLQ Actions</th>
+                            <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">GCP Message ID</th>
+                            <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Receipt Timestamp</th>
+                            <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Merchant ID</th>
+                            <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Failure Reason</th>
+                            <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Raw Payload</th>
+                            <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px] text-right">DLQ Actions</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#223147]">
+                        <tbody className="divide-y divide-[#1E293B]/60">
                           {dlqMessages.map((msg) => (
                             <React.Fragment key={msg.id}>
-                              <tr className="hover:bg-[#152238] transition-colors">
+                              <tr className="hover:bg-[#141C2B]/60 transition-colors">
                                 <td className="px-4 py-3.5 font-mono text-xs font-bold text-[#FDF4D2]">
                                   {msg.message_id}
                                 </td>
 
-                                <td className="px-4 py-3.5 text-[#CBD5E1] text-xs font-medium whitespace-nowrap">
+                                <td className="px-4 py-3.5 text-[#94A3B8] text-xs font-medium whitespace-nowrap">
                                   {new Date(msg.created_at).toLocaleTimeString()}
                                 </td>
 
-                                <td className="px-4 py-3.5 font-mono text-xs font-bold text-[#CBD5E1]">
+                                <td className="px-4 py-3.5 font-mono text-xs text-[#CBD5E1]">
                                   {msg.merchant_id}
                                 </td>
 
                                 <td className="px-4 py-3.5">
-                                  <span className="px-2.5 py-1 rounded text-xs bg-rose-500/20 text-[#FF788D] border border-rose-500/50 font-bold font-mono">
+                                  <span className="px-2 py-0.5 rounded text-[11px] bg-[#FF788D]/10 text-[#FF788D] border border-[#FF788D]/30 font-semibold font-mono">
                                     {msg.failure_reason}
                                   </span>
                                 </td>
@@ -1384,7 +1460,7 @@ export default function AdminDashboardPage() {
                                   <div className="flex items-center justify-end gap-2">
                                     <button
                                       onClick={() => handleDLQAction(msg.id, 'replay')}
-                                      className="px-3 py-1.5 bg-emerald-500/20 border border-emerald-500/50 hover:bg-emerald-500/30 text-emerald-300 font-bold rounded text-xs transition-colors flex items-center gap-1.5"
+                                      className="px-2.5 py-1 bg-[#141C2B] border border-[#1E293B] hover:border-[#10B981] text-[#10B981] font-semibold rounded text-xs transition-colors flex items-center gap-1.5"
                                     >
                                       <Play className="w-3.5 h-3.5" />
                                       <span>Replay</span>
@@ -1392,7 +1468,7 @@ export default function AdminDashboardPage() {
 
                                     <button
                                       onClick={() => handleDLQAction(msg.id, 'purge')}
-                                      className="px-3 py-1.5 bg-rose-500/20 border border-rose-500/50 hover:bg-rose-500/30 text-[#FF788D] font-bold rounded text-xs transition-colors flex items-center gap-1.5"
+                                      className="px-2.5 py-1 bg-[#141C2B] border border-[#1E293B] hover:border-[#FF788D] text-[#FF788D] font-semibold rounded text-xs transition-colors flex items-center gap-1.5"
                                     >
                                       <Trash2 className="w-3.5 h-3.5" />
                                       <span>Purge</span>
@@ -1402,13 +1478,13 @@ export default function AdminDashboardPage() {
                               </tr>
 
                               {expandedPayloadId === msg.id && (
-                                <tr className="bg-[#0b0f1a]">
-                                  <td colSpan={6} className="px-4 py-4 border-t border-[#223147]">
+                                <tr className="bg-[#070A12]">
+                                  <td colSpan={6} className="px-4 py-4 border-t border-[#1E293B]">
                                     <div className="text-xs text-[#CBD5E1] mb-2 font-bold flex items-center gap-2">
                                       <Terminal className="w-4 h-4 text-[#FF788D]" />
                                       <span>GCP Pub/Sub Ingestion Raw Payload Details:</span>
                                     </div>
-                                    <pre className="p-4 bg-[#060810] border border-[#2B3B52] rounded-md text-xs font-mono text-[#FDF4D2] overflow-x-auto max-h-56 leading-relaxed">
+                                    <pre className="p-4 bg-[#0a0b1dff] border border-[#1E293B] rounded-md text-xs font-mono text-[#CBD5E1] overflow-x-auto max-h-56 leading-relaxed">
                                       {JSON.stringify(msg.payload, null, 2)}
                                     </pre>
                                   </td>
@@ -1418,7 +1494,7 @@ export default function AdminDashboardPage() {
                           ))}
                           {dlqMessages.length === 0 && (
                             <tr>
-                              <td colSpan={6} className="px-4 py-12 text-center text-[#CBD5E1]">
+                              <td colSpan={6} className="px-4 py-12 text-center text-[#94A3B8]">
                                 Dead Letter Queue is clear. Zero dropped or malformed messages.
                               </td>
                             </tr>
@@ -1437,38 +1513,38 @@ export default function AdminDashboardPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-sm font-bold text-[#FDF4D2]">Slack & Outbound Dispatch Logs</h3>
-                    <p className="text-xs text-[#CBD5E1]">Verify that product disapproval incidents are delivered to client Slack channels</p>
+                    <p className="text-xs text-[#94A3B8]">Verify that product disapproval incidents are delivered to client Slack channels</p>
                   </div>
-                  <span className="text-xs text-[#CBD5E1] bg-[#142036] border border-[#2B3B52] px-3 py-1 rounded font-semibold">
+                  <span className="text-xs text-[#CBD5E1] bg-[#0F1522] border border-[#1E293B] px-3 py-1 rounded-md font-semibold">
                     {dispatchLogs.length} Recent Dispatches
                   </span>
                 </div>
 
-                <div className="bg-[#111828] border border-[#223147] rounded-lg overflow-hidden shadow-lg">
+                <div className="bg-[#0F1522] border border-[#1E293B] rounded-xl overflow-hidden shadow-sm">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs min-w-[760px]">
-                      <thead className="bg-[#142036] text-[#CBD5E1] border-b border-[#223147]">
+                      <thead className="bg-[#0c121e] text-[#64748B] border-b border-[#1E293B]">
                         <tr>
-                          <th className="px-4 py-3.5 font-bold uppercase tracking-wider text-[10px]">Dispatch ID & Time</th>
-                          <th className="px-4 py-3.5 font-bold uppercase tracking-wider text-[10px]">Tenant & Store</th>
-                          <th className="px-4 py-3.5 font-bold uppercase tracking-wider text-[10px]">Destination Channel</th>
-                          <th className="px-4 py-3.5 font-bold uppercase tracking-wider text-[10px]">Delivery Status</th>
-                          <th className="px-4 py-3.5 font-bold uppercase tracking-wider text-[10px]">Payload Preview</th>
-                          <th className="px-4 py-3.5 font-bold uppercase tracking-wider text-[10px] text-right">Actions</th>
+                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Dispatch ID & Time</th>
+                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Tenant & Store</th>
+                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Destination Channel</th>
+                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Delivery Status</th>
+                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px]">Payload Preview</th>
+                          <th className="px-4 py-3.5 font-semibold uppercase tracking-wider text-[10px] text-right">Actions</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-[#223147]">
+                      <tbody className="divide-y divide-[#1E293B]/60">
                         {dispatchLogs.map((log) => (
                           <React.Fragment key={log.id}>
-                            <tr className="hover:bg-[#152238] transition-colors">
+                            <tr className="hover:bg-[#141C2B]/50 transition-colors">
                               <td className="px-4 py-3.5">
                                 <div className="font-mono text-xs font-bold text-[#FDF4D2]">{log.dispatch_id}</div>
-                                <div className="text-[11px] text-[#CBD5E1] font-medium">{new Date(log.created_at).toLocaleTimeString()}</div>
+                                <div className="text-[11px] text-[#94A3B8] font-medium">{new Date(log.created_at).toLocaleTimeString()}</div>
                               </td>
 
                               <td className="px-4 py-3.5">
-                                <div className="font-bold text-[#FDF4D2] text-xs">{log.tenant_email}</div>
-                                <div className="text-[#CBD5E1] text-xs font-medium">{log.store_url}</div>
+                                <div className="font-semibold text-[#FDF4D2] text-xs">{log.tenant_email}</div>
+                                <div className="text-[#94A3B8] text-xs">{log.store_url}</div>
                               </td>
 
                               <td className="px-4 py-3.5">
@@ -1479,12 +1555,12 @@ export default function AdminDashboardPage() {
 
                               <td className="px-4 py-3.5 whitespace-nowrap">
                                 <span
-                                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-bold border ${
+                                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] font-medium border ${
                                     log.status_label === 'Delivered'
-                                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50'
+                                      ? 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/30'
                                       : log.status_label === 'Rate Limited'
-                                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/50'
-                                      : 'bg-rose-500/20 text-rose-300 border-rose-500/50'
+                                      ? 'bg-[#141C2B] text-[#CBD5E1] border-[#1E293B]'
+                                      : 'bg-[#FF788D]/10 text-[#FF788D] border-[#FF788D]/30'
                                   }`}
                                 >
                                   <span>{log.delivery_status}</span>
@@ -1506,14 +1582,14 @@ export default function AdminDashboardPage() {
                                 <div className="flex items-center justify-end gap-2">
                                   <button
                                     onClick={() => handleRetryDispatch(log.id)}
-                                    className="px-3 py-1.5 bg-[#18263D] border border-[#2B3E5C] hover:border-[#10B981] text-[#FDF4D2] font-semibold rounded text-xs transition-colors"
+                                    className="px-2.5 py-1.5 bg-[#141C2B] border border-[#1E293B] hover:border-[#10B981] text-[#FDF4D2] font-semibold rounded-md text-xs transition-all active:translate-y-[0.5px] shadow-sm"
                                   >
                                     Retry
                                   </button>
 
                                   <button
                                     onClick={() => handleDisableWebhook(log.destination)}
-                                    className="px-3 py-1.5 bg-rose-500/15 border border-rose-500/40 hover:bg-rose-500/25 text-[#FF788D] font-semibold rounded text-xs transition-colors"
+                                    className="px-2.5 py-1.5 bg-[#141C2B] border border-[#1E293B] hover:border-[#FF788D] text-[#CBD5E1] hover:text-[#FF788D] font-semibold rounded-md text-xs transition-all active:translate-y-[0.5px] shadow-sm"
                                   >
                                     Silence
                                   </button>
@@ -1522,10 +1598,13 @@ export default function AdminDashboardPage() {
                             </tr>
 
                             {expandedDispatchId === log.id && (
-                              <tr className="bg-[#0b0f1a]">
-                                <td colSpan={6} className="px-4 py-4 border-t border-[#223147]">
-                                  <div className="text-xs text-[#CBD5E1] mb-2 font-bold">Slack Block Kit JSON Dispatched to Customer:</div>
-                                  <pre className="p-4 bg-[#060810] border border-[#2B3B52] rounded-md text-xs font-mono text-[#FDF4D2] overflow-x-auto max-h-56 leading-relaxed">
+                              <tr className="bg-[#070A12]">
+                                <td colSpan={6} className="px-4 py-4 border-t border-[#1E293B]">
+                                  <div className="text-xs text-[#CBD5E1] mb-2 font-bold flex items-center gap-2">
+                                    <Terminal className="w-4 h-4 text-[#10B981]" />
+                                    <span>Slack Block Kit JSON Dispatched to Customer:</span>
+                                  </div>
+                                  <pre className="p-4 bg-[#0a0b1dff] border border-[#1E293B] rounded-lg text-xs font-mono text-[#CBD5E1] overflow-x-auto max-h-56 leading-relaxed">
                                     {JSON.stringify(log.payload, null, 2)}
                                   </pre>
                                 </td>
@@ -1535,7 +1614,7 @@ export default function AdminDashboardPage() {
                         ))}
                         {dispatchLogs.length === 0 && (
                           <tr>
-                            <td colSpan={6} className="px-4 py-12 text-center text-[#CBD5E1]">
+                            <td colSpan={6} className="px-4 py-12 text-center text-[#94A3B8]">
                               No outbound webhook logs available.
                             </td>
                           </tr>
@@ -1550,20 +1629,20 @@ export default function AdminDashboardPage() {
             {/* TAB 5: System Configuration & Feature Flags */}
             {activeTab === 'config' && (
               <div className="max-w-3xl mx-auto space-y-6">
-                <div className="bg-[#111828] border border-[#223147] rounded-lg p-5 sm:p-7 space-y-6 shadow-xl">
+                <div className="bg-[#0F1522] border border-[#1E293B] rounded-xl p-5 sm:p-7 space-y-6 shadow-sm">
                   <div>
-                    <h3 className="text-lg font-bold text-[#FDF4D2]">Platform Operational Controls & Feature Flags</h3>
-                    <p className="text-xs text-[#CBD5E1] mt-1 font-medium">
-                      Control platform behavior globally in real-time without redeploying code.
+                    <h3 className="text-base sm:text-lg font-bold text-[#FDF4D2]">Platform Operational Controls & Feature Flags</h3>
+                    <p className="text-xs text-[#94A3B8] mt-1 font-medium">
+                      Configure platform behavior globally in real-time without redeploying code.
                     </p>
                   </div>
 
-                  <form onSubmit={handleSaveConfig} className="space-y-6">
+                  <form onSubmit={handleSaveConfig} className="space-y-5">
                     {/* Maintenance Mode */}
-                    <div className="flex items-center justify-between p-4 bg-[#152033] border border-[#2B3B52] rounded-lg">
+                    <div className="flex items-center justify-between p-4 bg-[#0a0b1dff] border border-[#1E293B] rounded-xl">
                       <div className="pr-4">
-                        <div className="text-sm font-bold text-[#FDF4D2]">Maintenance Mode</div>
-                        <div className="text-xs text-[#CBD5E1] mt-0.5 font-medium">
+                        <div className="text-xs font-semibold text-[#FDF4D2]">Maintenance Mode</div>
+                        <div className="text-[11px] text-[#94A3B8] mt-0.5">
                           Pauses customer dashboard logins while keeping background GCP Pub/Sub workers active.
                         </div>
                       </div>
@@ -1574,14 +1653,14 @@ export default function AdminDashboardPage() {
                           onChange={(e) => setConfig({ ...config, maintenance_mode: e.target.checked })}
                           className="sr-only peer"
                         />
-                        <div className="w-12 h-6 bg-[#060810] border border-[#2B3B52] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[#CBD5E1] peer-checked:after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#FF788D]" />
+                        <div className="w-11 h-6 bg-[#141C2B] border border-[#1E293B] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[#94A3B8] peer-checked:after:bg-white after:border after:border-[#1E293B] after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#FF788D]" />
                       </label>
                     </div>
 
                     {/* Registration Gate */}
-                    <div className="p-4 bg-[#152033] border border-[#2B3B52] rounded-lg space-y-2">
-                      <label className="block text-sm font-bold text-[#FDF4D2]">Registration Gate</label>
-                      <p className="text-xs text-[#CBD5E1] font-medium">
+                    <div className="p-4 bg-[#0a0b1dff] border border-[#1E293B] rounded-xl space-y-2">
+                      <label className="block text-xs font-semibold text-[#FDF4D2]">Registration Gate</label>
+                      <p className="text-[11px] text-[#94A3B8]">
                         Regulates pilot onboarding and access controls on the public landing page.
                       </p>
                       <select
@@ -1589,7 +1668,7 @@ export default function AdminDashboardPage() {
                         onChange={(e) =>
                           setConfig({ ...config, registration_gate: e.target.value as 'open' | 'invite_only' | 'closed' })
                         }
-                        className="w-full bg-[#111828] border border-[#2B3B52] rounded p-2.5 text-xs text-[#FDF4D2] font-semibold focus:outline-none focus:border-[#FF788D]"
+                        className="w-full bg-[#0F1522] border border-[#1E293B] rounded-lg p-2.5 text-xs text-[#FDF4D2] font-medium focus:outline-none focus:border-[#FF788D] transition-colors cursor-pointer"
                       >
                         <option value="open">Open Sign-ups (Standard Pilot Intake)</option>
                         <option value="invite_only">Invite-only Code Gate (Manual Approval Required)</option>
@@ -1598,9 +1677,9 @@ export default function AdminDashboardPage() {
                     </div>
 
                     {/* Global Rate Limiting */}
-                    <div className="p-4 bg-[#152033] border border-[#2B3B52] rounded-lg space-y-2">
-                      <label className="block text-sm font-bold text-[#FDF4D2]">Global Pub/Sub Ingestion Rate Limiter</label>
-                      <p className="text-xs text-[#CBD5E1] font-medium">
+                    <div className="p-4 bg-[#0a0b1dff] border border-[#1E293B] rounded-xl space-y-2">
+                      <label className="block text-xs font-semibold text-[#FDF4D2]">Global Pub/Sub Ingestion Rate Limiter</label>
+                      <p className="text-[11px] text-[#94A3B8]">
                         Maximum Google Cloud Pub/Sub and webhook transactions processed per minute per tenant namespace.
                       </p>
                       <div className="flex items-center gap-3">
@@ -1611,16 +1690,16 @@ export default function AdminDashboardPage() {
                           step="50"
                           value={config.rate_limit_per_min}
                           onChange={(e) => setConfig({ ...config, rate_limit_per_min: Number(e.target.value) })}
-                          className="w-48 bg-[#111828] border border-[#2B3B52] rounded p-2.5 text-xs text-[#FDF4D2] font-bold focus:outline-none focus:border-[#FF788D]"
+                          className="w-48 bg-[#0F1522] border border-[#1E293B] rounded-lg p-2.5 text-xs text-[#FDF4D2] font-semibold focus:outline-none focus:border-[#FF788D] transition-colors"
                         />
-                        <span className="text-xs text-[#CBD5E1] font-bold">req / minute</span>
+                        <span className="text-xs text-[#94A3B8] font-semibold">req / minute</span>
                       </div>
                     </div>
 
                     {/* Global Alert Banner */}
-                    <div className="p-4 bg-[#152033] border border-[#2B3B52] rounded-lg space-y-2">
-                      <label className="block text-sm font-bold text-[#FDF4D2]">Global Customer Dashboard Alert Banner</label>
-                      <p className="text-xs text-[#CBD5E1] font-medium">
+                    <div className="p-4 bg-[#0a0b1dff] border border-[#1E293B] rounded-xl space-y-2">
+                      <label className="block text-xs font-semibold text-[#FDF4D2]">Global Customer Dashboard Alert Banner</label>
+                      <p className="text-[11px] text-[#94A3B8]">
                         Broadcasts a live banner across all authenticated customer dashboards. Leave blank to disable.
                       </p>
                       <textarea
@@ -1628,21 +1707,21 @@ export default function AdminDashboardPage() {
                         value={config.banner_text || ''}
                         onChange={(e) => setConfig({ ...config, banner_text: e.target.value })}
                         placeholder="e.g., Routine Google Merchant API maintenance scheduled on Sunday 02:00 UTC. Pub/Sub queue remains active."
-                        className="w-full bg-[#111828] border border-[#2B3B52] rounded p-2.5 text-xs text-[#FDF4D2] placeholder-[#94A3B8] font-medium focus:outline-none focus:border-[#FF788D]"
+                        className="w-full bg-[#0F1522] border border-[#1E293B] rounded-lg p-2.5 text-xs text-[#FDF4D2] placeholder-[#64748B] font-medium focus:outline-none focus:border-[#FF788D] transition-colors"
                       />
                       {config.banner_text && (
-                        <div className="mt-2.5 p-3 bg-amber-500/15 border border-amber-500/40 rounded text-xs text-amber-300 font-medium">
-                          <span className="font-bold">Live Banner Preview: </span>
+                        <div className="mt-2.5 p-3 bg-[#141C2B] border border-[#1E293B] rounded-lg text-xs text-[#CBD5E1]">
+                          <span className="font-semibold text-[#FDF4D2]">Live Banner Preview: </span>
                           <span>{config.banner_text}</span>
                         </div>
                       )}
                     </div>
 
-                    <div className="flex justify-end pt-3">
+                    <div className="flex justify-end pt-2">
                       <button
                         type="submit"
                         disabled={savingConfig}
-                        className="w-full sm:w-auto px-6 py-2.5 bg-[#FF788D] hover:bg-[#FF788D]/90 text-[#0a0b1dff] font-bold text-xs rounded transition-colors shadow-md disabled:opacity-50"
+                        className="w-full sm:w-auto px-6 py-2.5 bg-[#FF788D] hover:bg-[#FF8FA2] text-[#0a0b1dff] font-bold text-xs rounded-lg transition-all active:translate-y-[0.5px] shadow-sm disabled:opacity-50"
                       >
                         {savingConfig ? 'Saving Platform Changes...' : 'Save Configuration Live'}
                       </button>

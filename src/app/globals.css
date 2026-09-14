@@ -15,9 +15,14 @@
   --color-typography: #FDF4D2;
 }
 
-/* Base typography: Universal Satoshi font throughout every text in the app */
-*, html, body, h1, h2, h3, h4, h5, h6, p, a, button, input, textarea, span, div, text, code, pre, table, th, td {
-  font-family: 'Satoshi', sans-serif !important;
+/* Base typography: Universal Satoshi font throughout standard elements */
+html, body, button, input, textarea, select {
+  font-family: 'Satoshi', sans-serif;
+}
+
+/* Strict Monospace Isolation for protocol strings, IDs, and raw payloads */
+.font-mono, code.font-mono, pre.font-mono {
+  font-family: ui-monospace, 'Geist Mono', 'JetBrains Mono', SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
 }
 
 /* Dashboard frame progressive bottom fade mask */

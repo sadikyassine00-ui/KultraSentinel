@@ -148,11 +148,11 @@ export default function RegisterPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[#94A3B8]">Plan Tier:</span>
-                    <span className="text-amber-300 font-bold">{provisionedData.plan_tier}</span>
+                    <span className="text-[#FDF4D2] font-bold">{provisionedData.plan_tier}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[#94A3B8]">Pub/Sub Stream:</span>
-                    <span className="text-[#34D399] font-medium">Topic Provisioning Queued</span>
+                    <span className="text-[#10B981] font-medium">Topic Provisioning Queued</span>
                   </div>
                 </div>
 

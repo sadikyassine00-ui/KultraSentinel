@@ -1,7 +1,4 @@
-'use client';
-
 import React from 'react';
-import { Button } from '@heroui/react';
 import { DashboardIllustration } from './DashboardIllustration';
 
 export function Hero() {
@@ -38,10 +35,8 @@ export function Hero() {
 
         {/* Action Group: Side by side, centered, small 4px border radius, custom radar/pulse icon */}
         <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
-          <Button
-            as="a"
+          <a
             href="#beta"
-            size="lg"
             className="group relative overflow-hidden bg-[#FF788D] hover:bg-[#FF8FA2] active:scale-[0.98] text-[#0a0b1dff] font-bold text-[0.95rem] px-6 h-12 rounded-[4px] border border-[#FF788D] hover:border-white/90 shadow-none transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2.5 outline-none focus-visible:ring-2 focus-visible:ring-[#FF788D] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0b1dff]"
           >
             {/* Ambient Angled Sheen Sweep on Hover */}
@@ -78,13 +73,10 @@ export function Hero() {
             >
               →
             </span>
-          </Button>
+          </a>
 
-          <Button
-            as="a"
+          <a
             href="#demo"
-            variant="light"
-            size="lg"
             className="group relative overflow-hidden bg-[#0F1522] hover:bg-[#141C2B] active:scale-[0.98] text-[#FDF4D2] hover:text-[#FF788D] font-medium text-[0.95rem] px-6 h-12 rounded-[4px] border border-[#1E293B] hover:border-[#FF788D]/50 shadow-none transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2.5 outline-none focus-visible:ring-2 focus-visible:ring-[#94A3B8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0b1dff]"
           >
             <span className="transition-transform duration-200 group-hover:translate-x-0.5">
@@ -96,7 +88,7 @@ export function Hero() {
             >
               →
             </span>
-          </Button>
+          </a>
         </div>
       </div>
 
