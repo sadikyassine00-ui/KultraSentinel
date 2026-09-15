@@ -154,7 +154,7 @@ export async function POST(request: Request) {
     const isNew = !hasOpenIncident(store.id, sku, issueCode);
 
     // 9. Outbound Alert Dispatch & Spike Guard (Stage 6)
-    const destination = store.webhook_url || process.env.SLACK_WEBHOOK_URL;
+    const destination = store.webhook_url || store.slack_webhook_url || process.env.SLACK_WEBHOOK_URL;
     let dispatchOutcome = 'skipped_no_destination';
     let alertCard: Record<string, unknown> | null = null;
 

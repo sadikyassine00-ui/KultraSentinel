@@ -50,8 +50,9 @@ export interface Tenant {
 }
 
 export interface Store {
-  id: number;
+  id: number | string;
   gmc_id: string;
+  merchant_id?: string;
   tenant_id: number;
   tenant_email: string;
   account_type: 'Standalone Merchant' | 'MCA Child';
@@ -60,7 +61,9 @@ export interface Store {
   encrypted_refresh_token?: string | null;
   alert_status?: 'active' | 'degraded';
   webhook_url?: string | null;
+  slack_webhook_url?: string | null;
   webhook_verified?: boolean;
+  is_active?: boolean;
   pubsub_topic: string;
   last_message_at: string;
   open_disapprovals: number;
@@ -70,8 +73,8 @@ export interface Store {
 }
 
 export interface Incident {
-  id: number;
-  store_id: number;
+  id: number | string;
+  store_id: number | string;
   gmc_id: string;
   sku: string;
   title: string;
@@ -513,6 +516,9 @@ export async function ensureSchema(): Promise<boolean> {
     await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS alert_status TEXT DEFAULT 'active';`;
     await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS webhook_url TEXT;`;
     await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS webhook_verified BOOLEAN DEFAULT FALSE;`;
+    await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS merchant_id TEXT;`;
+    await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS slack_webhook_url TEXT;`;
+    await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;`;
 
     // 6. Dead Letter Queue Table
     await sql`
@@ -929,7 +935,7 @@ export async function cleanupOrphanStores(): Promise<{ purgedCount: number }> {
 // Tenant-Scoped Store Operations (Anti-IDOR Compound Verification)
 // -----------------------------------------------------------------------------
 
-export async function getStoreByIdAndTenant(id: number, tenantEmail: string): Promise<Store | null> {
+export async function getStoreByIdAndTenant(id: number | string, tenantEmail: string): Promise<Store | null> {
   const cleanEmail = tenantEmail.toLowerCase().trim();
   const sql = getDb();
   if (sql) {
@@ -937,7 +943,7 @@ export async function getStoreByIdAndTenant(id: number, tenantEmail: string): Pr
       await ensureSchema();
       const rows = await sql`
         SELECT * FROM stores 
-        WHERE id = ${id} AND LOWER(tenant_email) = ${cleanEmail}
+        WHERE id = ${String(id)} AND LOWER(tenant_email) = ${cleanEmail}
         LIMIT 1;
       `;
       if (rows.length > 0) return rows[0] as unknown as Store;
@@ -948,7 +954,7 @@ export async function getStoreByIdAndTenant(id: number, tenantEmail: string): Pr
   }
 
   const store = inMemoryStores.find(
-    (s) => s.id === id && s.tenant_email.toLowerCase().trim() === cleanEmail
+    (s) => String(s.id) === String(id) && s.tenant_email.toLowerCase().trim() === cleanEmail
   );
   return store || null;
 }
@@ -1048,7 +1054,11 @@ export async function deleteStoreForTenant(id: number, tenantEmail: string): Pro
 // -----------------------------------------------------------------------------
 
 export async function findStoreByGmcId(gmcId: string): Promise<Store | null> {
-  const memStore = inMemoryStores.find((s) => s.gmc_id === gmcId && s.status === 'active');
+  const memStore = inMemoryStores.find(
+    (s) =>
+      (s.gmc_id === gmcId || s.merchant_id === gmcId) &&
+      (s.status === 'active' || s.is_active === true)
+  );
   if (memStore) return memStore;
 
   const sql = getDb();
@@ -1056,10 +1066,35 @@ export async function findStoreByGmcId(gmcId: string): Promise<Store | null> {
     try {
       await ensureSchema();
       const rows = await sql`
-        SELECT * FROM stores WHERE gmc_id = ${gmcId} AND status = 'active' LIMIT 1;
+        SELECT * FROM stores 
+        WHERE (gmc_id = ${gmcId} OR merchant_id = ${gmcId}) 
+          AND (status = 'active' OR is_active = TRUE) 
+        LIMIT 1;
       `;
       if (rows.length > 0) {
-        const store = rows[0] as unknown as Store;
+        const row = rows[0] as unknown as Record<string, unknown>;
+        const store: Store = {
+          id: row.id as number | string,
+          gmc_id: (row.gmc_id || row.merchant_id || gmcId) as string,
+          merchant_id: (row.merchant_id || row.gmc_id || gmcId) as string,
+          tenant_id: (row.tenant_id || 1) as number,
+          tenant_email: (row.tenant_email || '') as string,
+          account_type: (row.account_type || 'Standalone Merchant') as 'Standalone Merchant' | 'MCA Child',
+          store_url: (row.store_url || 'apexfootwear.com') as string,
+          store_name: (row.store_name || 'Apex Footwear') as string,
+          encrypted_refresh_token: (row.encrypted_refresh_token || null) as string | null,
+          alert_status: (row.alert_status || 'active') as 'active' | 'degraded',
+          webhook_url: (row.webhook_url || row.slack_webhook_url || null) as string | null,
+          slack_webhook_url: (row.slack_webhook_url || row.webhook_url || null) as string | null,
+          webhook_verified: Boolean(row.webhook_verified),
+          is_active: row.is_active !== false,
+          pubsub_topic: (row.pubsub_topic || `projects/kultra-sentinel/topics/gmc-${gmcId}`) as string,
+          last_message_at: (row.last_message_at ? new Date(row.last_message_at as string).toISOString() : new Date().toISOString()),
+          open_disapprovals: (row.open_disapprovals || 0) as number,
+          total_caught: (row.total_caught || 0) as number,
+          status: (row.status || 'active') as 'active' | 'orphaned',
+          created_at: (row.created_at ? new Date(row.created_at as string).toISOString() : new Date().toISOString()),
+        };
         inMemoryStores.push(store);
         return store;
       }
@@ -1176,7 +1211,7 @@ export async function claimStoreForTenant(params: {
 }
 
 export async function updateStoreWebhook(
-  storeId: number,
+  storeId: number | string,
   tenantEmail: string,
   webhookUrl: string,
   verified: boolean,
@@ -1193,7 +1228,7 @@ export async function updateStoreWebhook(
           webhook_url = ${webhookUrl},
           webhook_verified = ${verified},
           alert_status = ${alertStatus}
-        WHERE id = ${storeId} AND LOWER(tenant_email) = ${cleanEmail}
+        WHERE id = ${String(storeId)} AND LOWER(tenant_email) = ${cleanEmail}
         RETURNING *;
       `;
       if (rows.length > 0) return rows[0] as unknown as Store;
@@ -1204,7 +1239,7 @@ export async function updateStoreWebhook(
   }
 
   const store = inMemoryStores.find(
-    (s) => s.id === storeId && s.tenant_email.toLowerCase().trim() === cleanEmail
+    (s) => String(s.id) === String(storeId) && s.tenant_email.toLowerCase().trim() === cleanEmail
   );
   if (store) {
     store.webhook_url = webhookUrl;
@@ -1215,19 +1250,19 @@ export async function updateStoreWebhook(
   return null;
 }
 
-export async function markStoreAlertStatus(storeId: number, alertStatus: 'active' | 'degraded'): Promise<void> {
+export async function markStoreAlertStatus(storeId: number | string, alertStatus: 'active' | 'degraded'): Promise<void> {
   const sql = getDb();
   if (sql) {
     try {
       await ensureSchema();
-      await sql`UPDATE stores SET alert_status = ${alertStatus} WHERE id = ${storeId};`;
+      await sql`UPDATE stores SET alert_status = ${alertStatus} WHERE id = ${String(storeId)};`;
       return;
     } catch (err) {
       console.warn('[Neon DB] Error updating store alert status:', err);
     }
   }
 
-  const store = inMemoryStores.find((s) => s.id === storeId);
+  const store = inMemoryStores.find((s) => String(s.id) === String(storeId));
   if (store) store.alert_status = alertStatus;
 }
 
@@ -1290,10 +1325,10 @@ export async function markMessageProcessed(messageId: string): Promise<void> {
 // Incident Persistence & Triage State (Stage 5)
 // -----------------------------------------------------------------------------
 
-export function hasOpenIncident(storeId: number, sku: string, issueCode: string): boolean {
+export function hasOpenIncident(storeId: number | string, sku: string, issueCode: string): boolean {
   return inMemoryIncidents.some(
     (i) =>
-      i.store_id === storeId &&
+      String(i.store_id) === String(storeId) &&
       i.sku === sku &&
       i.issue_code === issueCode &&
       i.status === 'unresolved'
@@ -1301,7 +1336,7 @@ export function hasOpenIncident(storeId: number, sku: string, issueCode: string)
 }
 
 export async function upsertIncident(data: {
-  storeId: number;
+  storeId: number | string;
   gmcId: string;
   sku: string;
   title: string;
@@ -1312,7 +1347,7 @@ export async function upsertIncident(data: {
   // Ultra-fast in-memory state mutation (0ms)
   const existingMem = inMemoryIncidents.find(
     (i) =>
-      i.store_id === data.storeId &&
+      String(i.store_id) === String(data.storeId) &&
       i.sku === data.sku &&
       i.issue_code === data.issueCode &&
       i.status === 'unresolved'
@@ -1347,7 +1382,7 @@ export async function upsertIncident(data: {
     inMemoryIncidents.push(newIncident);
     resultIncident = newIncident;
 
-    const memStore = inMemoryStores.find((s) => s.id === data.storeId);
+    const memStore = inMemoryStores.find((s) => String(s.id) === String(data.storeId));
     if (memStore) {
       memStore.open_disapprovals += 1;
       memStore.total_caught += 1;
@@ -1363,7 +1398,7 @@ export async function upsertIncident(data: {
         await sql`
           UPDATE incidents
           SET last_detected_at = NOW(), title = ${data.title}, severity = ${data.severity}, details = ${JSON.stringify(data.details || {})}
-          WHERE store_id = ${data.storeId} AND sku = ${data.sku} AND issue_code = ${data.issueCode} AND status = 'unresolved';
+          WHERE store_id = ${String(data.storeId)} AND sku = ${data.sku} AND issue_code = ${data.issueCode} AND status = 'unresolved';
         `;
       } else {
         await sql`
@@ -1371,14 +1406,14 @@ export async function upsertIncident(data: {
             store_id, gmc_id, sku, title, issue_code, severity, status,
             first_detected_at, last_detected_at, details
           ) VALUES (
-            ${data.storeId}, ${data.gmcId}, ${data.sku}, ${data.title}, ${data.issueCode},
+            ${String(data.storeId)}, ${data.gmcId}, ${data.sku}, ${data.title}, ${data.issueCode},
             ${data.severity}, 'unresolved', NOW(), NOW(), ${JSON.stringify(data.details || {})}
           );
         `;
         await sql`
           UPDATE stores
           SET open_disapprovals = open_disapprovals + 1, total_caught = total_caught + 1, last_message_at = NOW()
-          WHERE id = ${data.storeId};
+          WHERE id = ${String(data.storeId)};
         `;
       }
     } catch (err) {
@@ -1389,10 +1424,10 @@ export async function upsertIncident(data: {
   return { incident: resultIncident, isNew };
 }
 
-export async function resolveIncident(storeId: number, sku: string): Promise<boolean> {
+export async function resolveIncident(storeId: number | string, sku: string): Promise<boolean> {
   let resolvedAny = false;
   inMemoryIncidents.forEach((i) => {
-    if (i.store_id === storeId && i.sku === sku && i.status === 'unresolved') {
+    if (String(i.store_id) === String(storeId) && i.sku === sku && i.status === 'unresolved') {
       i.status = 'resolved';
       i.resolved_at = new Date().toISOString();
       resolvedAny = true;
@@ -1400,7 +1435,7 @@ export async function resolveIncident(storeId: number, sku: string): Promise<boo
   });
 
   if (resolvedAny) {
-    const memStore = inMemoryStores.find((s) => s.id === storeId);
+    const memStore = inMemoryStores.find((s) => String(s.id) === String(storeId));
     if (memStore) {
       memStore.open_disapprovals = Math.max(0, memStore.open_disapprovals - 1);
       memStore.last_message_at = new Date().toISOString();
@@ -1413,14 +1448,14 @@ export async function resolveIncident(storeId: number, sku: string): Promise<boo
       const updated = await sql`
         UPDATE incidents
         SET status = 'resolved', resolved_at = NOW()
-        WHERE store_id = ${storeId} AND sku = ${sku} AND status = 'unresolved'
+        WHERE store_id = ${String(storeId)} AND sku = ${sku} AND status = 'unresolved'
         RETURNING id;
       `;
       if (updated.length > 0) {
         await sql`
           UPDATE stores
           SET open_disapprovals = GREATEST(0, open_disapprovals - ${updated.length}), last_message_at = NOW()
-          WHERE id = ${storeId};
+          WHERE id = ${String(storeId)};
         `;
       }
     } catch (err) {
@@ -1431,16 +1466,16 @@ export async function resolveIncident(storeId: number, sku: string): Promise<boo
   return resolvedAny;
 }
 
-export async function getStoreIncidentCountInWindow(storeId: number, windowSeconds: number): Promise<number> {
+export async function getStoreIncidentCountInWindow(storeId: number | string, windowSeconds: number): Promise<number> {
   // Ultra-fast in-memory calculation (0ms) guaranteeing zero overhead inside ingestion loop
   const threshold = Date.now() - windowSeconds * 1000;
   return inMemoryIncidents.filter(
-    (i) => i.store_id === storeId && new Date(i.first_detected_at).getTime() >= threshold
+    (i) => String(i.store_id) === String(storeId) && new Date(i.first_detected_at).getTime() >= threshold
   ).length;
 }
 
 
-export async function getIncidentsByStore(storeId: number, tenantEmail: string): Promise<Incident[]> {
+export async function getIncidentsByStore(storeId: number | string, tenantEmail: string): Promise<Incident[]> {
   const cleanEmail = tenantEmail.toLowerCase().trim();
   const sql = getDb();
   if (sql) {
@@ -1448,7 +1483,7 @@ export async function getIncidentsByStore(storeId: number, tenantEmail: string):
       await ensureSchema();
       // Composite authorization: verify store ownership first
       const storeRows = await sql`
-        SELECT id FROM stores WHERE id = ${storeId} AND LOWER(tenant_email) = ${cleanEmail} LIMIT 1;
+        SELECT id FROM stores WHERE id = ${String(storeId)} AND LOWER(tenant_email) = ${cleanEmail} LIMIT 1;
       `;
       if (storeRows.length === 0) {
         return [];
@@ -1456,7 +1491,7 @@ export async function getIncidentsByStore(storeId: number, tenantEmail: string):
 
       const rows = await sql`
         SELECT * FROM incidents
-        WHERE store_id = ${storeId}
+        WHERE store_id = ${String(storeId)}
         ORDER BY last_detected_at DESC;
       `;
       return rows as unknown as Incident[];
@@ -1466,12 +1501,12 @@ export async function getIncidentsByStore(storeId: number, tenantEmail: string):
   }
 
   const memStore = inMemoryStores.find(
-    (s) => s.id === storeId && s.tenant_email.toLowerCase().trim() === cleanEmail
+    (s) => String(s.id) === String(storeId) && s.tenant_email.toLowerCase().trim() === cleanEmail
   );
   if (!memStore) return [];
 
   return inMemoryIncidents
-    .filter((i) => i.store_id === storeId)
+    .filter((i) => String(i.store_id) === String(storeId))
     .sort((a, b) => new Date(b.last_detected_at).getTime() - new Date(a.last_detected_at).getTime());
 }
 

@@ -252,7 +252,7 @@ export default function AdminDashboardPage() {
   };
 
   // Store Actions
-  const handleStoreSync = async (storeId: number) => {
+  const handleStoreSync = async (storeId: number | string) => {
     try {
       const res = await fetch('/api/admin/super/stores', {
         method: 'POST',
