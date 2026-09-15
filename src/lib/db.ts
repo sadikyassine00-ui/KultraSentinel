@@ -56,6 +56,11 @@ export interface Store {
   tenant_email: string;
   account_type: 'Standalone Merchant' | 'MCA Child';
   store_url: string;
+  store_name?: string;
+  encrypted_refresh_token?: string | null;
+  alert_status?: 'active' | 'degraded';
+  webhook_url?: string | null;
+  webhook_verified?: boolean;
   pubsub_topic: string;
   last_message_at: string;
   open_disapprovals: number;
@@ -63,6 +68,28 @@ export interface Store {
   status: 'active' | 'orphaned';
   created_at: string;
 }
+
+export interface Incident {
+  id: number;
+  store_id: number;
+  gmc_id: string;
+  sku: string;
+  title: string;
+  issue_code: string;
+  severity: 'critical' | 'warning';
+  status: 'unresolved' | 'resolved';
+  first_detected_at: string;
+  last_detected_at: string;
+  resolved_at?: string | null;
+  details?: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export interface ProcessedMessage {
+  message_id: string;
+  processed_at: string;
+}
+
 
 export interface DLQMessage {
   id: number;
@@ -379,8 +406,11 @@ let inMemoryConfig: SystemConfig = {
 const inMemoryLeads: Lead[] = [];
 const inMemoryAdmins: AdminUser[] = [];
 const inMemoryTelemetry: TelemetryEvent[] = [];
+const inMemoryProcessedMessages: Map<string, number> = new Map();
+const inMemoryIncidents: Incident[] = [];
 
 let schemaInitialized = false;
+
 
 export function getDb() {
   const databaseUrl = process.env.DATABASE_URL;
@@ -463,6 +493,11 @@ export async function ensureSchema(): Promise<boolean> {
         tenant_email TEXT,
         account_type TEXT DEFAULT 'Standalone Merchant',
         store_url TEXT NOT NULL,
+        store_name TEXT,
+        encrypted_refresh_token TEXT,
+        alert_status TEXT DEFAULT 'active',
+        webhook_url TEXT,
+        webhook_verified BOOLEAN DEFAULT FALSE,
         pubsub_topic TEXT,
         last_message_at TIMESTAMPTZ DEFAULT NOW(),
         open_disapprovals INT DEFAULT 0,
@@ -471,6 +506,13 @@ export async function ensureSchema(): Promise<boolean> {
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `;
+
+    // Ensure columns exist if stores table was created previously
+    await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS store_name TEXT;`;
+    await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS encrypted_refresh_token TEXT;`;
+    await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS alert_status TEXT DEFAULT 'active';`;
+    await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS webhook_url TEXT;`;
+    await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS webhook_verified BOOLEAN DEFAULT FALSE;`;
 
     // 6. Dead Letter Queue Table
     await sql`
@@ -511,6 +553,34 @@ export async function ensureSchema(): Promise<boolean> {
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
     `;
+
+    // 9. Processed Messages Table (for 7-day Pub/Sub deduplication)
+    await sql`
+      CREATE TABLE IF NOT EXISTS processed_messages (
+        message_id TEXT PRIMARY KEY,
+        processed_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `;
+
+    // 10. Incidents Table (SKU failure triage lifecycle)
+    await sql`
+      CREATE TABLE IF NOT EXISTS incidents (
+        id SERIAL PRIMARY KEY,
+        store_id INT NOT NULL,
+        gmc_id TEXT NOT NULL,
+        sku TEXT NOT NULL,
+        title TEXT NOT NULL,
+        issue_code TEXT NOT NULL,
+        severity TEXT NOT NULL,
+        status TEXT DEFAULT 'unresolved',
+        first_detected_at TIMESTAMPTZ DEFAULT NOW(),
+        last_detected_at TIMESTAMPTZ DEFAULT NOW(),
+        resolved_at TIMESTAMPTZ,
+        details JSONB,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `;
+
 
     // Initial Seeds
     const tenantCount = await sql`SELECT COUNT(*)::int as count FROM tenants;`;
@@ -678,7 +748,27 @@ export async function getTenants(filter?: { search?: string; planTier?: string; 
   return result;
 }
 
+export async function findTenantByEmail(email: string): Promise<Tenant | null> {
+  const cleanEmail = email.toLowerCase().trim();
+  const sql = getDb();
+  if (sql) {
+    try {
+      await ensureSchema();
+      const rows = await sql`
+        SELECT * FROM tenants WHERE LOWER(email) = ${cleanEmail} LIMIT 1;
+      `;
+      if (rows.length > 0) return rows[0] as unknown as Tenant;
+      return null;
+    } catch (err) {
+      console.warn('[Neon DB] Error finding tenant by email:', err);
+    }
+  }
+
+  return inMemoryTenants.find((t) => t.email.toLowerCase().trim() === cleanEmail) || null;
+}
+
 export async function createTenant(data: {
+
   email: string;
   companyName: string;
   planTier?: 'Trial' | 'Agency Pilot' | 'Active Pro';
@@ -863,7 +953,10 @@ export async function getStoreByIdAndTenant(id: number, tenantEmail: string): Pr
   return store || null;
 }
 
+export const getStoreForTenant = getStoreByIdAndTenant;
+
 export async function getStoresForTenant(tenantEmail: string): Promise<Store[]> {
+
   const cleanEmail = tenantEmail.toLowerCase().trim();
   const sql = getDb();
   if (sql) {
@@ -949,6 +1042,497 @@ export async function deleteStoreForTenant(id: number, tenantEmail: string): Pro
   }
   return false;
 }
+
+// -----------------------------------------------------------------------------
+// Kultra Event Processing Engine Database Methods
+// -----------------------------------------------------------------------------
+
+export async function findStoreByGmcId(gmcId: string): Promise<Store | null> {
+  const memStore = inMemoryStores.find((s) => s.gmc_id === gmcId && s.status === 'active');
+  if (memStore) return memStore;
+
+  const sql = getDb();
+  if (sql) {
+    try {
+      await ensureSchema();
+      const rows = await sql`
+        SELECT * FROM stores WHERE gmc_id = ${gmcId} AND status = 'active' LIMIT 1;
+      `;
+      if (rows.length > 0) {
+        const store = rows[0] as unknown as Store;
+        inMemoryStores.push(store);
+        return store;
+      }
+      return null;
+    } catch (err) {
+      console.warn('[Neon DB] Error finding store by GMC ID:', err);
+    }
+  }
+
+  return null;
+}
+
+
+export async function claimStoreForTenant(params: {
+  gmcId: string;
+  tenantId: number;
+  tenantEmail: string;
+  storeName: string;
+  storeUrl: string;
+  encryptedRefreshToken?: string;
+  accountType?: 'Standalone Merchant' | 'MCA Child';
+}): Promise<{ success: boolean; store?: Store; error?: string; collision?: boolean }> {
+  const cleanEmail = params.tenantEmail.toLowerCase().trim();
+  const sql = getDb();
+
+  // 1. Anti-Collision & Zero-Trust check
+  if (sql) {
+    try {
+      await ensureSchema();
+      const existing = await sql`SELECT * FROM stores WHERE gmc_id = ${params.gmcId} LIMIT 1;`;
+      if (existing.length > 0) {
+        const storeOwnerEmail = existing[0].tenant_email?.toLowerCase().trim();
+        if (storeOwnerEmail && storeOwnerEmail !== cleanEmail) {
+          return {
+            success: false,
+            collision: true,
+            error: `Store GMC ID ${params.gmcId} is already registered under another tenant. Cross-tenant collisions are strictly forbidden.`,
+          };
+        }
+
+        // Existing store belongs to same tenant: update credentials & info
+        const updated = await sql`
+          UPDATE stores
+          SET
+            store_name = ${params.storeName},
+            store_url = ${params.storeUrl},
+            encrypted_refresh_token = COALESCE(${params.encryptedRefreshToken || null}, encrypted_refresh_token),
+            last_message_at = NOW(),
+            status = 'active'
+          WHERE gmc_id = ${params.gmcId} AND LOWER(tenant_email) = ${cleanEmail}
+          RETURNING *;
+        `;
+        return { success: true, store: updated[0] as unknown as Store };
+      }
+
+      // New store insertion
+      const inserted = await sql`
+        INSERT INTO stores (
+          gmc_id, tenant_id, tenant_email, account_type, store_url, store_name,
+          encrypted_refresh_token, alert_status, webhook_verified, pubsub_topic,
+          last_message_at, open_disapprovals, total_caught, status, created_at
+        ) VALUES (
+          ${params.gmcId}, ${params.tenantId}, ${cleanEmail}, ${params.accountType || 'Standalone Merchant'},
+          ${params.storeUrl}, ${params.storeName}, ${params.encryptedRefreshToken || null},
+          'active', FALSE, ${`projects/kultra-sentinel/topics/gmc-${params.gmcId}`},
+          NOW(), 0, 0, 'active', NOW()
+        )
+        RETURNING *;
+      `;
+      return { success: true, store: inserted[0] as unknown as Store };
+    } catch (err) {
+      console.warn('[Neon DB] Error claiming store for tenant:', err);
+    }
+  }
+
+  // Fallback in-memory logic
+  const existingMem = inMemoryStores.find((s) => s.gmc_id === params.gmcId);
+  if (existingMem) {
+    if (existingMem.tenant_email.toLowerCase().trim() !== cleanEmail) {
+      return {
+        success: false,
+        collision: true,
+        error: `Store GMC ID ${params.gmcId} is already registered under another tenant. Cross-tenant collisions are strictly forbidden.`,
+      };
+    }
+    existingMem.store_name = params.storeName;
+    existingMem.store_url = params.storeUrl;
+    if (params.encryptedRefreshToken) existingMem.encrypted_refresh_token = params.encryptedRefreshToken;
+    existingMem.last_message_at = new Date().toISOString();
+    existingMem.status = 'active';
+    return { success: true, store: existingMem };
+  }
+
+  const newStore: Store = {
+    id: inMemoryStores.length + 1,
+    gmc_id: params.gmcId,
+    tenant_id: params.tenantId,
+    tenant_email: cleanEmail,
+    account_type: params.accountType || 'Standalone Merchant',
+    store_url: params.storeUrl,
+    store_name: params.storeName,
+    encrypted_refresh_token: params.encryptedRefreshToken || null,
+    alert_status: 'active',
+    webhook_verified: false,
+    pubsub_topic: `projects/kultra-sentinel/topics/gmc-${params.gmcId}`,
+    last_message_at: new Date().toISOString(),
+    open_disapprovals: 0,
+    total_caught: 0,
+    status: 'active',
+    created_at: new Date().toISOString(),
+  };
+  inMemoryStores.push(newStore);
+  return { success: true, store: newStore };
+}
+
+export async function updateStoreWebhook(
+  storeId: number,
+  tenantEmail: string,
+  webhookUrl: string,
+  verified: boolean,
+  alertStatus: 'active' | 'degraded' = 'active'
+): Promise<Store | null> {
+  const cleanEmail = tenantEmail.toLowerCase().trim();
+  const sql = getDb();
+  if (sql) {
+    try {
+      await ensureSchema();
+      const rows = await sql`
+        UPDATE stores
+        SET
+          webhook_url = ${webhookUrl},
+          webhook_verified = ${verified},
+          alert_status = ${alertStatus}
+        WHERE id = ${storeId} AND LOWER(tenant_email) = ${cleanEmail}
+        RETURNING *;
+      `;
+      if (rows.length > 0) return rows[0] as unknown as Store;
+      return null;
+    } catch (err) {
+      console.warn('[Neon DB] Error updating store webhook:', err);
+    }
+  }
+
+  const store = inMemoryStores.find(
+    (s) => s.id === storeId && s.tenant_email.toLowerCase().trim() === cleanEmail
+  );
+  if (store) {
+    store.webhook_url = webhookUrl;
+    store.webhook_verified = verified;
+    store.alert_status = alertStatus;
+    return store;
+  }
+  return null;
+}
+
+export async function markStoreAlertStatus(storeId: number, alertStatus: 'active' | 'degraded'): Promise<void> {
+  const sql = getDb();
+  if (sql) {
+    try {
+      await ensureSchema();
+      await sql`UPDATE stores SET alert_status = ${alertStatus} WHERE id = ${storeId};`;
+      return;
+    } catch (err) {
+      console.warn('[Neon DB] Error updating store alert status:', err);
+    }
+  }
+
+  const store = inMemoryStores.find((s) => s.id === storeId);
+  if (store) store.alert_status = alertStatus;
+}
+
+// -----------------------------------------------------------------------------
+// Message Deduplication (Stage 4: 7-Day Window)
+// -----------------------------------------------------------------------------
+
+const DEDUP_WINDOW_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+export async function isMessageProcessed(messageId: string): Promise<boolean> {
+  if (!messageId) return false;
+
+  // Ultra-fast memory check (0ms)
+  const ts = inMemoryProcessedMessages.get(messageId);
+  if (ts) {
+    if (Date.now() - ts < DEDUP_WINDOW_MS) return true;
+    inMemoryProcessedMessages.delete(messageId);
+  }
+
+  const sql = getDb();
+  if (sql) {
+    try {
+      const rows = await sql`
+        SELECT message_id FROM processed_messages 
+        WHERE message_id = ${messageId} 
+          AND processed_at >= NOW() - INTERVAL '7 days'
+        LIMIT 1;
+      `;
+      if (rows.length > 0) {
+        inMemoryProcessedMessages.set(messageId, Date.now());
+        return true;
+      }
+    } catch (err) {
+      console.warn('[Neon DB] Error checking processed message:', err);
+    }
+  }
+
+  return false;
+}
+
+export async function markMessageProcessed(messageId: string): Promise<void> {
+  if (!messageId) return;
+  inMemoryProcessedMessages.set(messageId, Date.now());
+
+  const sql = getDb();
+  if (sql) {
+    // Non-blocking persistent write to guarantee lean ingestion loop SLA
+    sql`
+      INSERT INTO processed_messages (message_id, processed_at)
+      VALUES (${messageId}, NOW())
+      ON CONFLICT (message_id) DO UPDATE SET processed_at = NOW();
+    `.catch((err) => console.warn('[Neon DB] Error marking message processed:', err));
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Incident Persistence & Triage State (Stage 5)
+// -----------------------------------------------------------------------------
+
+export async function upsertIncident(data: {
+  storeId: number;
+  gmcId: string;
+  sku: string;
+  title: string;
+  issueCode: string;
+  severity: 'critical' | 'warning';
+  details?: Record<string, unknown>;
+}): Promise<{ incident: Incident; isNew: boolean }> {
+  // Ultra-fast in-memory state mutation (0ms)
+  const existingMem = inMemoryIncidents.find(
+    (i) =>
+      i.store_id === data.storeId &&
+      i.sku === data.sku &&
+      i.issue_code === data.issueCode &&
+      i.status === 'unresolved'
+  );
+
+  let resultIncident: Incident;
+  let isNew = false;
+
+  if (existingMem) {
+    existingMem.last_detected_at = new Date().toISOString();
+    existingMem.title = data.title;
+    existingMem.severity = data.severity;
+    if (data.details) existingMem.details = data.details;
+    resultIncident = existingMem;
+  } else {
+    isNew = true;
+    const newIncident: Incident = {
+      id: inMemoryIncidents.length + 1,
+      store_id: data.storeId,
+      gmc_id: data.gmcId,
+      sku: data.sku,
+      title: data.title,
+      issue_code: data.issueCode,
+      severity: data.severity,
+      status: 'unresolved',
+      first_detected_at: new Date().toISOString(),
+      last_detected_at: new Date().toISOString(),
+      resolved_at: null,
+      details: data.details || null,
+      created_at: new Date().toISOString(),
+    };
+    inMemoryIncidents.push(newIncident);
+    resultIncident = newIncident;
+
+    const memStore = inMemoryStores.find((s) => s.id === data.storeId);
+    if (memStore) {
+      memStore.open_disapprovals += 1;
+      memStore.total_caught += 1;
+      memStore.last_message_at = new Date().toISOString();
+    }
+  }
+
+  // Resilient non-blocking database persistence
+  const sql = getDb();
+  if (sql) {
+    (async () => {
+      try {
+        if (!isNew) {
+          await sql`
+            UPDATE incidents
+            SET last_detected_at = NOW(), title = ${data.title}, severity = ${data.severity}, details = ${JSON.stringify(data.details || {})}
+            WHERE store_id = ${data.storeId} AND sku = ${data.sku} AND issue_code = ${data.issueCode} AND status = 'unresolved';
+          `;
+        } else {
+          await sql`
+            INSERT INTO incidents (
+              store_id, gmc_id, sku, title, issue_code, severity, status,
+              first_detected_at, last_detected_at, details
+            ) VALUES (
+              ${data.storeId}, ${data.gmcId}, ${data.sku}, ${data.title}, ${data.issueCode},
+              ${data.severity}, 'unresolved', NOW(), NOW(), ${JSON.stringify(data.details || {})}
+            );
+          `;
+          await sql`
+            UPDATE stores
+            SET open_disapprovals = open_disapprovals + 1, total_caught = total_caught + 1, last_message_at = NOW()
+            WHERE id = ${data.storeId};
+          `;
+        }
+      } catch (err) {
+        console.warn('[Neon DB] Background incident persistence error:', err);
+      }
+    })();
+  }
+
+  return { incident: resultIncident, isNew };
+}
+
+export async function resolveIncident(storeId: number, sku: string): Promise<boolean> {
+  let resolvedAny = false;
+  inMemoryIncidents.forEach((i) => {
+    if (i.store_id === storeId && i.sku === sku && i.status === 'unresolved') {
+      i.status = 'resolved';
+      i.resolved_at = new Date().toISOString();
+      resolvedAny = true;
+    }
+  });
+
+  if (resolvedAny) {
+    const memStore = inMemoryStores.find((s) => s.id === storeId);
+    if (memStore) {
+      memStore.open_disapprovals = Math.max(0, memStore.open_disapprovals - 1);
+      memStore.last_message_at = new Date().toISOString();
+    }
+  }
+
+  const sql = getDb();
+  if (sql) {
+    (async () => {
+      try {
+        const updated = await sql`
+          UPDATE incidents
+          SET status = 'resolved', resolved_at = NOW()
+          WHERE store_id = ${storeId} AND sku = ${sku} AND status = 'unresolved'
+          RETURNING id;
+        `;
+        if (updated.length > 0) {
+          await sql`
+            UPDATE stores
+            SET open_disapprovals = GREATEST(0, open_disapprovals - ${updated.length}), last_message_at = NOW()
+            WHERE id = ${storeId};
+          `;
+        }
+      } catch (err) {
+        console.warn('[Neon DB] Background incident resolve error:', err);
+      }
+    })();
+  }
+
+  return resolvedAny;
+}
+
+export async function getStoreIncidentCountInWindow(storeId: number, windowSeconds: number): Promise<number> {
+  // Ultra-fast in-memory calculation (0ms) guaranteeing zero overhead inside ingestion loop
+  const threshold = Date.now() - windowSeconds * 1000;
+  return inMemoryIncidents.filter(
+    (i) => i.store_id === storeId && new Date(i.first_detected_at).getTime() >= threshold
+  ).length;
+}
+
+
+export async function getIncidentsByStore(storeId: number, tenantEmail: string): Promise<Incident[]> {
+  const cleanEmail = tenantEmail.toLowerCase().trim();
+  const sql = getDb();
+  if (sql) {
+    try {
+      await ensureSchema();
+      // Composite authorization: verify store ownership first
+      const storeRows = await sql`
+        SELECT id FROM stores WHERE id = ${storeId} AND LOWER(tenant_email) = ${cleanEmail} LIMIT 1;
+      `;
+      if (storeRows.length === 0) {
+        return [];
+      }
+
+      const rows = await sql`
+        SELECT * FROM incidents
+        WHERE store_id = ${storeId}
+        ORDER BY last_detected_at DESC;
+      `;
+      return rows as unknown as Incident[];
+    } catch (err) {
+      console.warn('[Neon DB] Error fetching incidents by store:', err);
+    }
+  }
+
+  const memStore = inMemoryStores.find(
+    (s) => s.id === storeId && s.tenant_email.toLowerCase().trim() === cleanEmail
+  );
+  if (!memStore) return [];
+
+  return inMemoryIncidents
+    .filter((i) => i.store_id === storeId)
+    .sort((a, b) => new Date(b.last_detected_at).getTime() - new Date(a.last_detected_at).getTime());
+}
+
+export async function recordDLQMessage(data: {
+  message_id: string;
+  merchant_id: string;
+  failure_reason: string;
+  payload: Record<string, unknown>;
+}): Promise<void> {
+  const sql = getDb();
+  if (sql) {
+    try {
+      await ensureSchema();
+      await sql`
+        INSERT INTO dlq_messages (message_id, merchant_id, failure_reason, payload, status, created_at)
+        VALUES (${data.message_id}, ${data.merchant_id}, ${data.failure_reason}, ${JSON.stringify(data.payload)}, 'unhandled', NOW());
+      `;
+      return;
+    } catch (err) {
+      console.warn('[Neon DB] Error recording DLQ message:', err);
+    }
+  }
+
+  inMemoryDLQ.unshift({
+    id: inMemoryDLQ.length + 1,
+    message_id: data.message_id,
+    merchant_id: data.merchant_id,
+    failure_reason: data.failure_reason,
+    payload: data.payload,
+    status: 'unhandled',
+    created_at: new Date().toISOString(),
+  });
+}
+
+export async function recordDispatchLog(log: {
+  dispatch_id: string;
+  tenant_email?: string;
+  store_url?: string;
+  destination: string;
+  delivery_status: number;
+  status_label: 'Delivered' | 'Rate Limited' | 'Invalid Webhook';
+  payload: Record<string, unknown>;
+}): Promise<void> {
+  const sql = getDb();
+  if (sql) {
+    try {
+      await ensureSchema();
+      await sql`
+        INSERT INTO dispatch_logs (dispatch_id, tenant_email, store_url, destination, delivery_status, status_label, payload, created_at)
+        VALUES (${log.dispatch_id}, ${log.tenant_email || null}, ${log.store_url || null}, ${log.destination}, ${log.delivery_status}, ${log.status_label}, ${JSON.stringify(log.payload)}, NOW());
+      `;
+      return;
+    } catch (err) {
+      console.warn('[Neon DB] Error recording dispatch log:', err);
+    }
+  }
+
+  inMemoryDispatches.unshift({
+    id: inMemoryDispatches.length + 1,
+    dispatch_id: log.dispatch_id,
+    tenant_email: log.tenant_email || 'unknown',
+    store_url: log.store_url || 'unknown',
+    destination: log.destination,
+    delivery_status: log.delivery_status,
+    status_label: log.status_label,
+    payload: log.payload,
+    created_at: new Date().toISOString(),
+  });
+}
+
 
 
 export async function getDLQMessages(): Promise<DLQMessage[]> {
