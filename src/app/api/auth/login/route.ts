@@ -51,22 +51,15 @@ export async function POST(request: Request) {
     }
 
     const cleanEmail = email.trim().toLowerCase();
+    const isAdmin = isAllowedAdminEmail(cleanEmail);
+    const role = isAdmin ? 'admin' : 'user';
 
-    // 2. Strict Admin Authorization Check: Only whitelisted admin emails are allowed into Mission Control
-    if (!isAllowedAdminEmail(cleanEmail)) {
-      recordAttempt(rateLimitKey);
-      return NextResponse.json(
-        { error: `Access restricted: ${cleanEmail} is registered as a regular user. The user dashboard is currently in private pilot.` },
-        { status: 403 }
-      );
-    }
-
-    let admin = await findAdminByEmail(cleanEmail);
+    let user = await findAdminByEmail(cleanEmail);
 
     // Initial Bootstrap for whitelisted admin accounts
-    if (!admin || !admin.password_hash) {
+    if (isAdmin && (!user || !user.password_hash)) {
       const passwordHash = await hashPassword(DEFAULT_ADMIN_PASSWORD);
-      admin = await createOrUpdateAdmin({
+      user = await createOrUpdateAdmin({
         email: cleanEmail,
         passwordHash,
         name: cleanEmail.split('@')[0],
@@ -74,7 +67,7 @@ export async function POST(request: Request) {
       });
     }
 
-    if (!admin || !admin.password_hash) {
+    if (!user || !user.password_hash) {
       recordAttempt(rateLimitKey);
       return NextResponse.json(
         { error: 'Invalid credentials or account does not exist.' },
@@ -82,7 +75,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const isValid = await verifyPassword(password, admin.password_hash);
+    const isValid = await verifyPassword(password, user.password_hash);
     if (!isValid) {
       recordAttempt(rateLimitKey);
       return NextResponse.json(
@@ -94,23 +87,25 @@ export async function POST(request: Request) {
     // 3. Successful authentication - reset rate limit counter for this IP
     resetRateLimit(rateLimitKey);
 
-    // 4. Generate secure 7-day session token
+    // 4. Generate secure 7-day session token with role tagging
     const token = await createSessionToken({
-      email: admin.email,
-      role: admin.role,
-      name: admin.name || 'Admin',
+      email: user.email,
+      role,
+      name: user.name || cleanEmail.split('@')[0],
+      id: user.id,
     });
 
     // 5. Sanitize post-login redirect destination (Open-Redirect Defense)
-    const safeRedirect = sanitizeRedirectUrl(returnUrl, '/admin/dashboard');
+    const defaultDestination = role === 'admin' ? '/admin/dashboard' : '/dashboard';
+    const safeRedirect = sanitizeRedirectUrl(returnUrl, defaultDestination);
 
     const response = NextResponse.json({
       success: true,
       redirectUrl: safeRedirect,
       user: {
-        email: admin.email,
-        name: admin.name,
-        role: admin.role,
+        email: user.email,
+        name: user.name,
+        role,
       },
     });
 

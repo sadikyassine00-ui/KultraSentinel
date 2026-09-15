@@ -12,7 +12,6 @@ export async function GET(request: Request) {
   const errorParam = url.searchParams.get('error');
 
   const origin = url.origin;
-  const dashboardStoresUrl = new URL('/admin/dashboard?tab=stores', origin);
 
   // 1. CSRF State Parameter Validation (Zero-Trust Security)
   // Check that the state parameter exists and matches the encrypted HTTP-only cookie
@@ -34,24 +33,28 @@ export async function GET(request: Request) {
     );
   }
 
-  if (errorParam || !code) {
-    dashboardStoresUrl.searchParams.set('error', errorParam || 'Merchant Center OAuth was cancelled.');
-    return NextResponse.redirect(dashboardStoresUrl);
-  }
-
   // 2. Verify authenticated session
   const sessionCookie = cookieStore.get(COOKIE_NAME);
   if (!sessionCookie?.value) {
-    const loginUrl = new URL('/admin/login', origin);
+    const loginUrl = new URL('/login', origin);
     loginUrl.searchParams.set('error', 'Session expired during Merchant Center authorization.');
     return NextResponse.redirect(loginUrl);
   }
 
   const session = await verifySessionToken(sessionCookie.value);
   if (!session) {
-    const loginUrl = new URL('/admin/login', origin);
+    const loginUrl = new URL('/login', origin);
     loginUrl.searchParams.set('error', 'Invalid session credentials.');
     return NextResponse.redirect(loginUrl);
+  }
+
+  const fallbackDashboardUrl = session.role === 'admin'
+    ? new URL('/admin/dashboard?tab=stores', origin)
+    : new URL('/dashboard', origin);
+
+  if (errorParam || !code) {
+    fallbackDashboardUrl.searchParams.set('error', errorParam || 'Merchant Center OAuth was cancelled.');
+    return NextResponse.redirect(fallbackDashboardUrl);
   }
 
   // Verify state tenant email matches active authenticated session
@@ -66,8 +69,8 @@ export async function GET(request: Request) {
   const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
 
   if (!googleClientId || !googleClientSecret) {
-    dashboardStoresUrl.searchParams.set('error', 'Google OAuth credentials not configured on server.');
-    return NextResponse.redirect(dashboardStoresUrl);
+    fallbackDashboardUrl.searchParams.set('error', 'Google OAuth credentials not configured on server.');
+    return NextResponse.redirect(fallbackDashboardUrl);
   }
 
   try {
@@ -89,8 +92,8 @@ export async function GET(request: Request) {
     if (!tokenRes.ok) {
       const errText = await tokenRes.text();
       console.error('[Merchant OAuth Callback] Token exchange failed:', errText);
-      dashboardStoresUrl.searchParams.set('error', 'Failed to exchange authorization code with Google.');
-      return NextResponse.redirect(dashboardStoresUrl);
+      fallbackDashboardUrl.searchParams.set('error', 'Failed to exchange authorization code with Google.');
+      return NextResponse.redirect(fallbackDashboardUrl);
     }
 
     const tokenData = await tokenRes.json();
@@ -155,11 +158,11 @@ export async function GET(request: Request) {
           { status: 409 }
         );
       }
-      dashboardStoresUrl.searchParams.set(
+      fallbackDashboardUrl.searchParams.set(
         'error',
         claimResult.error || 'Failed to claim store due to cross-tenant collision.'
       );
-      return NextResponse.redirect(dashboardStoresUrl);
+      return NextResponse.redirect(fallbackDashboardUrl);
     }
 
     // Step 4: Auto-register Google Merchant Notifications API Pub/Sub pipeline
@@ -170,7 +173,13 @@ export async function GET(request: Request) {
     });
 
     // Step 5: Clean redirect to State B (Arm Your Alarm modal)
-    const successUrl = new URL('/admin/dashboard', origin);
+    const successUrl = session.role === 'admin'
+      ? new URL('/admin/dashboard', origin)
+      : new URL('/dashboard', origin);
+
+    if (session.role === 'admin') {
+      successUrl.searchParams.set('tab', 'triage');
+    }
     successUrl.searchParams.set('just_connected', 'true');
     if (claimResult.store?.id) {
       successUrl.searchParams.set('store_id', String(claimResult.store.id));
@@ -182,8 +191,8 @@ export async function GET(request: Request) {
     return redirectResponse;
   } catch (err) {
     console.error('[Merchant OAuth Callback Error]', err);
-    dashboardStoresUrl.searchParams.set('error', 'Internal server error processing Merchant Center authorization.');
-    return NextResponse.redirect(dashboardStoresUrl);
+    fallbackDashboardUrl.searchParams.set('error', 'Internal server error processing Merchant Center authorization.');
+    return NextResponse.redirect(fallbackDashboardUrl);
   }
 }
 

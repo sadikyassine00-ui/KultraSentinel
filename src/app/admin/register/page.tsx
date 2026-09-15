@@ -168,10 +168,10 @@ export default function RegisterPage() {
                     Return to Homepage
                   </a>
                   <a
-                    href="/admin/login"
+                    href="/dashboard"
                     className="flex-1 py-2.5 px-4 rounded bg-[#FF788D] hover:bg-[#FF788D]/90 text-[#0a0b1dff] text-xs font-bold transition-colors text-center"
                   >
-                    Sign In to Console
+                    Open Catalog Dashboard
                   </a>
                 </div>
               </div>

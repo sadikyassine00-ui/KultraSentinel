@@ -10,13 +10,20 @@ export function getJwtSecret(): Uint8Array {
 
 export interface SessionPayload {
   email: string;
-  role: string;
+  role: 'admin' | 'user' | string;
   name?: string | null;
+  id?: string | number | null;
 }
 
 export async function createSessionToken(payload: SessionPayload): Promise<string> {
   const secret = getJwtSecret();
-  return new SignJWT({ ...payload })
+  const email = payload.email.toLowerCase().trim();
+  const role = isAllowedAdminEmail(email) ? 'admin' : (payload.role === 'admin' ? 'admin' : 'user');
+  return new SignJWT({
+    ...payload,
+    email,
+    role,
+  })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('7d')
@@ -28,10 +35,14 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
     const secret = getJwtSecret();
     const { payload } = await jwtVerify(token, secret);
     if (!payload.email) return null;
+    const email = (payload.email as string).toLowerCase().trim();
+    const rawRole = (payload.role as string) || '';
+    const role = isAllowedAdminEmail(email) ? 'admin' : (rawRole === 'admin' ? 'admin' : 'user');
     return {
-      email: payload.email as string,
-      role: (payload.role as string) || 'admin',
+      email,
+      role,
       name: (payload.name as string) || null,
+      id: (payload.id as string | number) || null,
     };
   } catch {
     return null;

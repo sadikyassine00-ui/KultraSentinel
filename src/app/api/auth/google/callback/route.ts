@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createOrUpdateAdmin } from '@/lib/db';
+import { createOrUpdateAdmin, findTenantByEmail, createTenant } from '@/lib/db';
 import { createSessionToken, getSessionCookieHeader, isAllowedAdminEmail } from '@/lib/auth';
 
 export async function GET(request: Request) {
@@ -8,8 +8,7 @@ export async function GET(request: Request) {
   const error = url.searchParams.get('error');
 
   const origin = url.origin;
-  const loginUrl = new URL('/admin/login', origin);
-  const dashboardUrl = new URL('/admin/dashboard', origin);
+  const loginUrl = new URL('/login', origin);
 
   if (error || !code) {
     loginUrl.searchParams.set('error', error || 'Google sign-in was cancelled or failed.');
@@ -62,7 +61,7 @@ export async function GET(request: Request) {
 
     const userData = await userRes.json();
     const email = userData.email?.toLowerCase();
-    const name = userData.name || userData.given_name || 'Admin User';
+    const name = userData.name || userData.given_name || 'User';
     const googleId = userData.id;
 
     if (!email) {
@@ -70,32 +69,42 @@ export async function GET(request: Request) {
       return NextResponse.redirect(loginUrl);
     }
 
-    // Strict Admin Authorization Check
-    if (!isAllowedAdminEmail(email)) {
-      loginUrl.searchParams.set(
-        'error',
-        `Access restricted: ${email} is registered as a regular user. The user dashboard is currently in private pilot.`
-      );
-      return NextResponse.redirect(loginUrl);
-    }
+    const isAdmin = isAllowedAdminEmail(email);
+    const role = isAdmin ? 'admin' : 'user';
 
-    // 3. Persist or match admin account in Neon DB
-    const admin = await createOrUpdateAdmin({
+    // 3. Persist or match user account in Neon DB
+    const user = await createOrUpdateAdmin({
       email,
       name,
       googleId,
-      role: 'admin',
+      role,
     });
 
-    // 4. Generate 7-day secure session token
+    if (role === 'user') {
+      const existingTenant = await findTenantByEmail(email);
+      if (!existingTenant) {
+        await createTenant({
+          email,
+          companyName: name || email.split('@')[0],
+          planTier: 'Trial',
+        });
+      }
+    }
+
+    // 4. Generate 7-day secure session token with role tagging
     const token = await createSessionToken({
-      email: admin.email,
-      role: admin.role,
-      name: admin.name || 'Admin',
+      email: user.email,
+      role,
+      name: user.name || name,
+      id: user.id,
     });
 
-    // 5. Redirect to dashboard with HttpOnly session cookie
-    const response = NextResponse.redirect(dashboardUrl);
+    // 5. Redirect to customer dashboard or admin mission control
+    const targetUrl = role === 'admin'
+      ? new URL('/admin/dashboard', origin)
+      : new URL('/dashboard', origin);
+
+    const response = NextResponse.redirect(targetUrl);
     response.headers.set('Set-Cookie', getSessionCookieHeader(token));
     return response;
   } catch (err) {

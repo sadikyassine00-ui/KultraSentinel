@@ -95,10 +95,10 @@ export function Header() {
       setUser(null);
       setDropdownOpen(false);
       window.dispatchEvent(new Event('auth-change'));
-      router.push('/admin/login');
+      router.push('/login');
       router.refresh();
     } catch {
-      router.push('/admin/login');
+      router.push('/login');
     }
   };
 
@@ -117,6 +117,11 @@ export function Header() {
     }
     return emailOrName.slice(0, 2).toUpperCase();
   };
+
+  // Dedicated merchant workspace on /dashboard manages its own layout header
+  if (pathname.startsWith('/dashboard')) {
+    return null;
+  }
 
   return (
     <header
@@ -194,20 +199,41 @@ export function Header() {
                     <div className="text-[11px] text-[#94A3B8] truncate">{user.email}</div>
                     <div className="mt-1.5 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-[#142036] border border-[#1E293B] text-[#34D399]">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
-                      <span>{user.isAdmin || user.role === 'admin' ? 'Sole Platform Owner' : 'Active Tenant'}</span>
+                      <span>{user.isAdmin || user.role === 'admin' ? 'Sole Platform Owner' : 'Active Merchant'}</span>
                     </div>
                   </div>
 
                   {/* Menu Items */}
                   <div className="py-1 space-y-0.5">
-                    <Link
-                      href="/admin/dashboard"
-                      onClick={() => setDropdownOpen(false)}
-                      className="flex items-center gap-2.5 px-3 py-2 rounded text-xs font-semibold text-[#CBD5E1] hover:text-[#FDF4D2] hover:bg-[#18263D] transition-colors"
-                    >
-                      <LayoutDashboard className="w-3.5 h-3.5 text-[#FF788D]" />
-                      <span>Mission Control</span>
-                    </Link>
+                    {user.isAdmin || user.role === 'admin' ? (
+                      <>
+                        <Link
+                          href="/admin/dashboard"
+                          onClick={() => setDropdownOpen(false)}
+                          className="flex items-center gap-2.5 px-3 py-2 rounded text-xs font-semibold text-[#CBD5E1] hover:text-[#FDF4D2] hover:bg-[#18263D] transition-colors"
+                        >
+                          <LayoutDashboard className="w-3.5 h-3.5 text-[#FF788D]" />
+                          <span>Mission Control</span>
+                        </Link>
+                        <Link
+                          href="/dashboard"
+                          onClick={() => setDropdownOpen(false)}
+                          className="flex items-center gap-2.5 px-3 py-2 rounded text-xs font-semibold text-[#CBD5E1] hover:text-[#FDF4D2] hover:bg-[#18263D] transition-colors"
+                        >
+                          <ShieldCheck className="w-3.5 h-3.5 text-[#10B981]" />
+                          <span>Catalog Dashboard</span>
+                        </Link>
+                      </>
+                    ) : (
+                      <Link
+                        href="/dashboard"
+                        onClick={() => setDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded text-xs font-semibold text-[#CBD5E1] hover:text-[#FDF4D2] hover:bg-[#18263D] transition-colors"
+                      >
+                        <LayoutDashboard className="w-3.5 h-3.5 text-[#FF788D]" />
+                        <span>Catalog Dashboard</span>
+                      </Link>
+                    )}
 
                     <Link
                       href="/"
@@ -237,13 +263,13 @@ export function Header() {
             /* Logged-Out CTAs */
             <>
               <Link
-                href="/admin/login"
+                href="/login"
                 className="text-[0.84rem] font-bold text-[#CBD5E1] hover:text-[#FDF4D2] px-2.5 sm:px-3 py-1.5 transition-colors duration-180"
               >
                 Log in
               </Link>
               <Link
-                href="/admin/register"
+                href="/register"
                 className="text-[0.84rem] font-bold text-[#0a0b1dff] bg-[#FF788D] hover:bg-[#FF788D]/90 px-3.5 sm:px-4 py-1.5 rounded-[4px] transition-all duration-180 flex items-center gap-1.5 shadow-sm"
               >
                 <span>Register</span>

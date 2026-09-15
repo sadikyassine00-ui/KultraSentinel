@@ -3,7 +3,6 @@ import type { NextRequest } from 'next/server';
 import {
   COOKIE_NAME,
   verifySessionToken,
-  isAllowedAdminEmail,
 } from '@/lib/token';
 
 export async function middleware(request: NextRequest) {
@@ -19,23 +18,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 2. Identify target route category
-  const isAuthPage =
-    pathname === '/admin/login' ||
-    pathname === '/login' ||
-    pathname === '/admin/register' ||
-    pathname === '/register';
-
-  const isProtectedPage =
-    pathname === '/admin' ||
-    pathname === '/admin/dashboard' ||
-    pathname.startsWith('/admin/dashboard/') ||
-    pathname === '/dashboard' ||
-    pathname.startsWith('/dashboard/') ||
-    pathname.startsWith('/admin/stores') ||
-    pathname.startsWith('/admin/settings');
-
-  // 3. Inspect and cryptographically verify session token
+  // 2. Inspect and cryptographically verify session token
   const sessionCookie = request.cookies.get(COOKIE_NAME);
   const rawToken = sessionCookie?.value;
 
@@ -49,55 +32,10 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // 4. Handle Auth Pages (/admin/login, /admin/register, etc.)
-  if (isAuthPage) {
-    // If user is already authenticated with valid admin credentials, redirect to dashboard
-    if (session && isAllowedAdminEmail(session.email)) {
-      const dashboardUrl = new URL('/admin/dashboard', request.url);
-      return NextResponse.redirect(dashboardUrl);
-    }
-
-    // If an invalid or tampered cookie is present on login page, clear it immediately
-    if (isTamperedOrExpired) {
-      const response = NextResponse.next();
-      response.cookies.set({
-        name: COOKIE_NAME,
-        value: '',
-        path: '/',
-        maxAge: 0,
-        httpOnly: true,
-        sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production',
-      });
-      return response;
-    }
-
-    return NextResponse.next();
-  }
-
-  // 5. Handle Protected Pages (/admin/dashboard, etc.)
-  if (isProtectedPage) {
-    // Authenticated admin user: permit entry
-    if (session && isAllowedAdminEmail(session.email)) {
-      // If root /admin requested, direct to /admin/dashboard
-      if (pathname === '/admin') {
-        return NextResponse.redirect(new URL('/admin/dashboard', request.url));
-      }
-      return NextResponse.next();
-    }
-
-    // Invalid signature, tampered token, or expired token detected
-    const loginUrl = new URL('/admin/login', request.url);
-    const returnDestination = pathname + search;
-    loginUrl.searchParams.set('redirect', returnDestination);
-
-    if (isTamperedOrExpired) {
-      loginUrl.searchParams.set('error', 'Session signature invalid or expired. Please sign in again.');
-    }
-
-    const response = NextResponse.redirect(loginUrl);
-    // Erase the tampered/invalid cookie from client storage
-    response.cookies.set({
+  // Helper to clear invalid session cookies on redirect
+  const clearCookieResponse = (url: URL) => {
+    const res = NextResponse.redirect(url);
+    res.cookies.set({
       name: COOKIE_NAME,
       value: '',
       path: '/',
@@ -106,7 +44,100 @@ export async function middleware(request: NextRequest) {
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
     });
-    return response;
+    return res;
+  };
+
+  // 3. Public / Guest Routes (/login, /register)
+  if (pathname === '/login' || pathname === '/register') {
+    if (session) {
+      if (session.role === 'admin') {
+        return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+      }
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+
+    if (isTamperedOrExpired) {
+      const res = NextResponse.next();
+      res.cookies.set({
+        name: COOKIE_NAME,
+        value: '',
+        path: '/',
+        maxAge: 0,
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+      });
+      return res;
+    }
+
+    return NextResponse.next();
+  }
+
+  // 4. Admin Login Route (/admin/login, /admin/register)
+  if (pathname === '/admin/login' || pathname === '/admin/register') {
+    if (session) {
+      if (session.role === 'admin') {
+        return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+      }
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+
+    if (isTamperedOrExpired) {
+      const res = NextResponse.next();
+      res.cookies.set({
+        name: COOKIE_NAME,
+        value: '',
+        path: '/',
+        maxAge: 0,
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+      });
+      return res;
+    }
+
+    return NextResponse.next();
+  }
+
+  // 5. Customer Routes (/dashboard, /dashboard/:path*)
+  if (pathname === '/dashboard' || pathname.startsWith('/dashboard/')) {
+    if (!session) {
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('callbackUrl', pathname + search);
+      if (isTamperedOrExpired) {
+        loginUrl.searchParams.set('error', 'Session expired. Please sign in again.');
+        return clearCookieResponse(loginUrl);
+      }
+      return NextResponse.redirect(loginUrl);
+    }
+
+    // Accessible by both admin and user roles
+    return NextResponse.next();
+  }
+
+  // 6. Super Admin Perimeter (/admin, /admin/dashboard, /admin/:path*)
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) {
+    if (!session) {
+      const adminLoginUrl = new URL('/admin/login', request.url);
+      adminLoginUrl.searchParams.set('redirect', pathname + search);
+      if (isTamperedOrExpired) {
+        adminLoginUrl.searchParams.set('error', 'Session signature expired. Please sign in again.');
+        return clearCookieResponse(adminLoginUrl);
+      }
+      return NextResponse.redirect(adminLoginUrl);
+    }
+
+    // Strict boundary: standard users cannot enter super-admin perimeter
+    if (session.role !== 'admin') {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+
+    // Redirect bare /admin to /admin/dashboard
+    if (pathname === '/admin') {
+      return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+    }
+
+    return NextResponse.next();
   }
 
   return NextResponse.next();
@@ -118,5 +149,6 @@ export const config = {
     '/login',
     '/register',
     '/dashboard/:path*',
+    '/dashboard',
   ],
 };

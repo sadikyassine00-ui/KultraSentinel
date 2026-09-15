@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { findAdminByEmail, createOrUpdateAdmin } from '@/lib/db';
+import { findAdminByEmail, createOrUpdateAdmin, findTenantByEmail, createTenant } from '@/lib/db';
 import { createSessionToken, getSessionCookieHeader, isAllowedAdminEmail } from '@/lib/auth';
 
 export async function POST(request: Request) {
@@ -8,7 +8,7 @@ export async function POST(request: Request) {
     const { idToken, code } = body;
 
     let email = '';
-    let name = 'Admin User';
+    let name = 'User';
     let googleId = '';
 
     const googleClientId = process.env.GOOGLE_CLIENT_ID;
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
       }
 
       email = payload.email;
-      name = payload.name || payload.given_name || 'Admin User';
+      name = payload.name || payload.given_name || 'User';
       googleId = payload.sub;
     } else if (code && process.env.GOOGLE_CLIENT_SECRET && googleClientId) {
       // Exchange code for tokens
@@ -63,12 +63,12 @@ export async function POST(request: Request) {
       const userData = await userRes.json();
 
       email = userData.email;
-      name = userData.name;
+      name = userData.name || userData.given_name || 'User';
       googleId = userData.id;
     } else if (process.env.NODE_ENV !== 'production' && body.demoEmail) {
       // In development / test mode with no credentials configured
       email = body.demoEmail;
-      name = body.demoName || 'Google Authenticated Admin';
+      name = body.demoName || 'Google Authenticated User';
       googleId = 'google-dev-' + Date.now();
     } else {
       return NextResponse.json(
@@ -84,33 +84,45 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!isAllowedAdminEmail(email)) {
-      return NextResponse.json(
-        { error: `Access restricted: ${email} is registered as a regular user. The user dashboard is currently in private pilot.` },
-        { status: 403 }
-      );
-    }
+    const cleanEmail = email.toLowerCase().trim();
+    const isAdmin = isAllowedAdminEmail(cleanEmail);
+    const role = isAdmin ? 'admin' : 'user';
 
-    // Persist or match admin in Neon database
-    const admin = await createOrUpdateAdmin({
-      email: email.toLowerCase(),
+    // Persist or match user in Neon database
+    const user = await createOrUpdateAdmin({
+      email: cleanEmail,
       name,
       googleId,
-      role: 'admin',
+      role,
     });
 
+    if (role === 'user') {
+      const existingTenant = await findTenantByEmail(cleanEmail);
+      if (!existingTenant) {
+        await createTenant({
+          email: cleanEmail,
+          companyName: name || cleanEmail.split('@')[0],
+          planTier: 'Trial',
+        });
+      }
+    }
+
     const token = await createSessionToken({
-      email: admin.email,
-      role: admin.role,
-      name: admin.name || 'Admin',
+      email: user.email,
+      role,
+      name: user.name || name,
+      id: user.id,
     });
+
+    const redirectUrl = role === 'admin' ? '/admin/dashboard' : '/dashboard';
 
     const response = NextResponse.json({
       success: true,
+      redirectUrl,
       user: {
-        email: admin.email,
-        name: admin.name,
-        role: admin.role,
+        email: user.email,
+        name: user.name,
+        role,
       },
     });
 

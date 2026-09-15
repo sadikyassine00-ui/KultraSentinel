@@ -53,7 +53,7 @@ export async function POST(request: Request) {
     // 3. Hash password
     const passwordHash = await hashPassword(password);
     const isAdmin = isAllowedAdminEmail(cleanEmail);
-    const userRole = isAdmin ? 'admin' : 'tenant';
+    const userRole = isAdmin ? 'admin' : 'user';
 
     // 4. Create user record
     const user = await createOrUpdateAdmin({
@@ -80,23 +80,26 @@ export async function POST(request: Request) {
       catalogSize: '1,000 - 5,000 SKUs',
     });
 
-    // 7. Issue session token
+    // 7. Issue session token with tagged role
     const token = await createSessionToken({
       email: user.email,
-      role: user.role,
+      role: userRole,
       name: user.name,
+      id: user.id,
     });
 
     const cookieHeader = getSessionCookieHeader(token);
+    const redirectUrl = isAdmin ? '/admin/dashboard' : '/dashboard?just_connected=true';
 
     const response = NextResponse.json({
       success: true,
       isAdmin,
+      redirectUrl,
       user: {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role,
+        role: userRole,
       },
       tenant: {
         id: tenant.id,
