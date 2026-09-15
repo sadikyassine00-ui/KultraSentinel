@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import {
   isMessageProcessed,
   markMessageProcessed,
   findStoreByGmcId,
+  hasOpenIncident,
   upsertIncident,
   resolveIncident,
   getStoreIncidentCountInWindow,
@@ -48,6 +49,7 @@ export async function POST(request: Request) {
     if (alreadyProcessed) {
       return NextResponse.json(
         {
+          ok: true,
           status: 'acknowledged',
           action: 'deduplicated',
           messageId,
@@ -56,9 +58,6 @@ export async function POST(request: Request) {
         { status: 200 }
       );
     }
-
-    // Mark message as processed to prevent duplicates
-    await markMessageProcessed(messageId);
 
     // 4. Decode Google Cloud Pub/Sub base64 payload if applicable
     let eventData = body;
@@ -96,17 +95,27 @@ export async function POST(request: Request) {
     // 6. Store Lookup & DLQ Anomaly Routing
     const store = await findStoreByGmcId(merchantId);
     if (!store) {
-      // Unregistered merchant: route to DLQ gracefully, acknowledge 200 OK to prevent Google retry storms
-      await recordDLQMessage({
-        message_id: messageId,
-        merchant_id: merchantId,
-        failure_reason: `Unregistered Merchant Center Account ID: ${merchantId}`,
-        payload: eventData,
+      // Unregistered merchant: route to DLQ gracefully inside after(), acknowledge 200 OK immediately
+      after(async () => {
+        try {
+          await Promise.allSettled([
+            markMessageProcessed(messageId),
+            recordDLQMessage({
+              message_id: messageId,
+              merchant_id: merchantId,
+              failure_reason: `Unregistered Merchant Center Account ID: ${merchantId}`,
+              payload: eventData,
+            }),
+          ]);
+        } catch (workerErr) {
+          console.error('[PubSub Ingestion Worker Error (DLQ)]', workerErr);
+        }
       });
 
       return NextResponse.json(
         {
-          status: 'acknowledged',
+          ok: true,
+          status: 'processed',
           action: 'dlq_routed',
           merchantId,
           latencyMs: Math.round(performance.now() - startTime),
@@ -115,14 +124,23 @@ export async function POST(request: Request) {
       );
     }
 
-    // 7. Incident Lifecycle State Logic
+    // 7. Incident Lifecycle State Logic (Auto-resolution)
     if (status === 'approved' || status === 'resolved') {
-      // SKU is now approved: automatically transition open incident to resolved
-      await resolveIncident(store.id, sku);
+      after(async () => {
+        try {
+          await Promise.allSettled([
+            markMessageProcessed(messageId),
+            resolveIncident(store.id, sku),
+          ]);
+        } catch (workerErr) {
+          console.error('[PubSub Ingestion Worker Error (Resolve)]', workerErr);
+        }
+      });
 
       return NextResponse.json(
         {
-          status: 'acknowledged',
+          ok: true,
+          status: 'processed',
           action: 'incident_resolved',
           storeId: store.id,
           sku,
@@ -132,30 +150,19 @@ export async function POST(request: Request) {
       );
     }
 
-    // Disapproval / Demotion: Upsert incident
-    const { incident, isNew } = await upsertIncident({
-      storeId: store.id,
-      gmcId: merchantId,
-      sku,
-      title,
-      issueCode,
-      severity,
-      details: eventData,
-    });
+    // 8. Disapproval / Demotion: check in-memory status for immediate response
+    const isNew = !hasOpenIncident(store.id, sku, issueCode);
 
-    // 8. Outbound Alert Dispatch & Spike Guard (Stage 6)
+    // 9. Outbound Alert Dispatch & Spike Guard (Stage 6)
     const destination = store.webhook_url || process.env.SLACK_WEBHOOK_URL;
     let dispatchOutcome = 'skipped_no_destination';
+    let alertCard: Record<string, unknown> | null = null;
 
     if (destination) {
-      // Check volume in last 60 seconds
       const volumeInWindow = await getStoreIncidentCountInWindow(store.id, 60);
 
-      // Construct Deep Links
       const gmcDiagnosticsUrl = `https://merchants.google.com/mc/items/diagnostics?accountId=${encodeURIComponent(merchantId)}&offerId=${encodeURIComponent(sku)}`;
       const storeAdminEditUrl = `https://${store.store_url}/admin/products?sku=${encodeURIComponent(sku)}`;
-
-      let alertCard: Record<string, unknown>;
 
       if (volumeInWindow >= 10) {
         // Bulk Spike Guard activated: dispatch aggregated summary
@@ -228,69 +235,87 @@ export async function POST(request: Request) {
         };
         dispatchOutcome = 'individual_alert_dispatched';
       }
+    }
 
-      // Non-blocking Outbound Delivery: guarantees strict <500ms ingestion SLA
-      // External webhook latency or third-party outages will never delay Pub/Sub acknowledgment
-      (async () => {
-        try {
-          const dispatchRes = await fetch(destination, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(alertCard),
-            signal: AbortSignal.timeout(3000), // Strict 3s timeout for webhook dispatch
-          });
+    // Helper for non-blocking outbound webhook execution inside after()
+    const dispatchAlert = async () => {
+      if (!destination || !alertCard) return;
+      try {
+        const dispatchRes = await fetch(destination, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(alertCard),
+          signal: AbortSignal.timeout(3000), // Strict 3s timeout guard
+        });
 
-          if (!dispatchRes.ok) {
-            // If external platform returns error (e.g. 404/410/deleted webhook)
-            if (dispatchRes.status === 404 || dispatchRes.status === 410) {
-              await markStoreAlertStatus(store.id, 'degraded');
-            }
-
-            await recordDispatchLog({
-              dispatch_id: `dsp-${Date.now()}`,
-              tenant_email: store.tenant_email,
-              store_url: store.store_url,
-              destination,
-              delivery_status: dispatchRes.status,
-              status_label: dispatchRes.status === 404 ? 'Invalid Webhook' : 'Rate Limited',
-              payload: alertCard,
-            });
-          } else {
-            await recordDispatchLog({
-              dispatch_id: `dsp-${Date.now()}`,
-              tenant_email: store.tenant_email,
-              store_url: store.store_url,
-              destination,
-              delivery_status: 200,
-              status_label: 'Delivered',
-              payload: alertCard,
-            });
+        if (!dispatchRes.ok) {
+          if (dispatchRes.status === 404 || dispatchRes.status === 410) {
+            await markStoreAlertStatus(store.id, 'degraded');
           }
-        } catch (dispatchErr: unknown) {
-          // Safe Error Handling: Network failure delivering alert must NOT cause an error
-          console.warn('[PubSub Ingestion] Outbound dispatch error:', dispatchErr);
+
           await recordDispatchLog({
             dispatch_id: `dsp-${Date.now()}`,
             tenant_email: store.tenant_email,
             store_url: store.store_url,
             destination,
-            delivery_status: 502,
-            status_label: 'Invalid Webhook',
-            payload: { error: 'Network failure during delivery', alertCard },
+            delivery_status: dispatchRes.status,
+            status_label: dispatchRes.status === 404 ? 'Invalid Webhook' : 'Rate Limited',
+            payload: alertCard,
+          });
+        } else {
+          await recordDispatchLog({
+            dispatch_id: `dsp-${Date.now()}`,
+            tenant_email: store.tenant_email,
+            store_url: store.store_url,
+            destination,
+            delivery_status: 200,
+            status_label: 'Delivered',
+            payload: alertCard,
           });
         }
-      })();
-    }
+      } catch (dispatchErr: unknown) {
+        console.warn('[PubSub Ingestion] Outbound dispatch error:', dispatchErr);
+        await recordDispatchLog({
+          dispatch_id: `dsp-${Date.now()}`,
+          tenant_email: store.tenant_email,
+          store_url: store.store_url,
+          destination,
+          delivery_status: 502,
+          status_label: 'Invalid Webhook',
+          payload: { error: 'Network failure during delivery', alertCard },
+        });
+      }
+    };
 
+    // 10. Schedule All Downstream Execution inside Next.js 15 after()
+    after(async () => {
+      try {
+        await Promise.allSettled([
+          markMessageProcessed(messageId),
+          upsertIncident({
+            storeId: store.id,
+            gmcId: merchantId,
+            sku,
+            title,
+            issueCode,
+            severity,
+            details: eventData,
+          }),
+          dispatchAlert(),
+        ]);
+      } catch (workerErr) {
+        console.error('[PubSub Ingestion Worker Error (Incident)]', workerErr);
+      }
+    });
 
     const latencyMs = Math.round(performance.now() - startTime);
 
     // Guaranteed SLA: return 200 OK rapidly
     return NextResponse.json(
       {
-        status: 'acknowledged',
+        ok: true,
+        status: 'processed',
         action: isNew ? 'incident_created' : 'incident_updated',
-        incidentId: incident.id,
         storeId: store.id,
         dispatch: dispatchOutcome,
         latencyMs,
@@ -299,9 +324,9 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     console.error('[PubSub Ingestion Critical Error]', error);
-    // Catch-all to protect Pub/Sub SLA, logging error gracefully
     return NextResponse.json(
       {
+        ok: false,
         status: 'error_logged',
         error: 'Error processing catalog event',
         latencyMs: Math.round(performance.now() - startTime),

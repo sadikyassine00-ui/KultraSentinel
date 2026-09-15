@@ -1274,18 +1274,31 @@ export async function markMessageProcessed(messageId: string): Promise<void> {
 
   const sql = getDb();
   if (sql) {
-    // Non-blocking persistent write to guarantee lean ingestion loop SLA
-    sql`
-      INSERT INTO processed_messages (message_id, processed_at)
-      VALUES (${messageId}, NOW())
-      ON CONFLICT (message_id) DO UPDATE SET processed_at = NOW();
-    `.catch((err) => console.warn('[Neon DB] Error marking message processed:', err));
+    try {
+      await sql`
+        INSERT INTO processed_messages (message_id, processed_at)
+        VALUES (${messageId}, NOW())
+        ON CONFLICT (message_id) DO UPDATE SET processed_at = NOW();
+      `;
+    } catch (err) {
+      console.warn('[Neon DB] Error marking message processed:', err);
+    }
   }
 }
 
 // -----------------------------------------------------------------------------
 // Incident Persistence & Triage State (Stage 5)
 // -----------------------------------------------------------------------------
+
+export function hasOpenIncident(storeId: number, sku: string, issueCode: string): boolean {
+  return inMemoryIncidents.some(
+    (i) =>
+      i.store_id === storeId &&
+      i.sku === sku &&
+      i.issue_code === issueCode &&
+      i.status === 'unresolved'
+  );
+}
 
 export async function upsertIncident(data: {
   storeId: number;
@@ -1342,37 +1355,35 @@ export async function upsertIncident(data: {
     }
   }
 
-  // Resilient non-blocking database persistence
+  // Resilient database persistence
   const sql = getDb();
   if (sql) {
-    (async () => {
-      try {
-        if (!isNew) {
-          await sql`
-            UPDATE incidents
-            SET last_detected_at = NOW(), title = ${data.title}, severity = ${data.severity}, details = ${JSON.stringify(data.details || {})}
-            WHERE store_id = ${data.storeId} AND sku = ${data.sku} AND issue_code = ${data.issueCode} AND status = 'unresolved';
-          `;
-        } else {
-          await sql`
-            INSERT INTO incidents (
-              store_id, gmc_id, sku, title, issue_code, severity, status,
-              first_detected_at, last_detected_at, details
-            ) VALUES (
-              ${data.storeId}, ${data.gmcId}, ${data.sku}, ${data.title}, ${data.issueCode},
-              ${data.severity}, 'unresolved', NOW(), NOW(), ${JSON.stringify(data.details || {})}
-            );
-          `;
-          await sql`
-            UPDATE stores
-            SET open_disapprovals = open_disapprovals + 1, total_caught = total_caught + 1, last_message_at = NOW()
-            WHERE id = ${data.storeId};
-          `;
-        }
-      } catch (err) {
-        console.warn('[Neon DB] Background incident persistence error:', err);
+    try {
+      if (!isNew) {
+        await sql`
+          UPDATE incidents
+          SET last_detected_at = NOW(), title = ${data.title}, severity = ${data.severity}, details = ${JSON.stringify(data.details || {})}
+          WHERE store_id = ${data.storeId} AND sku = ${data.sku} AND issue_code = ${data.issueCode} AND status = 'unresolved';
+        `;
+      } else {
+        await sql`
+          INSERT INTO incidents (
+            store_id, gmc_id, sku, title, issue_code, severity, status,
+            first_detected_at, last_detected_at, details
+          ) VALUES (
+            ${data.storeId}, ${data.gmcId}, ${data.sku}, ${data.title}, ${data.issueCode},
+            ${data.severity}, 'unresolved', NOW(), NOW(), ${JSON.stringify(data.details || {})}
+          );
+        `;
+        await sql`
+          UPDATE stores
+          SET open_disapprovals = open_disapprovals + 1, total_caught = total_caught + 1, last_message_at = NOW()
+          WHERE id = ${data.storeId};
+        `;
       }
-    })();
+    } catch (err) {
+      console.warn('[Neon DB] Incident persistence error:', err);
+    }
   }
 
   return { incident: resultIncident, isNew };
@@ -1398,25 +1409,23 @@ export async function resolveIncident(storeId: number, sku: string): Promise<boo
 
   const sql = getDb();
   if (sql) {
-    (async () => {
-      try {
-        const updated = await sql`
-          UPDATE incidents
-          SET status = 'resolved', resolved_at = NOW()
-          WHERE store_id = ${storeId} AND sku = ${sku} AND status = 'unresolved'
-          RETURNING id;
+    try {
+      const updated = await sql`
+        UPDATE incidents
+        SET status = 'resolved', resolved_at = NOW()
+        WHERE store_id = ${storeId} AND sku = ${sku} AND status = 'unresolved'
+        RETURNING id;
+      `;
+      if (updated.length > 0) {
+        await sql`
+          UPDATE stores
+          SET open_disapprovals = GREATEST(0, open_disapprovals - ${updated.length}), last_message_at = NOW()
+          WHERE id = ${storeId};
         `;
-        if (updated.length > 0) {
-          await sql`
-            UPDATE stores
-            SET open_disapprovals = GREATEST(0, open_disapprovals - ${updated.length}), last_message_at = NOW()
-            WHERE id = ${storeId};
-          `;
-        }
-      } catch (err) {
-        console.warn('[Neon DB] Background incident resolve error:', err);
       }
-    })();
+    } catch (err) {
+      console.warn('[Neon DB] Incident resolve error:', err);
+    }
   }
 
   return resolvedAny;
