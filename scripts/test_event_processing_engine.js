@@ -163,9 +163,9 @@ async function runTestSuite() {
     assert(connectRes.statusCode === 200, 'Initiation endpoint GET /api/auth/merchant/connect returns 200');
     assert(typeof connectRes.json?.url === 'string', 'Returns Google OAuth authorization URL');
     assert(
-      connectRes.json.url.includes('https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcontent.readonly') ||
-      connectRes.json.url.includes('content.readonly'),
-      'Requests read-only access to Merchant API (content.readonly)'
+      connectRes.json.url.includes('https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcontent') ||
+      connectRes.json.url.includes('auth/content'),
+      'Requests access to Merchant Content API'
     );
     assert(connectRes.json.url.includes('access_type=offline'), 'Requests offline access for refresh token issuance');
 

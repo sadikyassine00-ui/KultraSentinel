@@ -31,7 +31,7 @@ export async function GET(request: Request) {
       client_id: googleClientId,
       redirect_uri: redirectUri,
       response_type: 'code',
-      scope: 'https://www.googleapis.com/auth/content.readonly openid email profile',
+      scope: 'https://www.googleapis.com/auth/content openid email profile',
       access_type: 'offline',
       prompt: 'consent',
       state,

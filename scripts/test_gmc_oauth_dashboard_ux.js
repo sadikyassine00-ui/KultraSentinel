@@ -138,7 +138,7 @@ async function runGmcOAuthAndDashboardSuite() {
     assert(connectRes.statusCode === 200, 'Initiation endpoint GET /api/auth/merchant/connect returns 200 OK');
     assert(!!connectRes.json?.url, 'Returns Google OAuth authorization URL');
     assert(connectRes.json.url.includes('accounts.google.com/o/oauth2/v2/auth'), 'Directs to Google OAuth authorization endpoint');
-    assert(connectRes.json.url.includes('content.readonly'), 'Requests read-only Content API access scope');
+    assert(connectRes.json.url.includes('auth%2Fcontent') || connectRes.json.url.includes('auth/content'), 'Requests Content API access scope');
     assert(connectRes.json.url.includes('access_type=offline'), 'Requests access_type=offline for refresh token');
     assert(connectRes.json.url.includes('prompt=consent'), 'Requests prompt=consent to guarantee refresh token return');
     assert(connectRes.json.url.includes('state='), 'Injects stateful CSRF verification token into Google authorization URL');
