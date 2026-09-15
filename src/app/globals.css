@@ -17,7 +17,7 @@
 
 /* Base typography: Universal Satoshi font throughout standard elements */
 html, body, button, input, textarea, select {
-  font-family: 'Satoshi', sans-serif;
+  font-family: 'Satoshi', sans-serif !important;
 }
 
 /* Strict Monospace Isolation for protocol strings, IDs, and raw payloads */

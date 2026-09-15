@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { COOKIE_NAME, verifySessionToken } from '@/lib/token';
 import { claimStoreForTenant, findTenantByEmail } from '@/lib/db';
-import { encryptToken } from '@/lib/security';
+import { encryptToken, verifyOAuthState, OAUTH_STATE_COOKIE_NAME } from '@/lib/security';
+import { registerMerchantNotificationSubscription } from '@/lib/merchant_api';
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -13,13 +14,32 @@ export async function GET(request: Request) {
   const origin = url.origin;
   const dashboardStoresUrl = new URL('/admin/dashboard?tab=stores', origin);
 
+  // 1. CSRF State Parameter Validation (Zero-Trust Security)
+  // Check that the state parameter exists and matches the encrypted HTTP-only cookie
+  const cookieStore = await cookies();
+  const stateCookie = cookieStore.get(OAUTH_STATE_COOKIE_NAME)?.value;
+
+  if (!state) {
+    return NextResponse.json(
+      { error: 'Forbidden: Missing OAuth state parameter' },
+      { status: 403 }
+    );
+  }
+
+  const stateResult = await verifyOAuthState(state, stateCookie);
+  if (!stateResult.valid) {
+    return NextResponse.json(
+      { error: `Forbidden: ${stateResult.error || 'Invalid or expired OAuth state parameter'}` },
+      { status: 403 }
+    );
+  }
+
   if (errorParam || !code) {
     dashboardStoresUrl.searchParams.set('error', errorParam || 'Merchant Center OAuth was cancelled.');
     return NextResponse.redirect(dashboardStoresUrl);
   }
 
-  // 1. Verify authenticated session
-  const cookieStore = await cookies();
+  // 2. Verify authenticated session
   const sessionCookie = cookieStore.get(COOKIE_NAME);
   if (!sessionCookie?.value) {
     const loginUrl = new URL('/admin/login', origin);
@@ -34,18 +54,12 @@ export async function GET(request: Request) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // 2. Verify state payload matches authenticated tenant
-  if (state) {
-    try {
-      const decodedState = JSON.parse(Buffer.from(state, 'base64url').toString('utf8'));
-      if (decodedState.email && decodedState.email.toLowerCase() !== session.email.toLowerCase()) {
-        dashboardStoresUrl.searchParams.set('error', 'State parameter tenant mismatch detected.');
-        return NextResponse.redirect(dashboardStoresUrl);
-      }
-    } catch {
-      dashboardStoresUrl.searchParams.set('error', 'Invalid state parameter.');
-      return NextResponse.redirect(dashboardStoresUrl);
-    }
+  // Verify state tenant email matches active authenticated session
+  if (stateResult.email && stateResult.email.toLowerCase() !== session.email.toLowerCase()) {
+    return NextResponse.json(
+      { error: 'Forbidden: OAuth state parameter tenant mismatch detected' },
+      { status: 403 }
+    );
   }
 
   const googleClientId = process.env.GOOGLE_CLIENT_ID;
@@ -132,6 +146,15 @@ export async function GET(request: Request) {
     });
 
     if (!claimResult.success) {
+      if (claimResult.collision) {
+        return NextResponse.json(
+          {
+            error: claimResult.error || 'Cross-tenant collision: Google Merchant Center ID already claimed by another tenant.',
+            collision: true,
+          },
+          { status: 409 }
+        );
+      }
       dashboardStoresUrl.searchParams.set(
         'error',
         claimResult.error || 'Failed to claim store due to cross-tenant collision.'
@@ -139,8 +162,24 @@ export async function GET(request: Request) {
       return NextResponse.redirect(dashboardStoresUrl);
     }
 
-    dashboardStoresUrl.searchParams.set('success', `Store ${storeName} (GMC #${gmcId}) successfully connected.`);
-    return NextResponse.redirect(dashboardStoresUrl);
+    // Step 4: Auto-register Google Merchant Notifications API Pub/Sub pipeline
+    await registerMerchantNotificationSubscription({
+      merchantId: gmcId,
+      accessToken,
+      pubsubTopic: claimResult.store?.pubsub_topic,
+    });
+
+    // Step 5: Clean redirect to State B (Arm Your Alarm modal)
+    const successUrl = new URL('/admin/dashboard', origin);
+    successUrl.searchParams.set('just_connected', 'true');
+    if (claimResult.store?.id) {
+      successUrl.searchParams.set('store_id', String(claimResult.store.id));
+    }
+    successUrl.searchParams.set('success', `Store ${storeName} (GMC #${gmcId}) successfully connected.`);
+
+    const redirectResponse = NextResponse.redirect(successUrl);
+    redirectResponse.cookies.delete(OAUTH_STATE_COOKIE_NAME);
+    return redirectResponse;
   } catch (err) {
     console.error('[Merchant OAuth Callback Error]', err);
     dashboardStoresUrl.searchParams.set('error', 'Internal server error processing Merchant Center authorization.');

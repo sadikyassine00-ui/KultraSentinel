@@ -88,9 +88,33 @@ export async function POST(request: Request) {
     );
 
     const title = eventData.title || eventData.product_title || 'Untitled Catalog Item';
-    const issueCode = eventData.issue_code || eventData.reason || eventData.policy_code || 'missing_required_attribute [gtin]';
-    const status = String(eventData.status || 'disapproved').toLowerCase();
-    const severity: 'critical' | 'warning' = status === 'demoted' ? 'warning' : 'critical';
+
+    // Support both direct attributes and Google Merchant Center PubSub issues array
+    const hasIssuesArray = Array.isArray(eventData.issues);
+    const firstIssue = hasIssuesArray && eventData.issues.length > 0 ? eventData.issues[0] : null;
+
+    const issueCode =
+      eventData.issue_code ||
+      eventData.reason ||
+      eventData.policy_code ||
+      (firstIssue ? (firstIssue.code || firstIssue.reason || firstIssue.issue_code) : null) ||
+      'missing_required_attribute [gtin]';
+
+    // Status resolution:
+    // If eventData.status is explicit, use it.
+    // If eventData.issues is an array:
+    //   If empty (issues.length === 0), it indicates Google re-approved the item (all issues resolved).
+    //   If non-empty, it indicates disapproval.
+    // Default fallback: 'disapproved'
+    let status = 'disapproved';
+    if (eventData.status) {
+      status = String(eventData.status).toLowerCase();
+    } else if (hasIssuesArray) {
+      status = eventData.issues.length === 0 ? 'resolved' : 'disapproved';
+    }
+
+    const issueSeverity = firstIssue?.severity ? String(firstIssue.severity).toLowerCase() : null;
+    const severity: 'critical' | 'warning' = (status === 'demoted' || issueSeverity === 'warning' || issueSeverity === 'demoted') ? 'warning' : 'critical';
 
     // 6. Store Lookup & DLQ Anomaly Routing
     const store = await findStoreByGmcId(merchantId);

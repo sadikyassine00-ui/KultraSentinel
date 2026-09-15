@@ -10,10 +10,10 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
-    const storeId = parseInt(id, 10);
-    if (isNaN(storeId)) {
+    if (!id || typeof id !== 'string') {
       return NextResponse.json({ error: 'Invalid store ID' }, { status: 400 });
     }
+    const storeId = isNaN(Number(id)) ? id : Number(id);
 
     // 1. Authenticate user
     const cookieStore = await cookies();

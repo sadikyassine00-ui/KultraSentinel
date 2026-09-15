@@ -26,16 +26,7 @@ const config: Config = {
         satoshi: ["'Satoshi'", "sans-serif"],
         sans: ["'Satoshi'", "sans-serif"],
         display: ["'Satoshi'", "sans-serif"],
-        mono: [
-          "ui-monospace",
-          "Geist Mono",
-          "JetBrains Mono",
-          "SFMono-Regular",
-          "Menlo",
-          "Monaco",
-          "Consolas",
-          "monospace",
-        ],
+        mono: ["'Satoshi'", "sans-serif"],
       },
       borderRadius: {
         xs: "2px",

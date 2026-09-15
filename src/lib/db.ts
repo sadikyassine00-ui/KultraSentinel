@@ -80,7 +80,7 @@ export interface Incident {
   title: string;
   issue_code: string;
   severity: 'critical' | 'warning';
-  status: 'unresolved' | 'resolved';
+  status: 'unresolved' | 'resolved' | 'pending_verification';
   first_detected_at: string;
   last_detected_at: string;
   resolved_at?: string | null;
@@ -985,7 +985,7 @@ export async function getStoresForTenant(tenantEmail: string): Promise<Store[]> 
 }
 
 export async function updateStoreForTenant(
-  id: number,
+  id: number | string,
   tenantEmail: string,
   updates: Partial<Store>
 ): Promise<Store | null> {
@@ -1000,7 +1000,7 @@ export async function updateStoreForTenant(
           store_url = COALESCE(${updates.store_url || null}, store_url),
           pubsub_topic = COALESCE(${updates.pubsub_topic || null}, pubsub_topic),
           status = COALESCE(${updates.status || null}, status)
-        WHERE id = ${id} AND LOWER(tenant_email) = ${cleanEmail}
+        WHERE id = ${String(id)} AND LOWER(tenant_email) = ${cleanEmail}
         RETURNING *;
       `;
       if (rows.length > 0) return rows[0] as unknown as Store;
@@ -1011,7 +1011,7 @@ export async function updateStoreForTenant(
   }
 
   const store = inMemoryStores.find(
-    (s) => s.id === id && s.tenant_email.toLowerCase().trim() === cleanEmail
+    (s) => String(s.id) === String(id) && s.tenant_email.toLowerCase().trim() === cleanEmail
   );
   if (store) {
     if (updates.store_url !== undefined) store.store_url = updates.store_url;
@@ -1022,7 +1022,7 @@ export async function updateStoreForTenant(
   return null;
 }
 
-export async function deleteStoreForTenant(id: number, tenantEmail: string): Promise<boolean> {
+export async function deleteStoreForTenant(id: number | string, tenantEmail: string): Promise<boolean> {
   const cleanEmail = tenantEmail.toLowerCase().trim();
   const sql = getDb();
   if (sql) {
@@ -1030,7 +1030,7 @@ export async function deleteStoreForTenant(id: number, tenantEmail: string): Pro
       await ensureSchema();
       const rows = await sql`
         DELETE FROM stores
-        WHERE id = ${id} AND LOWER(tenant_email) = ${cleanEmail}
+        WHERE id = ${String(id)} AND LOWER(tenant_email) = ${cleanEmail}
         RETURNING id;
       `;
       return rows.length > 0;
@@ -1040,7 +1040,7 @@ export async function deleteStoreForTenant(id: number, tenantEmail: string): Pro
   }
 
   const idx = inMemoryStores.findIndex(
-    (s) => s.id === id && s.tenant_email.toLowerCase().trim() === cleanEmail
+    (s) => String(s.id) === String(id) && s.tenant_email.toLowerCase().trim() === cleanEmail
   );
   if (idx !== -1) {
     inMemoryStores.splice(idx, 1);
@@ -1427,7 +1427,7 @@ export async function upsertIncident(data: {
 export async function resolveIncident(storeId: number | string, sku: string): Promise<boolean> {
   let resolvedAny = false;
   inMemoryIncidents.forEach((i) => {
-    if (String(i.store_id) === String(storeId) && i.sku === sku && i.status === 'unresolved') {
+    if (String(i.store_id) === String(storeId) && i.sku === sku && i.status !== 'resolved') {
       i.status = 'resolved';
       i.resolved_at = new Date().toISOString();
       resolvedAny = true;
@@ -1448,7 +1448,7 @@ export async function resolveIncident(storeId: number | string, sku: string): Pr
       const updated = await sql`
         UPDATE incidents
         SET status = 'resolved', resolved_at = NOW()
-        WHERE store_id = ${String(storeId)} AND sku = ${sku} AND status = 'unresolved'
+        WHERE store_id = ${String(storeId)} AND sku = ${sku} AND status != 'resolved'
         RETURNING id;
       `;
       if (updated.length > 0) {
@@ -1984,3 +1984,45 @@ export async function createOrUpdateAdmin(admin: {
   inMemoryAdmins.push(newAdmin);
   return newAdmin;
 }
+
+export async function markIncidentPendingVerification(
+  incidentId: number | string,
+  tenantEmail: string
+): Promise<{ success: boolean; incident?: Incident; error?: string }> {
+  const cleanEmail = tenantEmail.toLowerCase().trim();
+  const sql = getDb();
+  if (sql) {
+    try {
+      await ensureSchema();
+      // Composite authorization: verify the incident belongs to a store owned by tenantEmail
+      const rows = await sql`
+        UPDATE incidents
+        SET status = 'pending_verification', last_detected_at = NOW()
+        WHERE id = ${String(incidentId)}
+          AND store_id IN (SELECT id FROM stores WHERE LOWER(tenant_email) = ${cleanEmail})
+        RETURNING *;
+      `;
+      if (rows.length > 0) {
+        return { success: true, incident: rows[0] as unknown as Incident };
+      }
+      return { success: false, error: 'Incident not found or unauthorized' };
+    } catch (err) {
+      console.warn('[Neon DB] Error updating incident verification status:', err);
+    }
+  }
+
+  // In-memory fallback
+  const incident = inMemoryIncidents.find((i) => String(i.id) === String(incidentId));
+  if (incident) {
+    const store = inMemoryStores.find(
+      (s) => String(s.id) === String(incident.store_id) && s.tenant_email.toLowerCase().trim() === cleanEmail
+    );
+    if (!store) {
+      return { success: false, error: 'Unauthorized to modify incident' };
+    }
+    (incident as any).status = 'pending_verification';
+    return { success: true, incident };
+  }
+  return { success: false, error: 'Incident not found' };
+}
+

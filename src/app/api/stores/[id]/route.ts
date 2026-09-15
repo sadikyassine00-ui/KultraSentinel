@@ -20,10 +20,10 @@ export async function GET(request: Request, context: RouteContext) {
   }
 
   const { id } = await context.params;
-  const storeId = parseInt(id, 10);
-  if (isNaN(storeId)) {
+  if (!id || typeof id !== 'string') {
     return NextResponse.json({ error: 'Invalid store identifier.' }, { status: 400 });
   }
+  const storeId = isNaN(Number(id)) ? id : Number(id);
 
   // Anti-IDOR: Must match item ID AND authenticated user tenant simultaneously
   const store = await getStoreByIdAndTenant(storeId, session.email);
@@ -47,10 +47,10 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   const { id } = await context.params;
-  const storeId = parseInt(id, 10);
-  if (isNaN(storeId)) {
+  if (!id || typeof id !== 'string') {
     return NextResponse.json({ error: 'Invalid store identifier.' }, { status: 400 });
   }
+  const storeId = isNaN(Number(id)) ? id : Number(id);
 
   try {
     const body = await request.json();

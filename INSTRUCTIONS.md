@@ -1,94 +1,127 @@
-# Architectural Specification & Workflow Blueprint: Kultra Event Processing Engine
+# Architectural Specification: Google Merchant Center OAuth, Live Dashboard Engine & Conversion UX
 
-You are tasked with engineering the complete end-to-end integration and data lifecycle for Kultra. Implement this system strictly following the workflow stages, security boundaries, and reliability standards outlined below. Do not implement ad-hoc shortcuts. Every state mutation must be verifiable, tenant-isolated, and resilient to third-party outages.
-
----
-
-## 1. System Role & Architecture Overview
-
-The platform operates as a high-speed event processor connecting three primary entities:
-1. **Google Cloud Platform & Google Merchant Center:** Sources catalog crawler decisions and dispatches status change messages.
-2. **Kultra Core Application Engine:** Ingests incoming events, reconciles state against the persistent database, deduplicates messages, and verifies tenant access.
-3. **Outbound Notification Endpoints (Slack / Webhooks):** Delivers actionable triage cards with direct repair deep-links to merchants and agency operators.
+You are tasked with turning the current Kultra prototype dashboard into a production-grade, conversion-optimized monitoring hub. Implement the complete Google Merchant Center (GMC) OAuth connection flow, live database hydration, and a high-converting user experience based on the exact specifications below.
 
 ---
 
-## 2. End-to-End Workflow Stages
+## 1. Primary Objectives
 
-### Stage 1: User Onboarding & Account Scoping
-* **Authentication:** The user logs in via credentials or single sign-on. The server issues a cryptographically signed, encrypted session token stored in an HTTP-only, secure, browser-restricted cookie.
-* **Route Protection:** 
-  * An edge routing layer inspects all incoming requests. 
-  * Authenticated users attempting to load guest interfaces (login/register) must be redirected immediately to the dashboard.
-  * Unauthenticated requests attempting to reach internal screens or operational endpoints must be bounced to login, preserving only safe, relative destination URLs.
-
-### Stage 2: Merchant Center Authorization (Zero-Trust OAuth Handshake)
-* **Initiation:** The tenant clicks to authorize a Google Merchant Center account.
-* **Scope Definition:** Request read-only access to the Merchant API and basic user profile information.
-* **Token Exchange:** The server receives the authorization code, exchanges it directly with Google's servers for an access token and a persistent refresh token, and securely stores the refresh token in the database.
-* **Tenant Isolation:**
-  * The system immediately queries Google's API to retrieve the official Merchant Center Account ID and Store Title.
-  * The resulting store entity must be inserted into the database tied explicitly to the authenticated user's account identifier. 
-  * Cross-tenant account collisions must be rejected: a store entity cannot be claimed or overwritten by another tenant without re-authenticating ownership.
-
-### Stage 3: Alert Destination Configuration & Verification
-* **Channel Setup:** The user inputs an incoming notification destination (such as a Slack incoming webhook URL).
-* **Synthetic Verification Ping:**
-  * Before marking the notification channel active, the user triggers a verification test.
-  * The server dispatches a synthetic, formatted test payload to the external destination.
-  * The server measures round-trip delivery latency and verifies that the destination returns a successful delivery status.
-  * If the destination returns an error or fails to respond, the endpoint is flagged as invalid, and the user is warned immediately.
-
-### Stage 4: Real-Time Ingestion & The Deduplication Engine
-* **Push Reception:** Google Cloud Pub/Sub pushes incoming catalog disapproval events to the server's public ingestion endpoint via HTTP POST.
-* **Instant Ingestion SLA:** The endpoint must complete processing and return a success acknowledgment within 500 milliseconds. If the endpoint hangs or crashes, Google will assume delivery failure and repeatedly flood the system with retries.
-* **Payload Verification:** The endpoint must cryptographically verify that the incoming HTTP request originated from the configured Google Cloud project (using authentication tokens or shared push secret verification) before touching the database. Unsigned requests must be rejected immediately.
-* **Message Deduplication:**
-  * Extract the unique message identifier assigned by Google Cloud.
-  * Check whether this message identifier has already been processed within the last 7 days.
-  * If the message has already been processed, acknowledge the request immediately with a success status and exit to prevent duplicate database writes or duplicate notifications.
-  * If new, log the message identifier in the persistent tracking table.
-
-### Stage 5: Incident Persistence & Triage State
-* **Data Extraction:** Extract the target Merchant Account ID, Product Offer ID (SKU), Item Title, and the exact policy failure reason.
-* **Store Lookup:** Query the database for the active store matching the Merchant Account ID. If no active store is registered for that ID, gracefully discard the message and log the anomaly.
-* **Incident Lifecycle Logic:**
-  * If an unresolved incident already exists for this exact store, SKU, and issue code: Update the last-detected timestamp rather than creating a duplicate row.
-  * If the event indicates that a previously flagged SKU is now approved: Automatically transition the existing open incident to a resolved state.
-  * If the event represents a new rejection: Insert an active incident record marked as unresolved, setting the severity level according to whether the item is completely blocked or merely demoted.
-
-### Stage 6: Outbound Alert Dispatch
-* **Rate Limiting & Spike Guard:**
-  * Check the volume of incidents generated for this specific store within the last 60 seconds.
-  * If the count exceeds the bulk threshold (e.g., 10 or more SKUs flagged in one minute due to a major catalog feed error), suppress individual messages and dispatch a single aggregated summary alert.
-* **Payload Construction:** Format the alert card containing:
-  * Store Name and Environment Indicator.
-  * Impacted Product Title and SKU.
-  * Policy Failure Code and human-readable explanation.
-  * A direct deep-link navigating to the product editing screen within the store's e-commerce backend.
-  * A direct deep-link to the item diagnostics view inside Google Merchant Center.
-* **Delivery:** Send the alert to the store's configured notification destination. If the external platform returns an invalid destination error (e.g., deleted webhook), mark the store's alert configuration as degraded in the database so the user can be notified upon their next dashboard login.
+1. **Self-Serve Merchant Onboarding:** Eliminate manual database inserts by building a seamless Google OAuth 2.0 connection that extracts the user's Merchant ID, Store Name, and Catalog URL in two clicks.
+2. **Automated Notification Subscription:** Programmatically register Kultra's Google Cloud Pub/Sub topic with the user's Merchant Center account upon connection so disapproval events stream automatically.
+3. **Conversion-Driven Dashboard Hierarchy:** Replace all shell/mock components with dynamic queries from Neon, architected specifically to drive activation, prove immediate value, and lock in retention through instant Slack alerts.
+4. **Zero-Trust Security & Multi-Tenant Isolation:** Enforce stateful CSRF protection on OAuth, encrypt sensitive credentials at rest, and strictly bind all store mutations and queries to the authenticated tenant.
 
 ---
 
-## 3. Mandatory Security Standards
+## 2. Google Merchant Center OAuth Flow & Security Architecture
 
-1. **Insecure Direct Object Reference (IDOR) Elimination:**
-   * Every single database read, update, or deletion requested by a user (updating store settings, dispatching test pings, acknowledging incidents) must enforce composite authorization.
-   * Never query or mutate a record solely by its item identifier. The query criteria must explicitly require both the item identifier AND the authenticated session user's identifier.
-2. **Session & Token Protection:**
-   * User session cookies must enforce strict HTTP-only, secure transport, and same-site flags.
-   * Google OAuth refresh tokens stored in the database must be treated as sensitive credentials and encrypted at rest using the application's master encryption secret.
-3. **Open Redirect Mitigation:**
-   * Post-login redirection targets must be strictly validated.
-   * Only internal relative destinations starting with a single forward slash are permitted. Any destination containing external hostnames, protocols, or double slashes must be discarded, falling back to the primary dashboard.
-4. **Input Sanitization:**
-   * User-submitted webhook destinations must be validated against expected protocol schemes and destination formats before any network connection is attempted.
+### Step 1: OAuth Initiation
+* **User Trigger:** The user clicks the primary action button: **"Connect Google Merchant Center"**.
+* **State Verification & CSRF Defense:** Generate a cryptographically random, non-guessable state token. Store this token in an encrypted, short-lived (10-minute), HTTP-only cookie.
+* **Redirection Parameters:** Direct the user's browser to Google's OAuth 2.0 authorization endpoint requesting:
+  * Read-only Content API access scope: `https://www.googleapis.com/auth/content.readonly`
+  * Basic profile/email verification scopes.
+  * `access_type=offline` (mandatory to acquire a permanent refresh token).
+  * `prompt=consent` (mandatory to guarantee Google returns a refresh token on subsequent reconnects).
+  * The state token generated above.
+
+### Step 2: Callback Handling & Credential Ingestion
+* **State Parameter Validation:** Intercept the authorization code and state parameter sent back by Google. Verify that the returned state matches the value stored in the encrypted cookie. Reject mismatches immediately to prevent OAuth login CSRF attacks.
+* **Token Exchange:** Exchange the authorization code directly with Google's token endpoint to acquire the access token, ID token, and refresh token.
+* **Credential Encryption at Rest:** Never store plaintext refresh tokens. Encrypt the refresh token using AES-256-GCM with a unique 12-byte initialization vector and an authentication tag derived from the application security secret before database insertion.
+
+### Step 3: Account Discovery & Store Ingestion
+* **Metadata Resolution:** Using the newly acquired access token, immediately query the Google Merchant API to inspect the authorized account.
+* **Account Resolution:** Fetch the primary Merchant Center Account ID, the official Store Name, and the verified Website Domain.
+* **Multi-Account Edge Handling:** If the user authenticates with an Multi-Client Account (MCA) umbrella managing multiple sub-accounts, detect this state and present an account selector so the user can choose which specific client feed to monitor.
+* **Collision Check & Tenant Isolation:**
+  * Check the database to see if the Merchant ID is already claimed.
+  * If claimed by another tenant: Reject the binding with a conflict status to prevent cross-account feed hijacking.
+  * If unclaimed or previously owned by the same user: Upsert the record in the stores table, setting the foreign key strictly to the authenticated tenant session.
+
+### Step 4: Auto-Registering the Event Pipeline
+* Once the store record is created, the server must automatically call Google's Merchant Notifications API using the access token.
+* Register a new notification subscription linking the merchant's account to Kultra's GCP Pub/Sub topic for catalog status change events.
+* This guarantees the merchant's crawler rejections will immediately trigger Kultra's webhook ingestion engine without requiring the user to configure Google Cloud settings manually.
 
 ---
 
-## 4. Reliability & Failure Recovery Rules
+## 3. Dashboard UX & Conversion Architecture
 
-* **Database Connection Pooling:** All database interactions must use pooled, resilient connection management to avoid connection exhaustion under sudden Pub/Sub delivery spikes.
-* **Time-to-Acknowledgment Discipline:** Database queries within the webhook receiver must remain lean. Perform only the deduplication check, incident upsert, and webhook dispatch. Heavy analytics calculations, historical reporting, and audit aggregations must never run inside the ingestion loop.
-* **Safe Error Handling:** Catch and handle all third-party network exceptions. A failure while delivering a Slack notification must not prevent the incident from being recorded in the database, nor should it trigger a 500 error back to Google that causes infinite delivery retries.
+The dashboard must be optimized for **time-to-value** and **activation**. Every UI state must guide the user toward arming their alert system and seeing catalog protection in action.
+### State A: The Zero-Store State (The Onboarding Funnel)
+When a user logs into a fresh account with zero linked stores, suppress complex navigation, empty graphs, and blank tables. Replace the screen with a focused **Activation Card**:
+1. **Headline:** *"Automated, sub-30-second disapproval protection for your Google Shopping campaigns."*
+2. **Proof Mechanism:** A 3-step visualization showing: Connect GMC $\rightarrow$ Set Alert Destination $\rightarrow$ Protect Hero SKUs from silent revenue drops.
+3. **Primary Action:** Large high-contrast button: **"Connect Google Merchant Center"**.
+4. **Friction Reducer:** Micro-copy stating: *"Read-only access. No code or feed changes required."*
+
+### State B: The "Arm Your Alarm" Activation Modal (Post-OAuth)
+Immediately upon returning from a successful Google OAuth handshake, redirect the user back to the dashboard and trigger an unclosable or high-priority onboarding modal:
+* **The Goal:** Force notification setup. A monitoring tool with no configured alert destination has zero retention.
+* **The Interface:**
+  * Displays the newly linked store name and Merchant ID with a green checkmark.
+  * Input field: *"Where should we wake you up when an ad-blocking disapproval occurs?"* (Paste Slack Incoming Webhook URL).
+  * Action button: **"Send Test Alert & Arm System"**.
+* **The Verification Ping:**
+  * When clicked, the server dispatches a synthetic alert card to that webhook.
+  * The UI listens for success, plays a confirmation animation, and displays: *"Alert pipeline verified. Your campaigns are now monitored 24/7."*
+  * Close the modal and reveal the full active dashboard.
+
+### State C: The Active Dashboard (The Triage Center)
+Replace all static shell mockups with real data queries structured into three distinct visual tiers:
+
+#### Tier 1: Global Health & Triage Banner (Top Priority)
+* **Healthy State:** If open incidents equal zero, show an emerald-green banner:
+  * Badge: **"Catalog Shield Active"**.
+  * Copy: *"All items eligible for Google Shopping. Google crawler last checked: [Dynamic Timestamp]."*
+* **Threat State:** If one or more items are disapproved, render a high-visibility warning banner at the very top:
+  * Headline: *"Disapprovals Detected - Ad Traffic at Risk"*.
+  * Shows the most critical impacted product title and SKU in bold.
+  * Displays the raw policy rejection reason (e.g., `missing_value [gtin]`).
+  * Action buttons:
+    * **"Fix in Shopify":** Opens `https://[store-domain]/admin/products?query=[SKU]` in a new tab, instantly filtering their Shopify admin to that exact product variant.
+    * **"View in Merchant Center":** Deep-links directly to Google Merchant Center's Diagnostics panel for that specific item.
+    * **"Mark Pending Verification":** Allows the user to flag that they've pushed a fix, updating the incident state in the UI.
+
+#### Tier 2: Real-Time Metric Counters
+Three high-level diagnostic cards:
+1. **Monitored Products:** Total active products currently tracked under this Merchant ID.
+2. **Active Disapprovals:** Count of currently blocked SKUs (colored in red if > 0).
+3. **Alert Pipeline Status:** Displays the configured Slack channel name and latency status (e.g., *"Connected to #ppc-alerts (12ms)"*) with an inline "Send Test" button for peace of mind.
+
+#### Tier 3: Incident History & Resolution Audit Table
+A clean, paginated table hydrated from the database:
+* **Columns:** Product Title & SKU, Error Reason, Severity (`CRITICAL_DISAPPROVAL` vs `DEMOTION`), First Detected Timestamp, Last Status Update, Triage Action.
+* **Auto-Resolution Feedback:** When an item is fixed in Shopify and re-approved by Google's crawler, the table dynamically badges the item as **"Auto-Resolved"** with an emerald checkmark, showing the exact downtime duration (e.g., *"Resolved in 42 minutes"*). This quantifies the ROI of using the software.
+
+---
+
+## 4. Multi-Tenant Scoping & Database Query Rules
+
+All server actions, page data loaders, and API routes must adhere to strict tenant isolation:
+
+1. **Session-Bound Data Fetching:**
+   * Every SQL query fetching store details, statistics, or incident logs must include:
+     `WHERE stores.tenant_email = session.email` (or `stores.user_id = session.userId`).
+   * Never accept a raw `storeId` from client query parameters or request bodies without verifying that the store belongs to the active authenticated session.
+2. **Deep-Link Construction Rule:**
+   * When building the Shopify admin fix URL, sanitize the product SKU or Offer ID.
+   * Construct the URL using the native Shopify query parameter:
+     `https://${store.domain}/admin/products?query=${encodeURIComponent(incident.offerId)}`
+   * If the store domain is not yet saved, default safely to the Shopify admin unified hub (`https://admin.shopify.com`).
+3. **Token Refresh Routine:**
+   * When calling Google APIs on behalf of a store (e.g., manual re-sync or account verification), check access token expiration.
+   * If expired, decrypt the stored refresh token, request a new access token from Google, and update the cache without user intervention.
+
+---
+
+## 5. Verification Checklist
+
+Before completing this milestone, verify the following workflows:
+1. **Clean Connect:** Log into an empty test account, click "Connect Google Merchant Center", approve permissions on Google, and verify you are redirected back to the dashboard with the store details correctly populated in the database.
+2. **CSRF Rejection:** Simulate an invalid OAuth state parameter on callback and confirm the request is rejected with a 403 Forbidden.
+3. **Double Claim Rejection:** Attempt to connect the same Google Merchant Center ID from a secondary user account and verify the system blocks the registration with a clear error.
+4. **Slack Activation:** Paste a valid Slack incoming webhook into the post-onboarding modal, trigger the test alert, and confirm delivery in the Slack channel.
+5. **Dynamic Triage:** Trigger the local Pub/Sub test event and verify the dashboard instantly reflects the new critical disapproval banner and triage table row without requiring a database wipe.
+6. **Shopify Link:** Click "Fix in Shopify" on an active incident and ensure the resulting URL uses `?query=` to open the specific product in Shopify admin.

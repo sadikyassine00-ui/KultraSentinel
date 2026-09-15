@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { COOKIE_NAME, verifySessionToken } from '@/lib/token';
+import { createOAuthState, OAUTH_STATE_COOKIE_NAME } from '@/lib/security';
 
 export async function GET(request: Request) {
   try {
@@ -23,13 +24,8 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const redirectUri = `${url.origin}/api/auth/merchant/callback`;
 
-    // State payload contains tenant identity to prevent CSRF and guarantee account scoping
-    const statePayload = Buffer.from(
-      JSON.stringify({
-        email: session.email,
-        timestamp: Date.now(),
-      })
-    ).toString('base64url');
+    // Generate cryptographically random state and encrypted 10-minute HTTP-only cookie
+    const { state, cookieValue } = await createOAuthState(session.email);
 
     const params = new URLSearchParams({
       client_id: googleClientId,
@@ -38,17 +34,29 @@ export async function GET(request: Request) {
       scope: 'https://www.googleapis.com/auth/content.readonly openid email profile',
       access_type: 'offline',
       prompt: 'consent',
-      state: statePayload,
+      state,
     });
 
     const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 
-    // Return JSON with auth URL or redirect if requested by browser navigation
-    if (url.searchParams.get('format') === 'json') {
-      return NextResponse.json({ url: googleAuthUrl });
-    }
+    // Return JSON with auth URL or redirect directly for browser navigation
+    const isJsonFormat = url.searchParams.get('format') === 'json';
+    const response = isJsonFormat
+      ? NextResponse.json({ url: googleAuthUrl })
+      : NextResponse.redirect(googleAuthUrl);
 
-    return NextResponse.redirect(googleAuthUrl);
+    // Attach state verification cookie (10 minute lifespan)
+    response.cookies.set({
+      name: OAUTH_STATE_COOKIE_NAME,
+      value: cookieValue,
+      path: '/',
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 600, // 10 minutes
+    });
+
+    return response;
   } catch (error) {
     console.error('[Merchant OAuth Connect Error]', error);
     return NextResponse.json({ error: 'Failed to initiate Merchant Center OAuth' }, { status: 500 });

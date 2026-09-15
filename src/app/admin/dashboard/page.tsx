@@ -27,6 +27,7 @@ import {
   DollarSign,
   Layers,
   ShieldAlert,
+  ShieldCheck,
   Zap,
   RefreshCw,
   PanelLeftClose,
@@ -48,26 +49,41 @@ import {
   ConfigTabSkeleton,
   DashboardPageSkeleton,
 } from '@/components/Skeleton';
+import TenantTriageCenter from '@/components/dashboard/TenantTriageCenter';
 
-type TabType = 'tenants' | 'stores' | 'pipeline' | 'dispatches' | 'config';
+type TabType = 'triage' | 'tenants' | 'stores' | 'pipeline' | 'dispatches' | 'config';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
-  const [adminUser, setAdminUser] = useState<{ email: string; name?: string; role: string } | null>(null);
+  const [adminUser, setAdminUser] = useState<{ email: string; name?: string; role: string; isAdmin?: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
   const [tabLoading, setTabLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabType>('tenants');
+  const [activeTab, setActiveTab] = useState<TabType>('triage');
+  const [justConnected, setJustConnected] = useState(false);
+  const [urlStoreId, setUrlStoreId] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  // Initialize sidebar collapsed state from localStorage
+  // Initialize sidebar collapsed state and URL parameters
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('kultra_sidebar_collapsed');
       if (saved === 'true') {
         setSidebarCollapsed(true);
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab') as TabType;
+      const isJustConnected = params.get('just_connected') === 'true';
+      const sId = params.get('store_id');
+      if (isJustConnected) setJustConnected(true);
+      if (sId) setUrlStoreId(sId);
+      if (tabParam && ['triage', 'tenants', 'stores', 'pipeline', 'dispatches', 'config'].includes(tabParam)) {
+        setActiveTab(tabParam);
+      } else if (isJustConnected) {
+        setActiveTab('triage');
       }
     }
   }, []);
@@ -176,6 +192,12 @@ export default function AdminDashboardPage() {
       setTabLoading(true);
     }
     try {
+      if (activeTab === 'triage') {
+        setTabLoading(false);
+        setIsRefreshing(false);
+        return;
+      }
+
       await loadTelemetry();
 
       if (activeTab === 'tenants') {
@@ -386,6 +408,12 @@ export default function AdminDashboardPage() {
   };
 
   const navGroups = [
+    {
+      group: 'Catalog Monitoring',
+      items: [
+        { id: 'triage' as TabType, label: 'Catalog Shield Triage', icon: ShieldCheck, badge: null, badgeColor: '' },
+      ],
+    },
     {
       group: 'Platform Intelligence',
       items: [
@@ -731,8 +759,12 @@ export default function AdminDashboardPage() {
             </div>
           )}
 
-          {/* SECTION 1: Top-Level Platform Telemetry (Global KPIs) */}
-          <section className="space-y-4">
+          {activeTab === 'triage' ? (
+            <TenantTriageCenter initialStoreId={urlStoreId} justConnected={justConnected} />
+          ) : (
+            <>
+              {/* SECTION 1: Top-Level Platform Telemetry (Global KPIs) */}
+              <section className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-[#1E293B]/70 gap-4">
               <div>
                 <div className="flex items-center gap-2 text-[11px] text-[#94A3B8] font-medium mb-1 flex-wrap">
@@ -1749,7 +1781,9 @@ export default function AdminDashboardPage() {
               </div>
             )}
           </section>
-        </main>
+        </>
+      )}
+    </main>
       </div>
     </div>
   );

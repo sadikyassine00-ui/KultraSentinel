@@ -205,3 +205,63 @@ export function validateWebhookUrl(url: string | null | undefined): { valid: boo
 
   return { valid: true, url: parsed.toString() };
 }
+
+// -----------------------------------------------------------------------------
+// 4. OAuth Stateful CSRF Defense (Google Merchant Center)
+// -----------------------------------------------------------------------------
+
+export const OAUTH_STATE_COOKIE_NAME = 'kultra_oauth_state';
+
+export interface OAuthStatePayload {
+  token: string;
+  email: string;
+  exp: number;
+}
+
+/**
+ * Generates a cryptographically random, non-guessable state token and an encrypted cookie value (10 min expiration).
+ */
+export async function createOAuthState(tenantEmail: string): Promise<{ state: string; cookieValue: string }> {
+  const randomToken = crypto.randomBytes(32).toString('hex');
+  const payload: OAuthStatePayload = {
+    token: randomToken,
+    email: tenantEmail.toLowerCase().trim(),
+    exp: Date.now() + 10 * 60 * 1000, // 10 minutes
+  };
+
+  const cookieValue = await encryptToken(JSON.stringify(payload));
+  return { state: randomToken, cookieValue };
+}
+
+/**
+ * Validates the returned OAuth state parameter against the encrypted cookie.
+ */
+export async function verifyOAuthState(
+  stateParam: string | null | undefined,
+  cookieValue: string | null | undefined
+): Promise<{ valid: boolean; email?: string; error?: string }> {
+  if (!stateParam || !cookieValue) {
+    return { valid: false, error: 'State parameter or verification cookie missing' };
+  }
+
+  try {
+    const decrypted = await decryptToken(cookieValue);
+    const payload: OAuthStatePayload = JSON.parse(decrypted);
+
+    if (!payload.token || !payload.exp) {
+      return { valid: false, error: 'Malformed state payload' };
+    }
+
+    if (Date.now() > payload.exp) {
+      return { valid: false, error: 'OAuth state token has expired' };
+    }
+
+    if (payload.token !== stateParam.trim()) {
+      return { valid: false, error: 'OAuth state parameter CSRF mismatch' };
+    }
+
+    return { valid: true, email: payload.email };
+  } catch (err) {
+    return { valid: false, error: 'Failed to verify OAuth state envelope' };
+  }
+}
