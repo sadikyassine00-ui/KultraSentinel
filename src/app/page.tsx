@@ -7,7 +7,7 @@ import { Footer } from '@/components/Footer';
 
 export default function HomePage() {
   return (
-    <main className="relative min-h-screen bg-[#0a0b1dff] text-[#FDF4D2] flex flex-col selection:bg-[#FF788D]/25 selection:text-[#FDF4D2]">
+    <main className="relative min-h-screen bg-[var(--bg-canvas)] text-[var(--ink-primary)] flex flex-col selection:bg-[var(--signal-glow)] selection:text-[var(--ink-primary)]">
       {/* Hero Container with network canvas and centered hero */}
       <div className="relative w-full overflow-hidden flex flex-col">
         {/* Interactive Topological Canvas Mesh (z-[1]) */}

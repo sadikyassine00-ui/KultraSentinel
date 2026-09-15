@@ -4,7 +4,7 @@ import React from 'react';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <div className="dark text-[#FDF4D2] bg-[#0a0b1dff] min-h-screen">
+    <div className="dark text-[#f4f1ea] bg-[#0a0b0d] min-h-screen">
       {children}
     </div>
   );

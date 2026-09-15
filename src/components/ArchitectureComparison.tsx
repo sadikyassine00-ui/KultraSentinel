@@ -1,8 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Cpu, Check, X, ArrowRight } from 'lucide-react';
-import { SectionNetworkCanvas } from './SectionNetworkCanvas';
+import { Check, X } from 'lucide-react';
 
 interface MetricRow {
   title: string;
@@ -29,7 +28,7 @@ export function ArchitectureComparison() {
       title: 'Remediation Action',
       legacy: 'Raw code output requiring manual product search',
       kultra: 'Direct 1-click Shopify Admin deep link',
-      detail: 'Deep link (/admin/products/{id}) routes media buyers directly to the rejected field.',
+      detail: 'Deep link routes media buyers directly to the rejected field.',
     },
     {
       title: 'Revenue Urgency Context',
@@ -48,78 +47,75 @@ export function ArchitectureComparison() {
   return (
     <section
       id="architecture"
-      className="relative w-full py-24 px-4 sm:px-6 bg-[#0a0b1dff] border-t border-[#1E293B]/60 overflow-hidden"
+      className="relative w-full py-20 sm:py-24 px-4 sm:px-6 bg-[var(--bg-canvas)] border-t border-[var(--hairline)]"
     >
-      {/* Ambient Sparse Network Mesh */}
-      <SectionNetworkCanvas />
-
       <div className="relative z-10 max-w-[1140px] mx-auto">
         {/* Section Header */}
-        <div className="max-w-[760px] mb-14">
-          <span className="text-[0.85rem] font-semibold text-[#10B981] block mb-2">
-            Technical Proof
+        <div className="max-w-[760px] mb-12">
+          <span className="font-mono text-[11px] text-[var(--ghost-text-dim)] tracking-[0.02em] block mb-2">
+            Architecture comparison
           </span>
-          <h2 className="text-[1.85rem] sm:text-[2.4rem] font-bold text-[#FDF4D2] leading-[1.18] tracking-[-0.01em]">
-            Pub/Sub Event Streaming vs. Legacy Polling Architecture
+          <h2 className="font-display text-[1.85rem] sm:text-[2.25rem] font-semibold text-[var(--ink-primary)] leading-[1.2]">
+            Pub/Sub event streaming vs legacy polling
           </h2>
-          <p className="mt-3 text-[1rem] text-[#94A3B8] leading-relaxed">
+          <p className="mt-3 text-[14.5px] text-[var(--ink-secondary)] leading-[1.55]">
             Why scheduled batch cron pollers and deprecated Content API scrapers fail high-volume Google Shopping catalogs.
           </p>
         </div>
 
-        {/* Responsive Table: Desktop View */}
-        <div className="hidden lg:block overflow-hidden rounded-[6px] border border-[#1E293B] bg-[#0F1522]">
+        {/* Responsive Table: Desktop View per §16 */}
+        <div className="hidden lg:block overflow-hidden rounded-[var(--radius-md)] border border-[var(--hairline)] bg-[var(--bg-surface)]">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-[#1E293B] bg-[#141C2B]/60">
-                <th className="py-4 px-6 text-[0.8125rem] font-semibold text-[#94A3B8] w-[28%]">
-                  Architecture Metric
+              <tr className="border-b border-[var(--hairline)] bg-[var(--bg-surface-2)] font-mono text-[11px] text-[var(--ghost-text-dim)]">
+                <th className="py-3.5 px-6 w-[28%] font-normal">
+                  Architecture metric
                 </th>
-                <th className="py-4 px-6 text-[0.8125rem] font-semibold text-[#94A3B8] w-[36%]">
+                <th className="py-3.5 px-6 w-[36%] font-normal">
                   <div className="flex items-center gap-2">
-                    <span>Legacy Feed Tools (Batch Cron)</span>
-                    <span className="text-[0.675rem] font-semibold px-2 py-0.5 rounded-[2px] bg-[#FF788D]/10 text-[#FF788D] border border-[#FF788D]/30">
-                      Deprecated Pattern
+                    <span>Legacy feed tools (Batch cron)</span>
+                    <span className="tag-pill tag-ghost text-[10px] py-0.5">
+                      Dormant
                     </span>
                   </div>
                 </th>
-                <th className="py-4 px-6 text-[0.8125rem] font-semibold text-[#10B981] w-[36%] bg-[#10B981]/5 border-l border-[#1E293B]">
+                <th className="py-3.5 px-6 w-[36%] font-normal text-[var(--signal)] bg-[var(--signal-wash)] border-l border-[var(--hairline)]">
                   <div className="flex items-center gap-2">
                     <span>Kultra Sentinel Engine</span>
-                    <span className="text-[0.675rem] font-semibold px-2 py-0.5 rounded-[2px] bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/40">
-                      Merchant API v1 Native
+                    <span className="tag-pill tag-signal text-[10px] py-0.5">
+                      Merchant API v1
                     </span>
                   </div>
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#1E293B]">
+            <tbody className="divide-y divide-[var(--hairline)]">
               {metrics.map((row) => (
-                <tr key={row.title} className="hover:bg-[#141C2B]/50 transition-colors duration-150">
-                  <td className="py-5 px-6 align-top">
-                    <div className="font-semibold text-[0.95rem] text-[#FDF4D2]">
+                <tr key={row.title} className="hover:bg-[var(--bg-surface-2)] transition-colors duration-120">
+                  <td className="py-4 px-6 align-top">
+                    <div className="font-medium text-[14px] text-[var(--ink-primary)]">
                       {row.title}
                     </div>
-                    <div className="text-[0.75rem] text-[#94A3B8] mt-1 leading-normal">
+                    <div className="text-[12.5px] text-[var(--ghost-text)] mt-0.5 leading-[1.4]">
                       {row.detail}
                     </div>
                   </td>
-                  <td className="py-5 px-6 align-top">
+                  <td className="py-4 px-6 align-top">
                     <div className="flex items-start gap-2.5">
-                      <div className="w-4 h-4 rounded-[2px] bg-[#FF788D]/15 text-[#FF788D] flex items-center justify-center shrink-0 mt-0.5">
-                        <X className="w-3 h-3" strokeWidth={2.5} />
+                      <div className="w-4 h-4 rounded-[var(--radius-sm)] border border-[var(--ghost-line)] text-[var(--ghost-text)] flex items-center justify-center shrink-0 mt-0.5">
+                        <X className="w-3 h-3" strokeWidth={1.5} />
                       </div>
-                      <span className="text-[0.875rem] text-[#94A3B8] leading-snug">
+                      <span className="text-[13px] text-[var(--ghost-text)] leading-snug">
                         {row.legacy}
                       </span>
                     </div>
                   </td>
-                  <td className="py-5 px-6 align-top bg-[#10B981]/5 border-l border-[#1E293B]">
+                  <td className="py-4 px-6 align-top bg-[var(--signal-wash)] border-l border-[var(--hairline)]">
                     <div className="flex items-start gap-2.5">
-                      <div className="w-4 h-4 rounded-[2px] bg-[#10B981]/20 text-[#10B981] flex items-center justify-center shrink-0 mt-0.5">
-                        <Check className="w-3 h-3" strokeWidth={2.5} />
+                      <div className="w-4 h-4 rounded-[var(--radius-sm)] border border-[var(--signal-dim)] text-[var(--signal)] flex items-center justify-center shrink-0 mt-0.5">
+                        <Check className="w-3 h-3" strokeWidth={1.5} />
                       </div>
-                      <span className="text-[0.875rem] font-semibold text-[#FDF4D2] leading-snug">
+                      <span className="text-[13px] font-medium text-[var(--ink-primary)] leading-snug">
                         {row.kultra}
                       </span>
                     </div>
@@ -135,38 +131,38 @@ export function ArchitectureComparison() {
           {metrics.map((row) => (
             <div
               key={row.title}
-              className="rounded-[6px] bg-[#0F1522] border border-[#1E293B] p-5 space-y-4"
+              className="rounded-[var(--radius-md)] bg-[var(--bg-surface)] border border-[var(--hairline)] p-5 space-y-3"
             >
               <div>
-                <span className="text-[0.75rem] font-semibold text-[#94A3B8] block mb-1">
-                  Architecture Metric
+                <span className="font-mono text-[10.5px] text-[var(--ghost-text-dim)] block mb-1">
+                  Metric
                 </span>
-                <h3 className="text-[1.05rem] font-bold text-[#FDF4D2]">
+                <h3 className="text-[14.5px] font-semibold text-[var(--ink-primary)]">
                   {row.title}
                 </h3>
-                <p className="text-[0.75rem] text-[#94A3B8] mt-1">
+                <p className="text-[12.5px] text-[var(--ghost-text)] mt-0.5">
                   {row.detail}
                 </p>
               </div>
 
-              <div className="pt-3 border-t border-[#1E293B] space-y-3">
+              <div className="pt-3 border-t border-[var(--hairline)] space-y-2.5">
                 <div className="flex items-start gap-2.5">
-                  <div className="w-4 h-4 rounded-[2px] bg-[#FF788D]/15 text-[#FF788D] flex items-center justify-center shrink-0 mt-0.5">
-                    <X className="w-3 h-3" strokeWidth={2.5} />
+                  <div className="w-4 h-4 rounded-[var(--radius-sm)] border border-[var(--ghost-line)] text-[var(--ghost-text)] flex items-center justify-center shrink-0 mt-0.5">
+                    <X className="w-3 h-3" strokeWidth={1.5} />
                   </div>
                   <div>
-                    <span className="text-[0.7rem] text-[#94A3B8] block">Legacy Polling</span>
-                    <span className="text-[0.8125rem] text-[#94A3B8]">{row.legacy}</span>
+                    <span className="font-mono text-[10px] text-[var(--ghost-text-dim)] block">Legacy polling</span>
+                    <span className="text-[12.5px] text-[var(--ghost-text)]">{row.legacy}</span>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-2.5 bg-[#10B981]/10 p-2.5 rounded-[4px] border border-[#10B981]/20">
-                  <div className="w-4 h-4 rounded-[2px] bg-[#10B981]/20 text-[#10B981] flex items-center justify-center shrink-0 mt-0.5">
-                    <Check className="w-3 h-3" strokeWidth={2.5} />
+                <div className="flex items-start gap-2.5 bg-[var(--signal-wash)] p-2.5 rounded-[var(--radius-sm)] border border-[var(--signal-dim)]">
+                  <div className="w-4 h-4 rounded-[var(--radius-sm)] border border-[var(--signal-dim)] text-[var(--signal)] flex items-center justify-center shrink-0 mt-0.5">
+                    <Check className="w-3 h-3" strokeWidth={1.5} />
                   </div>
                   <div>
-                    <span className="text-[0.7rem] text-[#10B981] font-semibold block">Kultra Sentinel</span>
-                    <span className="text-[0.8125rem] font-semibold text-[#FDF4D2]">{row.kultra}</span>
+                    <span className="font-mono text-[10px] text-[var(--signal)] font-medium block">Kultra Sentinel</span>
+                    <span className="text-[12.5px] font-medium text-[var(--ink-primary)]">{row.kultra}</span>
                   </div>
                 </div>
               </div>

@@ -5,12 +5,10 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import {
-  ShieldCheck,
-  Globe,
   LogOut,
   ChevronDown,
-  User,
   LayoutDashboard,
+  ShieldAlert,
 } from 'lucide-react';
 
 interface AuthUser {
@@ -29,7 +27,6 @@ export function Header() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Check scroll position for styling
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 15);
@@ -39,7 +36,6 @@ export function Header() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Fetch session status
   const checkAuth = useCallback(async () => {
     try {
       const res = await fetch('/api/auth/me', { cache: 'no-store' });
@@ -60,7 +56,6 @@ export function Header() {
     checkAuth();
   }, [checkAuth, pathname]);
 
-  // Listen for custom auth-change events across components
   useEffect(() => {
     const handleAuthChange = () => {
       checkAuth();
@@ -69,7 +64,6 @@ export function Header() {
     return () => window.removeEventListener('auth-change', handleAuthChange);
   }, [checkAuth]);
 
-  // Close dropdown on outside click or escape key
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -125,31 +119,31 @@ export function Header() {
 
   return (
     <header
-      className={`sticky top-0 left-0 w-full z-50 transition-colors duration-200 ${
+      className={`sticky top-0 left-0 w-full z-50 transition-colors duration-150 ${
         scrolled || mobileMenuOpen
-          ? 'bg-[#0a0b1dff]/95 backdrop-blur-md border-b border-[#1E293B]'
-          : 'bg-[#0a0b1dff]/80 backdrop-blur-sm border-b border-[#1E293B]/40'
+          ? 'bg-[#0a0b0d]/95 backdrop-blur-md border-b border-[var(--hairline)]'
+          : 'bg-[#0a0b0d] border-b border-[var(--hairline)]'
       }`}
     >
-      <div className="max-w-[1400px] h-[68px] mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4 sm:gap-6">
+      <div className="max-w-[1400px] h-[60px] mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4 sm:gap-6">
         {/* Brand Group */}
         <div className="flex items-center gap-3 sm:gap-4">
           <Link
             href="/"
-            className="flex items-center rounded-[2px] outline-none focus-visible:ring-2 focus-visible:ring-[#94A3B8] focus-visible:ring-offset-4 focus-visible:ring-offset-[#0a0b1dff] group"
+            className="flex items-center rounded-[var(--radius-sm)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal-glow)]"
             aria-label="Kultra Home"
           >
             <Image
               src="/assets/logos/kultraLogo-trimmed.png"
               alt="Kultra"
-              width={140}
-              height={30}
-              className="h-[26px] sm:h-[30px] w-auto object-contain transition-opacity duration-180 group-hover:opacity-95 brightness-110"
+              width={130}
+              height={28}
+              className="h-[24px] sm:h-[26px] w-auto object-contain brightness-105"
               priority
             />
           </Link>
-          <span className="hidden lg:inline-block text-[0.8125rem] font-medium text-[#94A3B8] whitespace-nowrap pl-3 border-l border-[#1E293B]">
-            Built on Merchant API v1
+          <span className="hidden lg:inline-block font-mono text-[11px] text-[var(--ghost-text-dim)] pl-3 border-l border-[var(--hairline)]">
+            Merchant API v1
           </span>
         </div>
 
@@ -159,7 +153,7 @@ export function Header() {
             <Link
               key={link.label}
               href={link.href}
-              className="text-[0.875rem] font-medium text-[#CBD5E1] hover:text-[#FDF4D2] transition-colors duration-180 relative py-1 after:content-[''] after:absolute after:bottom-[-2px] after:left-0 after:w-0 hover:after:w-full after:h-[1.5px] after:bg-[#FF788D] after:transition-all after:duration-200 outline-none focus-visible:ring-2 focus-visible:ring-[#94A3B8] focus-visible:ring-offset-4 focus-visible:ring-offset-[#0a0b1dff] rounded-[2px]"
+              className="text-[14px] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] transition-colors duration-120 outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal-glow)] rounded-[var(--radius-sm)]"
             >
               {link.label}
             </Link>
@@ -167,132 +161,115 @@ export function Header() {
         </nav>
 
         {/* Header Action & Mobile Menu Toggle */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-3">
           {user ? (
-            /* Logged-In User Profile Pill & Dropdown */
+            /* Logged-In User Profile Pill & Dropdown (§16 Top bar) */
             <div className="relative" ref={dropdownRef}>
               <button
                 type="button"
                 onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-[#142036] hover:bg-[#1C2C4A] border border-[#2B3B52] hover:border-slate-500 text-xs font-semibold text-[#FDF4D2] transition-colors"
+                className="flex items-center gap-2.5 px-3 py-1.5 rounded-[var(--radius-sm)] bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-2)] border border-[var(--hairline)] text-[13px] text-[var(--ink-primary)] transition-colors"
                 aria-expanded={dropdownOpen}
                 aria-haspopup="true"
               >
-                <div className="w-6 h-6 rounded-full bg-[#FF788D] text-[#0a0b1dff] flex items-center justify-center text-[10px] font-bold shrink-0">
+                <div className="w-6 h-6 rounded-full bg-[var(--bg-surface-2)] border border-[var(--hairline)] text-[var(--ink-primary)] flex items-center justify-center font-mono text-[10px] font-semibold shrink-0">
                   {getInitials(user.name || user.email)}
                 </div>
-                <span className="hidden sm:inline max-w-[120px] truncate text-xs font-bold text-[#FDF4D2]">
+                <span className="hidden sm:inline max-w-[120px] truncate text-[13px] text-[var(--ink-primary)]">
                   {user.name || user.email}
                 </span>
-                <span className="w-2 h-2 rounded-full bg-[#10B981] shrink-0" title="Active Session" />
-                <ChevronDown className={`w-3.5 h-3.5 text-[#94A3B8] transition-transform ${dropdownOpen ? 'rotate-180 text-[#FF788D]' : ''}`} />
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)] shrink-0" title="Active Session" />
+                <ChevronDown className={`w-3.5 h-3.5 text-[var(--ghost-text)] transition-transform duration-120 ${dropdownOpen ? 'rotate-180 text-[var(--signal)]' : ''}`} />
               </button>
 
               {/* Profile Dropdown Menu */}
               {dropdownOpen && (
-                <div className="absolute right-0 mt-2 w-64 rounded-lg bg-[#0F1522] border border-[#2B3B52] p-2 shadow-2xl z-[100] animate-in fade-in-50 duration-100">
-                  {/* User Profile Header */}
-                  <div className="p-2.5 border-b border-[#1E293B]">
-                    <div className="text-xs font-bold text-[#FDF4D2] truncate">
+                <div className="absolute right-0 mt-2 w-60 rounded-[var(--radius-md)] bg-[var(--bg-surface)] border border-[var(--hairline-strong)] p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.5)] z-[100]">
+                  <div className="p-2 border-b border-[var(--hairline)]">
+                    <div className="text-[13px] font-medium text-[var(--ink-primary)] truncate">
                       {user.name || user.email}
                     </div>
-                    <div className="text-[11px] text-[#94A3B8] truncate">{user.email}</div>
-                    <div className="mt-1.5 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-[#142036] border border-[#1E293B] text-[#34D399]">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
-                      <span>{user.isAdmin || user.role === 'admin' ? 'Sole Platform Owner' : 'Active Merchant'}</span>
-                    </div>
+                    <div className="text-[11px] font-mono text-[var(--ghost-text-dim)] truncate">{user.email}</div>
                   </div>
 
-                  {/* Menu Items */}
                   <div className="py-1 space-y-0.5">
                     {user.isAdmin || user.role === 'admin' ? (
                       <>
                         <Link
                           href="/admin/dashboard"
                           onClick={() => setDropdownOpen(false)}
-                          className="flex items-center gap-2.5 px-3 py-2 rounded text-xs font-semibold text-[#CBD5E1] hover:text-[#FDF4D2] hover:bg-[#18263D] transition-colors"
+                          className="flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-[13px] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:bg-[var(--bg-surface-2)] transition-colors"
                         >
-                          <LayoutDashboard className="w-3.5 h-3.5 text-[#FF788D]" />
+                          <LayoutDashboard className="w-3.5 h-3.5 text-[var(--ghost-text)]" />
                           <span>Mission Control</span>
                         </Link>
                         <Link
                           href="/dashboard"
                           onClick={() => setDropdownOpen(false)}
-                          className="flex items-center gap-2.5 px-3 py-2 rounded text-xs font-semibold text-[#CBD5E1] hover:text-[#FDF4D2] hover:bg-[#18263D] transition-colors"
+                          className="flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-[13px] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:bg-[var(--bg-surface-2)] transition-colors"
                         >
-                          <ShieldCheck className="w-3.5 h-3.5 text-[#10B981]" />
-                          <span>Catalog Dashboard</span>
+                          <ShieldAlert className="w-3.5 h-3.5 text-[var(--signal)]" />
+                          <span>Catalog Shield</span>
                         </Link>
                       </>
                     ) : (
                       <Link
                         href="/dashboard"
                         onClick={() => setDropdownOpen(false)}
-                        className="flex items-center gap-2.5 px-3 py-2 rounded text-xs font-semibold text-[#CBD5E1] hover:text-[#FDF4D2] hover:bg-[#18263D] transition-colors"
+                        className="flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-[13px] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:bg-[var(--bg-surface-2)] transition-colors"
                       >
-                        <LayoutDashboard className="w-3.5 h-3.5 text-[#FF788D]" />
-                        <span>Catalog Dashboard</span>
+                        <LayoutDashboard className="w-3.5 h-3.5 text-[var(--signal)]" />
+                        <span>Catalog Shield</span>
                       </Link>
                     )}
-
-                    <Link
-                      href="/"
-                      onClick={() => setDropdownOpen(false)}
-                      className="flex items-center gap-2.5 px-3 py-2 rounded text-xs font-semibold text-[#CBD5E1] hover:text-[#FDF4D2] hover:bg-[#18263D] transition-colors"
-                    >
-                      <Globe className="w-3.5 h-3.5 text-[#38BDF8]" />
-                      <span>Public Website</span>
-                    </Link>
                   </div>
 
-                  {/* Sign Out Button */}
-                  <div className="pt-1 border-t border-[#1E293B]">
+                  <div className="pt-1 border-t border-[var(--hairline)]">
                     <button
                       type="button"
                       onClick={handleLogout}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded text-xs font-semibold text-[#FF788D] hover:bg-rose-500/15 transition-colors text-left"
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-[13px] text-[var(--danger)] hover:bg-[var(--danger-wash)] transition-colors text-left"
                     >
                       <LogOut className="w-3.5 h-3.5" />
-                      <span>Sign Out</span>
+                      <span>Sign out</span>
                     </button>
                   </div>
                 </div>
               )}
             </div>
           ) : (
-            /* Logged-Out CTAs */
-            <>
+            /* Logged-Out Actions: Ghost secondary / Signal primary */
+            <div className="flex items-center gap-2">
               <Link
                 href="/login"
-                className="text-[0.84rem] font-bold text-[#CBD5E1] hover:text-[#FDF4D2] px-2.5 sm:px-3 py-1.5 transition-colors duration-180"
+                className="text-[13px] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] px-3 py-1.5 transition-colors duration-120"
               >
                 Log in
               </Link>
               <Link
                 href="/register"
-                className="text-[0.84rem] font-bold text-[#0a0b1dff] bg-[#FF788D] hover:bg-[#FF788D]/90 px-3.5 sm:px-4 py-1.5 rounded-[4px] transition-all duration-180 flex items-center gap-1.5 shadow-sm"
+                className="btn-primary"
               >
-                <span>Register</span>
-                <span aria-hidden="true" className="text-[0.85rem]">→</span>
+                Start trial
               </Link>
-            </>
+            </div>
           )}
 
           {/* Mobile Hamburger Toggle */}
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 text-[#94A3B8] hover:text-[#FDF4D2] transition-colors rounded-[4px] border border-[#1E293B] bg-[#0F1522] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#94A3B8]"
+            className="md:hidden p-2 text-[var(--ghost-text)] hover:text-[var(--ink-primary)] transition-colors rounded-[var(--radius-sm)] border border-[var(--hairline)] bg-[var(--bg-surface)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal-glow)]"
             aria-label="Toggle navigation menu"
             aria-expanded={mobileMenuOpen}
           >
             {mobileMenuOpen ? (
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M6 18L18 6M6 6l12 12" />
               </svg>
             ) : (
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             )}
           </button>
@@ -301,66 +278,53 @@ export function Header() {
 
       {/* Mobile Navigation Dropdown */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-[#0F1522] border-b border-[#1E293B] px-5 py-3 space-y-2">
+        <div className="md:hidden bg-[var(--bg-surface)] border-b border-[var(--hairline)] px-5 py-3 space-y-2">
           {navLinks.map((link) => (
             <Link
               key={link.label}
               href={link.href}
               onClick={() => setMobileMenuOpen(false)}
-              className="block text-[0.9rem] font-medium text-[#CBD5E1] hover:text-[#FDF4D2] py-2 transition-colors border-b border-[#1E293B]/40 last:border-none"
+              className="block text-[14px] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] py-2 transition-colors border-b border-[var(--hairline)] last:border-none"
             >
               {link.label}
             </Link>
           ))}
 
           {user ? (
-            <div className="pt-2 border-t border-[#1E293B] space-y-2">
-              <div className="flex items-center gap-2.5 p-2 rounded bg-[#142036]">
-                <div className="w-7 h-7 rounded-full bg-[#FF788D] text-[#0a0b1dff] flex items-center justify-center text-xs font-bold shrink-0">
-                  {getInitials(user.name || user.email)}
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs font-bold text-[#FDF4D2] truncate">{user.name || user.email}</div>
-                  <div className="text-[10px] text-[#34D399] font-medium">
-                    {user.isAdmin || user.role === 'admin' ? 'Sole Platform Owner' : 'Active Tenant'}
-                  </div>
-                </div>
-              </div>
-
+            <div className="pt-2 border-t border-[var(--hairline)] space-y-2">
               <Link
-                href="/admin/dashboard"
+                href="/dashboard"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block text-center text-[0.85rem] font-bold text-[#0a0b1dff] bg-[#FF788D] hover:bg-[#FF788D]/90 py-2 rounded-[4px] transition-colors"
+                className="btn-primary w-full justify-center"
               >
-                Go to Mission Control
+                Open Catalog Shield
               </Link>
-
               <button
                 type="button"
                 onClick={() => {
                   setMobileMenuOpen(false);
                   handleLogout();
                 }}
-                className="w-full block text-center text-[0.85rem] font-semibold text-[#FF788D] bg-[#142036] hover:bg-[#1E293B] border border-[#1E293B] py-2 rounded-[4px] transition-colors"
+                className="btn-secondary w-full justify-center"
               >
-                Sign Out
+                Sign out
               </button>
             </div>
           ) : (
             <div className="pt-2 flex flex-col gap-2">
               <Link
-                href="/admin/login"
+                href="/login"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block text-center text-[0.85rem] font-bold text-[#FDF4D2] bg-[#141C2B] hover:bg-[#1E293B] border border-[#1E293B] py-2 rounded-[4px] transition-colors"
+                className="btn-secondary w-full justify-center"
               >
                 Log in
               </Link>
               <Link
-                href="/admin/register"
+                href="/register"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block text-center text-[0.85rem] font-bold text-[#0a0b1dff] bg-[#FF788D] hover:bg-[#FF788D]/90 py-2 rounded-[4px] transition-colors"
+                className="btn-primary w-full justify-center"
               >
-                Register
+                Start trial
               </Link>
             </div>
           )}

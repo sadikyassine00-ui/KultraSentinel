@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import './satoshi-font.css';
 import './globals.css';
 import { Providers } from './providers';
 import { Header } from '@/components/Header';
@@ -65,17 +64,17 @@ export default function RootLayout({
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/site.webmanifest" />
-        <meta name="theme-color" content="#0a0b1d" />
-        <meta name="msapplication-TileColor" content="#0a0b1d" />
+        <meta name="theme-color" content="#0a0b0d" />
+        <meta name="msapplication-TileColor" content="#0a0b0d" />
         <meta name="msapplication-config" content="/browserconfig.xml" />
-        <link rel="preconnect" href="https://api.fontshare.com" />
-        <link rel="preconnect" href="https://cdn.fontshare.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://api.fontshare.com/v2/css?f[]=satoshi@900,700,500,400,300&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap"
           rel="stylesheet"
         />
       </head>
-      <body className="bg-[#0a0b1dff] text-[#FDF4D2] antialiased overflow-x-hidden selection:bg-[#FF788D]/25 selection:text-[#FDF4D2] min-h-screen flex flex-col">
+      <body className="bg-[#0a0b0d] text-[#f4f1ea] font-sans antialiased overflow-x-hidden selection:bg-[#f2a93b]/20 selection:text-[#f4f1ea] min-h-screen flex flex-col">
         <Providers>
           <Header />
           <div className="flex-1 flex flex-col min-h-0 w-full">

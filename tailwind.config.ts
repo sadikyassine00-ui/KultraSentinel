@@ -9,30 +9,66 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        canvas: "#0a0b1dff",
-        surface: "#0F1522",
-        "surface-elevated": "#141C2B",
-        stroke: "#1E293B",
-        "stroke-subtle": "rgba(30, 41, 59, 0.6)",
-        "accent-amber": "#FF788D",
-        accent: "#FF788D",
-        "sentinel-green": "#10B981",
-        "text-primary": "#FDF4D2",
-        "text-subhead": "#fffae9ff",
-        "text-muted": "#94A3B8",
-        "text-subtle": "#64748B",
+        // Base
+        canvas: "#0a0b0d",
+        surface: "#0e0f11",
+        "surface-2": "#131418",
+        hairline: "rgba(255, 255, 255, 0.08)",
+        "hairline-strong": "rgba(255, 255, 255, 0.14)",
+
+        // Ghost (dormant / inactive / "before")
+        ghost: {
+          text: "#6b7078",
+          dim: "#45484f",
+          line: "#3a3d43",
+          heading: "#cfcdc8",
+        },
+
+        // Signal (active / live / "after") — THE accent
+        signal: {
+          DEFAULT: "#f2a93b",
+          dim: "#7a5a26",
+          glow: "rgba(242, 169, 59, 0.35)",
+          wash: "rgba(242, 169, 59, 0.06)",
+        },
+
+        // Content on dark
+        ink: {
+          primary: "#f4f1ea",
+          secondary: "#b9b3a5",
+        },
+
+        // Semantic
+        danger: {
+          DEFAULT: "#d64545",
+          wash: "rgba(214, 69, 69, 0.08)",
+        },
+
+        // Paper
+        paper: "#f4f1ea",
+        "paper-ink": "#111214",
+
+        // Backward compatibility mappings for legacy classes
+        "accent-amber": "#f2a93b",
+        accent: "#f2a93b",
+        "sentinel-green": "#f2a93b",
+        "text-primary": "#f4f1ea",
+        "text-subhead": "#b9b3a5",
+        "text-muted": "#6b7078",
+        "text-subtle": "#45484f",
+        stroke: "rgba(255, 255, 255, 0.08)",
+        "stroke-subtle": "rgba(255, 255, 255, 0.05)",
       },
       fontFamily: {
-        satoshi: ["'Satoshi'", "sans-serif"],
-        sans: ["'Satoshi'", "sans-serif"],
-        display: ["'Satoshi'", "sans-serif"],
-        mono: ["'Satoshi'", "sans-serif"],
+        display: ["'Fraunces'", "Georgia", "serif"],
+        sans: ["'Inter'", "system-ui", "-apple-system", "sans-serif"],
+        body: ["'Inter'", "system-ui", "-apple-system", "sans-serif"],
+        mono: ["'IBM Plex Mono'", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
       borderRadius: {
-        xs: "2px",
-        sm: "4px",
-        md: "5px",
-        lg: "6px",
+        sm: "3px",
+        md: "4px",
+        pill: "100px",
       },
     },
   },

@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { HelpCircle, ChevronDown } from 'lucide-react';
-import { SectionNetworkCanvas } from './SectionNetworkCanvas';
+import { ChevronDown } from 'lucide-react';
 
 interface FaqItem {
   question: string;
@@ -40,7 +39,6 @@ export function FaqSection() {
     },
   ];
 
-  // JSON-LD Schema for rich search snippets
   const jsonLd = {
     '@context': 'https://schema.org',
     '@graph': [
@@ -74,12 +72,8 @@ export function FaqSection() {
   return (
     <section
       id="faq"
-      className="relative w-full py-24 px-4 sm:px-6 bg-[#0a0b1dff] border-t border-[#1E293B]/60 overflow-hidden"
+      className="relative w-full py-20 px-4 sm:px-6 bg-[var(--bg-canvas)] border-t border-[var(--hairline)]"
     >
-      {/* Ambient Sparse Network Mesh */}
-      <SectionNetworkCanvas />
-
-      {/* Embedded JSON-LD Schema for SEO */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -87,47 +81,47 @@ export function FaqSection() {
 
       <div className="relative z-10 max-w-[860px] mx-auto">
         {/* Section Header */}
-        <div className="max-w-[760px] mb-14">
-          <span className="text-[0.85rem] font-semibold text-[#10B981] block mb-2">
-            Frequently Asked Questions
+        <div className="max-w-[760px] mb-12">
+          <span className="font-mono text-[11px] text-[var(--ghost-text-dim)] tracking-[0.02em] block mb-2">
+            Frequently asked questions
           </span>
-          <h2 className="text-[1.85rem] sm:text-[2.4rem] font-bold text-[#FDF4D2] leading-[1.18] tracking-[-0.01em]">
+          <h2 className="font-display text-[1.85rem] sm:text-[2.25rem] font-semibold text-[var(--ink-primary)] leading-[1.2]">
             Everything you need to know about zero-downtime feed monitoring
           </h2>
-          <p className="mt-3 text-[1rem] text-[#94A3B8] leading-relaxed">
+          <p className="mt-3 text-[14.5px] text-[var(--ink-secondary)] leading-[1.55]">
             Architectural transparency, integration prerequisites, and pilot onboarding timelines.
           </p>
         </div>
 
         {/* Accordion List */}
-        <div className="space-y-4">
+        <div className="space-y-3">
           {faqs.map((faq, idx) => {
             const isOpen = openIdx === idx;
             return (
               <div
                 key={faq.question}
-                className="rounded-[6px] border border-[#1E293B] bg-[#0F1522] transition-colors duration-180 hover:border-[#334155] overflow-hidden"
+                className="rounded-[var(--radius-md)] border border-[var(--hairline)] bg-[var(--bg-surface)] hover:border-[var(--hairline-strong)] transition-colors duration-120 overflow-hidden"
               >
                 <button
                   type="button"
                   onClick={() => setOpenIdx(isOpen ? null : idx)}
-                  className="w-full text-left p-5 sm:p-6 flex items-center justify-between gap-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF788D]"
+                  className="w-full text-left p-5 flex items-center justify-between gap-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal-glow)]"
                   aria-expanded={isOpen}
                 >
-                  <span className="text-[1rem] sm:text-[1.05rem] font-semibold text-[#FDF4D2] leading-snug">
+                  <span className="text-[15px] font-medium text-[var(--ink-primary)] leading-snug">
                     {faq.question}
                   </span>
                   <ChevronDown
-                    className={`w-4 h-4 text-[#94A3B8] shrink-0 transition-transform duration-200 ${
-                      isOpen ? 'rotate-180 text-[#10B981]' : ''
+                    className={`w-4 h-4 text-[var(--ghost-text)] shrink-0 transition-transform duration-150 ${
+                      isOpen ? 'rotate-180 text-[var(--signal)]' : ''
                     }`}
-                    strokeWidth={2}
+                    strokeWidth={1.5}
                   />
                 </button>
 
                 {isOpen && (
-                  <div className="px-5 pb-6 sm:px-6 pt-1 text-[0.875rem] sm:text-[0.925rem] text-[#94A3B8] leading-relaxed border-t border-[#1E293B]/60">
-                    <p className="mt-3 pl-0">{faq.answer}</p>
+                  <div className="px-5 pb-5 pt-1 text-[13.5px] text-[var(--ink-secondary)] leading-[1.6] border-t border-[var(--hairline)]">
+                    <p className="mt-2">{faq.answer}</p>
                   </div>
                 )}
               </div>

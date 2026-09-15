@@ -1,79 +1,254 @@
-@import './satoshi-font.css';
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --bg-canvas: #0a0b1dff;
-  --bg-surface: #0F1522;
-  --bg-surface-elevated: #141C2B;
-  --border-stroke: #1E293B;
-  --accent-amber: #FF788D;
-  --accent-color: #FF788D;
-  --status-green: #10B981;
-  --color-typography: #FDF4D2;
+  /* base */
+  --bg-canvas: #0a0b0d;
+  --bg-surface: #0e0f11;
+  --bg-surface-2: #131418;
+  --hairline: rgba(255, 255, 255, 0.08);
+  --hairline-strong: rgba(255, 255, 255, 0.14);
+
+  /* ghost (dormant / inactive / "before") */
+  --ghost-text: #6b7078;
+  --ghost-text-dim: #45484f;
+  --ghost-line: #3a3d43;
+  --ghost-heading: #cfcdc8;
+
+  /* signal (active / live / "after") — THE accent, do not add a second one */
+  --signal: #f2a93b;
+  --signal-dim: #7a5a26;
+  --signal-glow: rgba(242, 169, 59, 0.35);
+  --signal-wash: rgba(242, 169, 59, 0.06);
+
+  /* content on dark */
+  --ink-primary: #f4f1ea;
+  --ink-secondary: #b9b3a5;
+
+  /* semantic (used ONLY where the product must show true error/danger) */
+  --danger: #d64545;
+  --danger-wash: rgba(214, 69, 69, 0.08);
+
+  /* paper (rare — inverted surfaces) */
+  --paper: #f4f1ea;
+  --paper-ink: #111214;
+
+  /* typography */
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+
+  /* spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 40px;
+  --space-8: 56px;
+
+  /* radius */
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-pill: 100px;
+
+  /* network background motif */
+  --network-line: rgba(255, 255, 255, 0.06);
+  --network-node: rgba(255, 255, 255, 0.14);
+  --network-node-signal: rgba(242, 169, 59, 0.4);
 }
 
-/* Base typography: Universal Satoshi font throughout standard elements */
-html, body, button, input, textarea, select {
-  font-family: 'Satoshi', sans-serif !important;
+/* Typography assignment */
+body {
+  background-color: var(--bg-canvas);
+  color: var(--ink-primary);
+  font-family: var(--font-body);
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
-/* Strict Monospace Isolation for protocol strings, IDs, and raw payloads */
-.font-mono, code.font-mono, pre.font-mono {
-  font-family: ui-monospace, 'Geist Mono', 'JetBrains Mono', SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+h1, h2, h3, .font-display {
+  font-family: var(--font-display);
 }
 
-/* Dashboard frame progressive bottom fade mask */
+.font-mono, code, pre, .mono-data {
+  font-family: var(--font-mono);
+}
+
+/* Standard Button Grammar (§4) */
+.btn-primary {
+  background: var(--signal);
+  color: #1a1305;
+  border: 1px solid var(--signal);
+  border-radius: var(--radius-sm);
+  padding: 10px 18px;
+  font-weight: 600;
+  font-size: 12.5px;
+  line-height: 1.4;
+  font-family: var(--font-body);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 120ms ease, transform 80ms ease;
+  cursor: pointer;
+}
+.btn-primary:hover {
+  background: #f6b855;
+}
+.btn-primary:active {
+  background: #d9932a;
+  transform: scale(0.98);
+}
+.btn-primary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--signal-glow);
+}
+.btn-primary:disabled {
+  background: var(--ghost-line);
+  border-color: var(--ghost-line);
+  color: var(--ghost-text-dim);
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--ink-secondary);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-sm);
+  padding: 10px 18px;
+  font-weight: 600;
+  font-size: 12.5px;
+  line-height: 1.4;
+  font-family: var(--font-body);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
+  cursor: pointer;
+}
+.btn-secondary:hover {
+  border-color: var(--signal-dim);
+  color: var(--ink-primary);
+  background: var(--bg-surface-2);
+}
+.btn-secondary:active {
+  border-color: var(--signal);
+}
+.btn-secondary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--signal-glow);
+}
+
+.btn-destructive {
+  background: transparent;
+  color: var(--ink-secondary);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-sm);
+  padding: 10px 18px;
+  font-weight: 600;
+  font-size: 12.5px;
+  line-height: 1.4;
+  font-family: var(--font-body);
+  transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
+  cursor: pointer;
+}
+.btn-destructive:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: var(--danger-wash);
+}
+.btn-destructive:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(214, 69, 69, 0.35);
+}
+
+/* Standard Form Input Grammar (§6) */
+.input {
+  background: var(--bg-canvas);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-sm);
+  color: var(--ink-primary);
+  font-weight: 400;
+  font-size: 14.5px;
+  line-height: 1.55;
+  font-family: var(--font-body);
+  padding: 10px 12px;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+.input::placeholder {
+  color: var(--ghost-text-dim);
+}
+.input:hover {
+  border-color: var(--ghost-text);
+}
+.input:focus {
+  border-color: var(--signal);
+  box-shadow: 0 0 0 3px var(--signal-glow);
+  outline: none;
+}
+.input:disabled {
+  background: var(--bg-surface);
+  color: var(--ghost-text-dim);
+  border-color: var(--hairline);
+}
+.input.error {
+  border-color: var(--danger);
+}
+
+/* Standard Tags, Badges & Status Pills (§7) */
+.tag-pill {
+  font: 500 11px/1.4 var(--font-mono);
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid;
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.tag-ghost {
+  border-color: var(--ghost-line);
+  color: var(--ghost-text);
+  background: transparent;
+}
+.tag-signal {
+  border-color: var(--signal-dim);
+  color: var(--signal);
+  background: var(--signal-wash);
+}
+.tag-danger {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: var(--danger-wash);
+}
+
+/* Skeletons hold still — NO shimmer sweeps, NO pulsing loops (§11) */
+.skeleton-static {
+  background: var(--bg-surface-2);
+  border-radius: var(--radius-sm);
+}
+
+/* Dashboard frame fade mask for peek views */
 .dashboard-frame-mask {
   -webkit-mask-image: linear-gradient(
     to bottom,
     #000 0%,
-    #000 60%,
-    rgba(0, 0, 0, 0.85) 74%,
-    rgba(0, 0, 0, 0.25) 88%,
+    #000 65%,
+    rgba(0, 0, 0, 0.8) 78%,
+    rgba(0, 0, 0, 0.2) 90%,
     transparent 100%
   );
   mask-image: linear-gradient(
     to bottom,
     #000 0%,
-    #000 60%,
-    rgba(0, 0, 0, 0.85) 74%,
-    rgba(0, 0, 0, 0.25) 88%,
+    #000 65%,
+    rgba(0, 0, 0, 0.8) 78%,
+    rgba(0, 0, 0, 0.2) 90%,
     transparent 100%
   );
-}
-
-.dashboard-frame-scrim {
-  background: linear-gradient(
-    to bottom,
-    transparent 0%,
-    transparent 55%,
-    rgba(10, 11, 29, 0.45) 75%,
-    #0a0b1d 100%
-  );
-}
-
-/* Nocturne Sentinel Lightweight Skeleton Shimmer (GPU-accelerated, zero-pulse, zero-glow) */
-@keyframes skeleton-shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-.skeleton-shimmer {
-  background: linear-gradient(
-    90deg,
-    #141C2B 0%,
-    #1C2638 50%,
-    #141C2B 100%
-  );
-  background-size: 200% 100%;
-  animation: skeleton-shimmer 1.8s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -85,9 +260,4 @@ html, body, button, input, textarea, select {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-  .skeleton-shimmer {
-    animation: none !important;
-    background: #141C2B !important;
-  }
 }
-
