@@ -22,9 +22,16 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { email, password, companyName, accountType, website } = body;
+    const { email, password, companyName, accountType, website, agreedToTerms } = body;
 
     // 1. Validation
+    if (!agreedToTerms) {
+      return NextResponse.json(
+        { error: 'You must agree to the Terms of Service and acknowledge the Privacy Policy.' },
+        { status: 400 }
+      );
+    }
+
     if (!email || typeof email !== 'string' || !email.includes('@')) {
       return NextResponse.json({ error: 'A valid email address is required.' }, { status: 400 });
     }

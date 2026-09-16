@@ -77,6 +77,8 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
   const [verifyingIncidentId, setVerifyingIncidentId] = useState<string | number | null>(null);
   const [testAlertSending, setTestAlertSending] = useState(false);
   const [inlineFeedback, setInlineFeedback] = useState<string | null>(null);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [confirmDisconnect, setConfirmDisconnect] = useState(false);
 
   const fetchDashboardData = useCallback(async (storeId?: string | null) => {
     try {
@@ -128,11 +130,44 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
     }
   };
 
+  const handleDisconnectStore = async () => {
+    if (!data?.activeStore?.id) return;
+    setDisconnecting(true);
+    setArmingFeedback(null);
+
+    try {
+      const res = await fetch(`/api/stores/${data.activeStore.id}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setModalOpen(false);
+        setConfirmDisconnect(false);
+        await fetchDashboardData(null);
+      } else {
+        const resJson = await res.json();
+        setArmingFeedback(resJson.error || 'Failed to disconnect store. Please contact contact@usekultra.com.');
+        setArmingStatus('error');
+      }
+    } catch {
+      setArmingFeedback('Network timeout communicating with store management service.');
+      setArmingStatus('error');
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
   const handleArmSystem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!data?.activeStore?.id) return;
-    if (!slackWebhookInput.trim()) {
+    const trimmedWebhook = slackWebhookInput.trim();
+    if (!trimmedWebhook) {
       setArmingFeedback('Please enter a valid Slack Incoming Webhook URL.');
+      setArmingStatus('error');
+      return;
+    }
+
+    if (!trimmedWebhook.startsWith('https://hooks.slack.com/')) {
+      setArmingFeedback('Invalid Slack Webhook format. Please provide a standard incoming webhook URL beginning with the authorized domain (https://hooks.slack.com/services/...).');
       setArmingStatus('error');
       return;
     }
@@ -284,15 +319,33 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
             </div>
           </div>
 
-          <button
-            onClick={handleConnectGmc}
-            className="btn-primary px-6 py-2.5 text-[13px]"
-          >
-            Connect Google Merchant Center
-          </button>
+          <div className="flex flex-col items-center">
+            <button
+              onClick={handleConnectGmc}
+              className="btn-primary px-7 py-3 text-[13.5px] font-semibold !rounded-[3px]"
+            >
+              Connect Google Merchant Center
+            </button>
 
-          <div className="mt-3 font-mono text-[11px] text-[var(--ghost-text-dim)]">
-            Read-only access / No feed changes required
+            <div className="mt-2.5 font-mono text-[11px] text-[var(--ghost-text-dim)]">
+              Read-only telemetry / No feed modifications
+            </div>
+
+            {/* Pre-OAuth Trust Framing Disclaimer (§1 Compliance Directive) */}
+            <div className="max-w-lg w-full mt-6 text-left p-4 rounded-[var(--radius-sm)] bg-[var(--bg-canvas)] border border-[var(--hairline)]">
+              <div className="flex items-center gap-2 mb-1.5">
+                <ShieldCheck className="w-4 h-4 text-[var(--signal)] shrink-0" strokeWidth={1.5} />
+                <span className="text-[12.5px] font-semibold text-[var(--ink-primary)]">
+                  Google OAuth Scope Transparency
+                </span>
+              </div>
+              <p className="text-[12px] text-[var(--ghost-text)] leading-[1.55]">
+                Google displays a standard &ldquo;Manage your product listings&rdquo; consent prompt because Google&apos;s Merchant API lacks a dedicated read-only scope tier. Kultra operates strictly in read-only telemetry mode to capture crawl status and policy health.
+              </p>
+              <div className="mt-2.5 text-[12px] font-medium text-[var(--ink-primary)] border-t border-[var(--hairline)] pt-2 leading-[1.5]">
+                <strong className="text-[var(--signal)]">Safety Guarantee:</strong> Kultra will never edit, overwrite, delete, or mutate your product catalog, pricing, or Google Ads campaigns.
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -689,16 +742,19 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
               <div className="flex items-center justify-end gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setModalOpen(false)}
-                  className="btn-secondary text-[12.5px] py-2 px-3.5"
+                  onClick={() => {
+                    setModalOpen(false);
+                    setConfirmDisconnect(false);
+                  }}
+                  className="btn-secondary text-[12.5px] py-2 px-3.5 !rounded-[3px]"
                 >
-                  Configure later
+                  Close
                 </button>
 
                 <button
                   type="submit"
                   disabled={armingStatus === 'testing' || armingStatus === 'armed'}
-                  className="btn-primary text-[12.5px] py-2 px-4 disabled:opacity-50"
+                  className="btn-primary text-[12.5px] py-2 px-4 disabled:opacity-50 !rounded-[3px]"
                 >
                   {armingStatus === 'testing' ? (
                     <>
@@ -716,6 +772,58 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                 </button>
               </div>
             </form>
+
+            {/* Store Management & Data Ownership Section (§1 Compliance Directive) */}
+            <div className="pt-5 border-t border-[var(--hairline)]">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[12.5px] font-semibold text-[var(--ink-primary)]">
+                  Data Ownership &amp; Integration Management
+                </span>
+                <span className="tag-pill tag-ghost text-[10px]">
+                  Zero Vendor Lock-In
+                </span>
+              </div>
+              <p className="text-[12px] text-[var(--ghost-text)] leading-[1.5] mb-3">
+                You retain 100% ownership of your catalog telemetry. Disconnecting immediately terminates Pub/Sub ingestion and purges all cached incidents from Kultra&apos;s database. For full account deletion or verification inquiries, email{' '}
+                <a href="mailto:contact@usekultra.com" className="text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] underline">
+                  contact@usekultra.com
+                </a>.
+              </p>
+
+              {!confirmDisconnect ? (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDisconnect(true)}
+                  className="btn-secondary text-[12px] py-1.5 px-3 text-[var(--danger)] hover:border-[var(--danger)] !rounded-[3px]"
+                >
+                  Disconnect Store &amp; Purge Cached Telemetry
+                </button>
+              ) : (
+                <div className="p-3 rounded-[var(--radius-sm)] bg-[var(--danger-wash)] border border-[var(--danger)] space-y-2.5">
+                  <div className="text-[12px] text-[var(--danger)] font-medium">
+                    Are you sure? This will remove GMC #{activeStore?.gmc_id || activeStore?.merchant_id} and permanently purge all stored incident logs.
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={disconnecting}
+                      onClick={handleDisconnectStore}
+                      className="py-1.5 px-3 rounded-[var(--radius-sm)] bg-[var(--danger)] text-[#111214] font-semibold text-[12px] hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-1.5"
+                    >
+                      {disconnecting && <RefreshCw className="w-3 h-3 animate-spin" />}
+                      <span>{disconnecting ? 'Purging telemetry...' : 'Yes, Purge Telemetry & Disconnect'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDisconnect(false)}
+                      className="btn-secondary text-[12px] py-1.5 px-2.5 !rounded-[3px]"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

@@ -1,56 +1,91 @@
-# Architectural Directive: Decouple Tenant Workspace from Admin Console
+# Production Trust, Compliance & Landing Page Transformation Directive
 
-Implement a dedicated public customer route (/dashboard) and role-aware routing architecture. Do not alter the core triage logic inside TenantTriageCenter.tsx or api/dashboard/route.ts. Focus entirely on layout isolation, route separation, and role-based session guarding.
-
----
-
-### 1. Update Authentication & Session Roles (`src/lib/token.ts`)
-- Remove the hard rejection error ("The user dashboard is currently in private pilot") for non-admin emails during standard login.
-- Introduce role tagging in the session token payload:
-  - If `ALLOWED_ADMIN_EMAILS.includes(email.toLowerCase())` -> `role = 'admin'`
-  - Otherwise -> `role = 'user'`
-- Ensure the role is cryptographically signed inside the session cookie alongside the user's email and ID.
+Execute an exhaustive audit across the entire application to eliminate every trust defect, amateur design pattern, and suspicious friction point that triggers user hesitation. Re-architect the landing page from a passive "waitlist/upcoming" concept into a live, high-converting enterprise SaaS ready for instant customer onboarding.
 
 ---
 
-### 2. Update Edge Route Guarding (`middleware.ts`)
-Enforce strict boundary separation:
-1. **Public/Guest Routes (`/login`, `/register`):**
-   - If an authenticated session with `role === 'admin'` visits `/login`, redirect to `/admin/dashboard`.
-   - If an authenticated session with `role === 'user'` visits `/login`, redirect to `/dashboard`.
-2. **Customer Routes (`/dashboard/:path*`):**
-   - Requires any authenticated session (`admin` or `user`).
-   - Unauthenticated visitors redirect to `/login?callbackUrl=/dashboard`.
-3. **Super Admin Perimeter (`/admin/:path*`):**
-   - `/admin/login`: Accessible to unauthenticated visitors. If an authenticated admin visits, bounce to `/admin/dashboard`.
-   - `/admin/dashboard/:path*`: Requires `role === 'admin'`. If a user with `role === 'user'` attempts access, reject with HTTP 403 or redirect directly to `/dashboard`.
+### 1. Form Compliance, Legal Consent & Suspicion Eradication
+
+Audit and harden every interactive form, input, and authentication screen:
+
+* **Explicit Legal Consent on Registration:**
+  * Add a mandatory, un-checked consent checkbox to the registration and sign-up interface.
+  * Label text must explicitly read: *"I agree to the Terms of Service and acknowledge the Privacy Policy."*
+  * Both terms must be clickable links opening directly into the corresponding legal pages in a new tab.
+  * Form submission must be hard-disabled until this box is checked, displaying a crisp visual validation hint if bypassed.
+* **Pre-OAuth Trust Framing:**
+  * Place a high-visibility trust disclaimer directly adjacent to the primary connection button.
+  * Address Google's broad consent language proactively: inform the user that Google displays a standard "Manage" prompt because their API lacks a dedicated read-only scope, but certify that Kultra operates strictly in read-only telemetry mode.
+  * Emphasize the core safety guarantee: *"Kultra will never edit, overwrite, delete, or mutate your product catalog, pricing, or Google Ads campaigns."*
+* **Zero Cryptic or Amateur Error Messages:**
+  * Eradicate all raw stack traces, generic alerts like "Something went wrong", or exposed database error strings.
+  * Map every failure mode to an institutional-grade notification explaining what occurred and the exact corrective action required (e.g., *"Invalid Slack Webhook format. Please provide a standard incoming webhook URL beginning with the authorized domain."*).
+* **Transparent Data Ownership & Deletion Signals:**
+  * Ensure store and account settings visibly offer a clear "Disconnect Store & Purge Cached Telemetry" action.
+  * Include clear micro-copy affirming that users retain total ownership of their diagnostic data and can request permanent deletion at any time via the official contact channel.
 
 ---
 
-### 3. Create the Dedicated Tenant Interface (`src/app/dashboard/`)
-1. **Create `src/app/dashboard/layout.tsx`:**
-   - Design a minimal, clean merchant navigation bar.
-   - Include: Kultra brand logo, store selector dropdown, "Catalog Shield: Active" indicator, and user profile/logout menu.
-   - Strictly exclude any internal admin telemetry, super-admin sidebar tabs, DLQ inspection tools, and platform analytics.
-2. **Create `src/app/dashboard/page.tsx`:**
-   - Mount `TenantTriageCenter.tsx` inside this layout.
-   - Pass the authenticated session directly to the triage component.
-   - Handle the `?just_connected=true` URL search parameter to automatically trigger State B ("Arm Your Alarm" Slack modal) upon returning from OAuth.
+### 2. Landing Page Pivot: From "Upcoming Waitlist" to "Live Production"
+
+Scrub every trace of pre-launch, beta, or waitlist messaging across the public domain and replace it with an immediate conversion engine:
+
+* **Eliminate Pre-Launch Artifacts:**
+  * Remove all phrases mentioning "Join the Waitlist", "Coming Soon", "Request Early Access", or "Launching in 2026".
+  * Remove email capture forms designed for queues or notification lists.
+* **Direct Activation Calls-to-Action:**
+  * Standardize primary navigation and hero buttons to immediate, high-intent triggers: *"Start Monitoring Now"* or *"Connect Your Store in 60 Seconds"*.
+  * Link these buttons directly to the live registration and Google connection flow.
+* **High-Converting Hero Section:**
+  * **Headline:** Deliver the core commercial outcome: *"Detect Google Merchant Disapprovals Before Silent Ad Traffic Drops."*
+  * **Subheadline:** Articulate the sub-second speed advantage: *"Instant sub-30-second Slack alerts with direct one-click fix links the moment Google's crawler flags a product violation."*
+  * **Friction Reducers:** Place three concise trust pills directly below the primary action: *"No Credit Card Required"*, *"Read-Only Catalog Access"*, and *"Set Up in Under 2 Minutes"*.
+* **Interactive / Visual Product Proof:**
+  * Replace static mockups or abstract vector graphics with a high-fidelity visualization of the active triage center.
+  * Showcase a realistic incident card: a hero product flagged for a common policy violation, displaying exact downtime counters, direct fix links, and a live Slack alert notification preview.
+* **Comparison & Cost-of-Inaction Section:**
+  * Contrast the status quo against Kultra: show how standard merchant email notices arrive 24 to 72 hours late (costing wasted ad budget and lost impressions), whereas Kultra streams real-time webhook telemetry straight to operational channels.
 
 ---
 
-### 4. Adjust OAuth & Post-Login Callbacks
-1. In `/api/auth/merchant/callback`:
-   - Inspect the authenticated session role.
-   - If `role === 'user'`, redirect to `/dashboard?just_connected=true`.
-   - If `role === 'admin'`, redirect to `/admin/dashboard?tab=triage&just_connected=true`.
-2. Ensure `/login` and `/register` form handlers complete login without forcing a redirect to `/admin/*`.
+### 3. Institutional Legitimacy & Identity Ground Truth
+
+Eliminate any generic corporate boilerplate, placeholder text, or misleading geographical claims:
+
+* **Corporate Entity Truth:**
+  * State the company identity strictly as **Kultra**, headquartered and operating in **Ouarzazate, Morocco**.
+  * Purge all unauthorized legal suffixes (such as "Inc.", "LLC", or Delaware corporation templates).
+* **Unified Point of Contact:**
+  * Standardize the sole operational, legal, and privacy inquiry address across the entire platform: `contact@usekultra.com`.
+  * Remove all non-existent support aliases or dummy placeholders.
+* **Clear Trademark & Platform Disclaimers:**
+  * In the global website footer and terms pages, display prominent, legally sound disclaimer text: *"Kultra is an independent monitoring platform and is not affiliated with, sponsored by, or endorsed by Google LLC or Shopify Inc. Google Merchant Center and Shopify are registered trademarks of their respective owners."*
+* **Compliance & Security Credibility Badges:**
+  * Feature clean, non-flashy security badges in the footer and onboarding areas highlighting key technical standards: *"AES-256-GCM Token Encryption at Rest"*, *"Enforced TLS 1.3 Transport"*, and *"Google Limited Use Policy Compliant"*.
 
 ---
 
-### 5. Verification Requirements
-Verify the following before marking this complete:
-1. Log in with a non-whitelisted email: verify successful access to `/dashboard` and that the zero-store onboarding funnel (State A) renders cleanly.
-2. While logged in as a standard user, attempt to navigate to `/admin/dashboard`: verify immediate rejection and redirection to `/dashboard`.
-3. Log in with an admin email: verify access to both `/admin/dashboard` and `/dashboard`.
-4. Ensure `npm run build` compiles with 0 route or TypeScript errors.
+### 4. Enterprise UX Polish & Conversion Integrity
+
+Refine small interaction states that define high-caliber production software:
+
+* **Interactive Form Feedback:**
+  * Ensure all text fields provide real-time validation states (valid email formatting, clear password requirements displayed inline before submission, and clean field focus treatments).
+  * Submission buttons must dynamically transition into an explicit, accessible loading state upon interaction to prevent double-submits.
+* **Global Navigation Structure:**
+  * Header must include: Kultra Brand Logo, Features, Security & Compliance, Pricing, and two clear conversion actions: *"Sign In"* and *"Start Monitoring"*.
+  * Footer must include: Product summary, Direct Links to Privacy Policy and Terms of Service, Security Disclosures, Sole Contact Email, and Official Copyright declaration.
+* **Mobile & Cross-Viewport Rigor:**
+  * Confirm all forms, tables, and triage alerts remain fully legible and operable on mobile viewports without horizontal overflowing or broken modal dialogs.
+
+---
+
+### 5. Verification Checklist
+
+Complete the transformation by confirming:
+1. Every instance of "waitlist", "coming soon", and "beta queue" is eradicated from all public-facing pages.
+2. Clicking the hero call-to-action navigates directly to the live account creation screen.
+3. Registration strictly requires checking the legal consent box before submission.
+4. The OAuth connection interface contains explicit read-only non-mutation guarantees.
+5. All legal footers and branding reference only Kultra, Ouarzazate, Morocco, and `contact@usekultra.com`.
+6. Production builds compile cleanly with zero broken internal links or validation warnings.

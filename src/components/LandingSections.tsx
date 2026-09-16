@@ -1,21 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { CostOfSilence } from './CostOfSilence';
 import { RemediationPipeline } from './RemediationPipeline';
 import { ArchitectureComparison } from './ArchitectureComparison';
 import { SlackPreview } from './SlackPreview';
-import { FaqSection } from './FaqSection';
+import { SecurityCompliance } from './SecurityCompliance';
 import { PricingMatrix } from './PricingMatrix';
-import { PilotApplicationForm } from './PilotApplicationForm';
+import { FaqSection } from './FaqSection';
+import { InstantActivationCta } from './InstantActivationCta';
 
 export function LandingSections() {
-  const [selectedPlan, setSelectedPlan] = useState<'merchant' | 'agency'>('agency');
-
-  const handleSelectPlan = (plan: 'merchant' | 'agency') => {
-    setSelectedPlan(plan);
-  };
-
   return (
     <>
       {/* 1. The Cost of Silence (Problem & Loss Aversion) */}
@@ -30,17 +25,17 @@ export function LandingSections() {
       {/* 4. Live Slack Alert & Payload Preview */}
       <SlackPreview />
 
-      {/* 5. Programmatic SEO FAQ Section */}
-      <FaqSection />
+      {/* 5. Security & Compliance Standards */}
+      <SecurityCompliance />
 
       {/* 6. Dual Pricing Matrix */}
-      <PricingMatrix onSelectPlan={handleSelectPlan} />
+      <PricingMatrix />
 
-      {/* 7. High-Intent Pilot Application Form */}
-      <PilotApplicationForm
-        selectedPlan={selectedPlan}
-        onPlanChange={handleSelectPlan}
-      />
+      {/* 7. Programmatic SEO FAQ Section */}
+      <FaqSection />
+
+      {/* 8. Instant Live SaaS Onboarding */}
+      <InstantActivationCta />
     </>
   );
 }

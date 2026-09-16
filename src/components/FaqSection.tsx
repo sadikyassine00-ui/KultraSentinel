@@ -33,9 +33,9 @@ export function FaqSection() {
         "Kultra was built natively on Google Merchant API v1 from day one. As Google sunsets Content API v2.1, Kultra utilizes the new modular Accounts, Products, and Notifications sub-APIs with native Cloud Pub/Sub push architecture, avoiding deprecated endpoints, batch quota limits, and polling throttles.",
     },
     {
-      question: 'What happens during the pilot? How fast do I get access after applying?',
+      question: 'How quickly can I set up Kultra and begin receiving alerts?',
       answer:
-        "We personally review and onboard pilot accounts within 24 hours of submission. During your scheduled 15-minute onboarding session, we assist you in connecting your Google Merchant Center Cloud Pub/Sub push notification topic and designated Slack channel, run an instant comprehensive diagnostic audit of your live feed, and confirm real-time alert delivery immediately.",
+        'Setup takes under 2 minutes. Authenticate your Google Merchant Center account with read-only OAuth, paste your Slack incoming webhook URL, and Kultra immediately synchronizes catalog health and streams real-time Pub/Sub push alerts.',
     },
   ];
 
@@ -89,7 +89,7 @@ export function FaqSection() {
             Everything you need to know about zero-downtime feed monitoring
           </h2>
           <p className="mt-3 text-[14.5px] text-[var(--ink-secondary)] leading-[1.55]">
-            Architectural transparency, integration prerequisites, and pilot onboarding timelines.
+            Architectural transparency, integration prerequisites, and instant onboarding workflows.
           </p>
         </div>
 

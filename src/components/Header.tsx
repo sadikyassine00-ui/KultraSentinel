@@ -97,11 +97,9 @@ export function Header() {
   };
 
   const navLinks = [
-    { label: 'How It Works', href: '/#features' },
-    { label: 'Architecture', href: '/#architecture' },
-    { label: 'Integrations', href: '/#integrations' },
+    { label: 'Features', href: '/#features' },
+    { label: 'Security & Compliance', href: '/#security' },
     { label: 'Pricing', href: '/#pricing' },
-    { label: 'FAQ', href: '/#faq' },
   ];
 
   const getInitials = (emailOrName: string) => {
@@ -244,13 +242,13 @@ export function Header() {
                 href="/login"
                 className="text-[13px] text-[var(--ghost-text)] hover:text-[var(--ink-primary)] px-3 py-1.5 transition-colors duration-120"
               >
-                Log in
+                Sign In
               </Link>
               <Link
                 href="/register"
-                className="btn-primary !rounded-[3px]"
+                className="btn-primary !rounded-[3px] text-[13px] py-2 px-3.5"
               >
-                Start trial
+                Start Monitoring
               </Link>
             </div>
           )}
@@ -315,16 +313,16 @@ export function Header() {
               <Link
                 href="/login"
                 onClick={() => setMobileMenuOpen(false)}
-                className="btn-secondary !rounded-[3px] w-full justify-center"
+                className="btn-secondary !rounded-[3px] w-full justify-center text-[13px] py-2"
               >
-                Log in
+                Sign In
               </Link>
               <Link
                 href="/register"
                 onClick={() => setMobileMenuOpen(false)}
-                className="btn-primary !rounded-[3px] w-full justify-center"
+                className="btn-primary !rounded-[3px] w-full justify-center text-[13px] py-2"
               >
-                Start trial
+                Start Monitoring
               </Link>
             </div>
           )}

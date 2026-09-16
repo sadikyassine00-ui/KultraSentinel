@@ -1,4 +1,6 @@
 import React from 'react';
+import Link from 'next/link';
+import { ShieldCheck, Clock, Zap } from 'lucide-react';
 import { DashboardIllustration } from './DashboardIllustration';
 
 export function Hero() {
@@ -11,34 +13,52 @@ export function Hero() {
           className="font-display font-semibold text-[2.25rem] sm:text-[3rem] md:text-[3.6rem] text-[var(--ink-primary)] leading-[1.15] tracking-[-0.01em] max-w-[960px] mx-auto text-center"
           style={{ fontWeight: 600 }}
         >
-          Stop losing ad spend to silent Google Merchant disapprovals
+          Detect Google Merchant Disapprovals Before Silent Ad Traffic Drops.
         </h1>
 
         {/* Subheadline in Inter (High-contrast ink-secondary per §13) */}
-        <p className="mt-6 text-[15.5px] sm:text-[16.5px] text-[var(--ink-secondary)] leading-[1.65] max-w-[640px] mx-auto text-balance">
-          Google will not text you when policy changes silently kill your bestselling ads. Kultra monitors your feed 24/7 and delivers instant alerts before you waste ad spend.
+        <p className="mt-6 text-[15.5px] sm:text-[16.5px] text-[var(--ink-secondary)] leading-[1.65] max-w-[680px] mx-auto text-balance">
+          Instant sub-30-second Slack alerts with direct one-click fix links the moment Google&apos;s crawler flags a product violation.
         </p>
 
         {/* Action Group: Primary and Secondary buttons (§4 radius 3px) */}
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <a
-            href="#pilot"
-            className="btn-primary !rounded-[3px] text-[13px] px-5 py-2.5"
+          <Link
+            href="/register"
+            className="btn-primary !rounded-[3px] text-[13.5px] px-6 py-3"
           >
-            Start monitoring feed
-          </a>
+            Start Monitoring Now
+          </Link>
 
           <a
             href="#demo"
-            className="btn-secondary !rounded-[3px] text-[13px] px-5 py-2.5"
+            className="btn-secondary !rounded-[3px] text-[13.5px] px-6 py-3"
           >
-            View live triage demo
+            View Live Triage Demo
           </a>
+        </div>
+
+        {/* Three Friction Reducer Pills Directly Below Primary Action (§2 Landing Page Directive) */}
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+          <span className="tag-pill tag-ghost text-[11px] py-1 px-3 inline-flex items-center gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5 text-[var(--signal)]" strokeWidth={1.5} />
+            <span>No Credit Card Required</span>
+          </span>
+
+          <span className="tag-pill tag-ghost text-[11px] py-1 px-3 inline-flex items-center gap-1.5">
+            <Zap className="w-3.5 h-3.5 text-[var(--signal)]" strokeWidth={1.5} />
+            <span>Read-Only Catalog Access</span>
+          </span>
+
+          <span className="tag-pill tag-ghost text-[11px] py-1 px-3 inline-flex items-center gap-1.5">
+            <Clock className="w-3.5 h-3.5 text-[var(--signal)]" strokeWidth={1.5} />
+            <span>Set Up in Under 2 Minutes</span>
+          </span>
         </div>
       </div>
 
       {/* 2. Dashboard Graphic Stage: Visible above the fold peek, flat surface with hairline border */}
-      <div className="w-full max-w-[1140px] mx-auto mt-12 md:mt-16 relative">
+      <div id="demo" className="w-full max-w-[1140px] mx-auto mt-12 md:mt-16 relative">
         <div className="relative w-full rounded-[var(--radius-md)] border border-[var(--hairline)] bg-[var(--bg-surface)] overflow-hidden dashboard-frame-mask">
           <div className="w-full relative z-[1]">
             <DashboardIllustration />

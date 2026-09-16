@@ -3,21 +3,42 @@
 import React, { useState, Suspense } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Mail, Lock, Building, Globe } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Mail, Lock, Building, Globe, Check, AlertCircle, Loader2 } from 'lucide-react';
 
 function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const planParam = searchParams.get('plan');
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [companyName, setCompanyName] = useState('');
-  const [accountType, setAccountType] = useState<'merchant' | 'agency'>('merchant');
+  const [accountType, setAccountType] = useState<'merchant' | 'agency'>(
+    planParam === 'agency' ? 'agency' : 'merchant'
+  );
   const [website, setWebsite] = useState('');
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [touchedEmail, setTouchedEmail] = useState(false);
+  const [touchedPassword, setTouchedPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  const isPasswordValid = password.length >= 8;
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!agreedToTerms) {
+      setError('You must agree to the Terms of Service and acknowledge the Privacy Policy to proceed.');
+      return;
+    }
+
+    if (!isPasswordValid) {
+      setError('Password must be at least 8 characters long.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -26,17 +47,18 @@ function RegisterForm() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email,
+          email: email.trim(),
           password,
-          companyName,
+          companyName: companyName.trim(),
           accountType,
-          website,
+          website: website.trim(),
+          agreedToTerms,
         }),
       });
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Registration failed. Please check your details.');
+        throw new Error(data.error || 'Registration failed. Please verify your details.');
       }
 
       if (typeof window !== 'undefined') {
@@ -46,17 +68,17 @@ function RegisterForm() {
       router.push(data.redirectUrl || '/dashboard?just_connected=true');
       router.refresh();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Unable to complete registration.');
+      setError(err instanceof Error ? err.message : 'Unable to complete registration. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="w-full max-w-[440px]">
+    <div className="w-full max-w-[460px]">
       {/* Brand Header */}
       <div className="text-center mb-6">
-        <Link href="/" className="inline-block mb-4">
+        <Link href="/" className="inline-block mb-4 outline-none focus-visible:ring-2 focus-visible:ring-[#f2a93b] rounded-[3px]">
           <Image
             src="/assets/logos/kultra-logo-horizontal.svg"
             alt="Kultra"
@@ -77,15 +99,17 @@ function RegisterForm() {
       {/* Register Card */}
       <div className="rounded-[4px] bg-[#0e0f11] border border-[rgba(255,255,255,0.08)] p-6 sm:p-7">
         {error && (
-          <div className="mb-4 p-3 rounded-[3px] bg-[rgba(214,69,69,0.08)] border border-[#d64545] text-[#d64545] text-[12.5px] leading-relaxed">
-            {error}
+          <div className="mb-4 p-3 rounded-[3px] bg-[rgba(214,69,69,0.08)] border border-[#d64545] text-[#d64545] text-[12.5px] leading-relaxed flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>{error}</span>
           </div>
         )}
 
         <form onSubmit={handleRegister} className="space-y-3.5">
+          {/* Store or Agency Name */}
           <div>
             <label className="block text-[12.5px] font-semibold text-[#6b7078] mb-1">
-              Store or agency name
+              Store or agency name <span className="text-[#f2a93b]">*</span>
             </label>
             <div className="relative">
               <Building className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#45484f]" />
@@ -100,26 +124,48 @@ function RegisterForm() {
             </div>
           </div>
 
+          {/* Work Email with Real-time Validation */}
           <div>
-            <label className="block text-[12.5px] font-semibold text-[#6b7078] mb-1">
-              Work email
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-[12.5px] font-semibold text-[#6b7078]">
+                Work email <span className="text-[#f2a93b]">*</span>
+              </label>
+              {touchedEmail && isEmailValid && (
+                <span className="font-mono text-[10.5px] text-[#f2a93b] flex items-center gap-1">
+                  <Check className="w-3 h-3" /> Valid format
+                </span>
+              )}
+            </div>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#45484f]" />
               <input
                 type="email"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onBlur={() => setTouchedEmail(true)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (!touchedEmail) setTouchedEmail(true);
+                }}
                 placeholder="founder@acme.com"
-                className="w-full pl-9 pr-3 py-2 rounded-[3px] bg-[#0a0b0d] border border-[rgba(255,255,255,0.14)] text-[#f4f1ea] text-[13px] placeholder:text-[#45484f] focus:border-[#f2a93b] focus:outline-none focus:ring-1 focus:ring-[#f2a93b] transition-colors"
+                className={`w-full pl-9 pr-3 py-2 rounded-[3px] bg-[#0a0b0d] border text-[#f4f1ea] text-[13px] placeholder:text-[#45484f] focus:outline-none focus:ring-1 transition-colors ${
+                  touchedEmail && !isEmailValid && email.length > 0
+                    ? 'border-[#d64545] focus:border-[#d64545] focus:ring-[#d64545]'
+                    : 'border-[rgba(255,255,255,0.14)] focus:border-[#f2a93b] focus:ring-[#f2a93b]'
+                }`}
               />
             </div>
+            {touchedEmail && !isEmailValid && email.length > 0 && (
+              <p className="text-[11px] text-[#d64545] mt-1">
+                Please enter a valid work email address.
+              </p>
+            )}
           </div>
 
+          {/* Website */}
           <div>
             <label className="block text-[12.5px] font-semibold text-[#6b7078] mb-1">
-              Store website (optional)
+              Store or agency website <span className="font-mono text-[10.5px] text-[#45484f]">(optional)</span>
             </label>
             <div className="relative">
               <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#45484f]" />
@@ -133,9 +179,10 @@ function RegisterForm() {
             </div>
           </div>
 
+          {/* Account Type Selector */}
           <div>
             <label className="block text-[12.5px] font-semibold text-[#6b7078] mb-1">
-              Account type
+              Account plan
             </label>
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -147,7 +194,7 @@ function RegisterForm() {
                     : 'border-[rgba(255,255,255,0.14)] text-[#6b7078] hover:text-[#b9b3a5]'
                 }`}
               >
-                Standalone Merchant
+                Solo Merchant ($19/mo)
               </button>
               <button
                 type="button"
@@ -158,15 +205,29 @@ function RegisterForm() {
                     : 'border-[rgba(255,255,255,0.14)] text-[#6b7078] hover:text-[#b9b3a5]'
                 }`}
               >
-                Agency / MCA
+                PPC Agency ($99/mo)
               </button>
             </div>
           </div>
 
+          {/* Password with Inline Requirement Indicator */}
           <div>
-            <label className="block text-[12.5px] font-semibold text-[#6b7078] mb-1">
-              Create password (min 8 characters)
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-[12.5px] font-semibold text-[#6b7078]">
+                Password <span className="text-[#f2a93b]">*</span>
+              </label>
+              <span
+                className={`font-mono text-[10.5px] ${
+                  isPasswordValid
+                    ? 'text-[#f2a93b]'
+                    : touchedPassword
+                    ? 'text-[#6b7078]'
+                    : 'text-[#45484f]'
+                }`}
+              >
+                {isPasswordValid ? '✓ Minimum 8 chars met' : 'Min 8 characters'}
+              </span>
+            </div>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#45484f]" />
               <input
@@ -174,32 +235,72 @@ function RegisterForm() {
                 required
                 minLength={8}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onBlur={() => setTouchedPassword(true)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (!touchedPassword) setTouchedPassword(true);
+                }}
                 placeholder="Choose a strong password"
                 className="w-full pl-9 pr-3 py-2 rounded-[3px] bg-[#0a0b0d] border border-[rgba(255,255,255,0.14)] text-[#f4f1ea] text-[13px] placeholder:text-[#45484f] focus:border-[#f2a93b] focus:outline-none focus:ring-1 focus:ring-[#f2a93b] transition-colors"
               />
             </div>
           </div>
 
+          {/* MANDATORY LEGAL CONSENT CHECKBOX (§1 Form Compliance) */}
+          <div className="pt-2">
+            <label className="flex items-start gap-2.5 cursor-pointer select-none group">
+              <input
+                type="checkbox"
+                required
+                checked={agreedToTerms}
+                onChange={(e) => setAgreedToTerms(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded-[2px] bg-[#0a0b0d] border border-[rgba(255,255,255,0.2)] text-[#f2a93b] focus:ring-0 focus:ring-offset-0 accent-[#f2a93b] cursor-pointer"
+              />
+              <span className="text-[12px] text-[#b9b3a5] leading-[1.5]">
+                I agree to the{' '}
+                <Link
+                  href="/terms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#f4f1ea] underline underline-offset-2 hover:text-[#f2a93b] transition-colors"
+                >
+                  Terms of Service
+                </Link>{' '}
+                and acknowledge the{' '}
+                <Link
+                  href="/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#f4f1ea] underline underline-offset-2 hover:text-[#f2a93b] transition-colors"
+                >
+                  Privacy Policy
+                </Link>
+                .
+              </span>
+            </label>
+
+            {!agreedToTerms && (
+              <p className="text-[11px] font-mono text-[#45484f] mt-1.5 pl-6">
+                Required for workspace provisioning and API telemetry access.
+              </p>
+            )}
+          </div>
+
+          {/* Hard-Disabled Submit Button with Accessible Dynamic Loading State */}
           <button
             type="submit"
-            disabled={loading}
-            className="w-full !mt-5 py-2.5 px-4 rounded-[3px] bg-[#f2a93b] hover:bg-[#f6b855] text-[#1a1305] text-[12.5px] font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            disabled={loading || !agreedToTerms}
+            className="w-full !mt-5 py-2.5 px-4 rounded-[3px] bg-[#f2a93b] hover:bg-[#f6b855] text-[#1a1305] text-[12.5px] font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 outline-none focus-visible:ring-2 focus-visible:ring-[#f2a93b]"
           >
-            {loading ? 'Creating workspace...' : 'Start 14-day free trial'}
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Creating workspace...</span>
+              </>
+            ) : (
+              <span>Start 14-day free trial</span>
+            )}
           </button>
-
-          <p className="text-[11.5px] text-[#6b7078] text-center pt-1 leading-normal">
-            By signing up, you agree to our{' '}
-            <Link href="/terms" className="text-[#b9b3a5] hover:text-[#f4f1ea] underline underline-offset-2">
-              Terms of Service
-            </Link>{' '}
-            and{' '}
-            <Link href="/privacy" className="text-[#b9b3a5] hover:text-[#f4f1ea] underline underline-offset-2">
-              Privacy Policy
-            </Link>
-            .
-          </p>
         </form>
       </div>
 

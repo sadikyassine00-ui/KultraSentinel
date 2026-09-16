@@ -1731,7 +1731,7 @@ export default function AdminDashboardPage() {
                         <div className="p-3.5 bg-[#0a0b0d] border border-[rgba(255,255,255,0.08)] rounded-[3px] space-y-2">
                           <label className="block text-xs font-semibold text-[#f4f1ea]">Registration gate</label>
                           <p className="text-[11px] text-[#6b7078]">
-                            Regulates pilot onboarding and access controls on the public landing page.
+                            Regulates account registration and access controls on the platform.
                           </p>
                           <select
                             value={config.registration_gate}
@@ -1740,9 +1740,9 @@ export default function AdminDashboardPage() {
                             }
                             className="w-full bg-[#0e0f11] border border-[rgba(255,255,255,0.14)] rounded-[3px] p-2 text-xs text-[#f4f1ea] font-sans focus:outline-none focus:border-[#f2a93b] transition-colors cursor-pointer"
                           >
-                            <option value="open">Open Sign-ups (Standard Pilot Intake)</option>
+                            <option value="open">Open Sign-ups (Live Public Registration)</option>
                             <option value="invite_only">Invite-only Code Gate (Manual Approval Required)</option>
-                            <option value="closed">Closed Registration (Waitlist Paused)</option>
+                            <option value="closed">Closed Registration (Maintenance Mode)</option>
                           </select>
                         </div>
 

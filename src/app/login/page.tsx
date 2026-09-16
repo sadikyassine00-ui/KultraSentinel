@@ -76,7 +76,7 @@ function LoginForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           demoEmail: 'demo-merchant@example.com',
-          demoName: 'Pilot Merchant',
+          demoName: 'Merchant',
         }),
       });
 

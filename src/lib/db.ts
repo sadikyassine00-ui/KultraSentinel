@@ -1028,6 +1028,13 @@ export async function deleteStoreForTenant(id: number | string, tenantEmail: str
   if (sql) {
     try {
       await ensureSchema();
+      // Purge cached incidents associated with this store to ensure complete data purging
+      await sql`
+        DELETE FROM incidents
+        WHERE store_id = ${String(id)} OR gmc_id IN (
+          SELECT gmc_id FROM stores WHERE id = ${String(id)} AND LOWER(tenant_email) = ${cleanEmail}
+        );
+      `;
       const rows = await sql`
         DELETE FROM stores
         WHERE id = ${String(id)} AND LOWER(tenant_email) = ${cleanEmail}
@@ -1043,7 +1050,12 @@ export async function deleteStoreForTenant(id: number | string, tenantEmail: str
     (s) => String(s.id) === String(id) && s.tenant_email.toLowerCase().trim() === cleanEmail
   );
   if (idx !== -1) {
-    inMemoryStores.splice(idx, 1);
+    const removed = inMemoryStores.splice(idx, 1)[0];
+    for (let i = inMemoryIncidents.length - 1; i >= 0; i--) {
+      if (String(inMemoryIncidents[i].store_id) === String(id) || inMemoryIncidents[i].gmc_id === removed.gmc_id) {
+        inMemoryIncidents.splice(i, 1);
+      }
+    }
     return true;
   }
   return false;

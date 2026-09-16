@@ -1,21 +1,14 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { Check } from 'lucide-react';
 
 interface PricingMatrixProps {
-  onSelectPlan: (plan: 'merchant' | 'agency') => void;
+  onSelectPlan?: (plan: 'merchant' | 'agency') => void;
 }
 
 export function PricingMatrix({ onSelectPlan }: PricingMatrixProps) {
-  const handlePlanClick = (plan: 'merchant' | 'agency') => {
-    onSelectPlan(plan);
-    const formElement = document.getElementById('pilot-application') || document.getElementById('beta');
-    if (formElement) {
-      formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  };
-
   return (
     <section
       id="pricing"
@@ -35,10 +28,10 @@ export function PricingMatrix({ onSelectPlan }: PricingMatrixProps) {
           </p>
         </div>
 
-        {/* Founder Trust Line */}
+        {/* Live Onboarding Trust Line */}
         <div className="max-w-[960px] mx-auto mb-10 rounded-[var(--radius-sm)] bg-[var(--bg-surface)] border border-[var(--hairline)] p-3.5 text-center">
           <span className="text-[13px] text-[var(--ink-secondary)]">
-            We are personally onboarding every pilot account this month: direct engineer support, no automated queue.
+            14-day full feature trial. Instant activation with read-only catalog access. Cancel anytime.
           </span>
         </div>
 
@@ -102,13 +95,13 @@ export function PricingMatrix({ onSelectPlan }: PricingMatrixProps) {
 
             {/* CTA Button */}
             <div className="mt-8 pt-6 border-t border-[var(--hairline)]">
-              <button
-                type="button"
-                onClick={() => handlePlanClick('merchant')}
-                className="btn-secondary w-full justify-center text-[13px] py-2.5"
+              <Link
+                href="/register?plan=merchant"
+                onClick={() => onSelectPlan?.('merchant')}
+                className="btn-secondary w-full justify-center text-[13px] py-2.5 !rounded-[3px]"
               >
-                Apply for Merchant pilot
-              </button>
+                Start 14-day free trial
+              </Link>
             </div>
           </div>
 
@@ -173,13 +166,13 @@ export function PricingMatrix({ onSelectPlan }: PricingMatrixProps) {
 
             {/* CTA Button */}
             <div className="mt-8 pt-6 border-t border-[var(--hairline)]">
-              <button
-                type="button"
-                onClick={() => handlePlanClick('agency')}
-                className="btn-primary w-full justify-center text-[13px] py-2.5"
+              <Link
+                href="/register?plan=agency"
+                onClick={() => onSelectPlan?.('agency')}
+                className="btn-primary w-full justify-center text-[13px] py-2.5 !rounded-[3px]"
               >
-                Apply for Agency pilot
-              </button>
+                Start 14-day free trial
+              </Link>
             </div>
           </div>
         </div>
