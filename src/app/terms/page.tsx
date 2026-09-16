@@ -5,7 +5,7 @@ import { ArrowLeft, FileText, AlertTriangle, ShieldCheck, Scale, ExternalLink } 
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Terms of Service | Kultra — Google Merchant Center Telemetry',
+  title: 'Terms of Service | Kultra',
   description:
     'Terms of Service governing the use of Kultra (usekultra.com) SaaS catalog monitoring, diagnostic telemetry, and alerting services.',
 };
@@ -51,7 +51,7 @@ export default function TermsOfServicePage() {
         <div className="space-y-4 border-b border-[rgba(255,255,255,0.08)] pb-8">
           <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-[100px] border border-[rgba(255,255,255,0.14)] bg-[rgba(255,255,255,0.02)] text-[#b9b3a5] text-[11px] font-mono tracking-[0.02em]">
             <FileText className="w-3.5 h-3.5 text-[#f2a93b]" />
-            <span>SaaS Commercial Terms & Conditions</span>
+            <span>Commercial SaaS Terms</span>
           </div>
 
           <h1 className="text-3xl sm:text-4xl font-semibold font-display text-[#f4f1ea] tracking-tight">
@@ -59,7 +59,7 @@ export default function TermsOfServicePage() {
           </h1>
 
           <div className="flex flex-wrap items-center gap-4 text-xs font-mono text-[#6b7078]">
-            <span>Entity: Kultra Inc. (usekultra.com)</span>
+            <span>Party: Kultra (Ouarzazate, Morocco)</span>
             <span>•</span>
             <span>Effective Date: September 16, 2026</span>
             <span>•</span>
@@ -73,173 +73,129 @@ export default function TermsOfServicePage() {
             Terms Table of Contents
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[13px] text-[#b9b3a5]">
-            <a href="#acceptance" className="hover:text-[#f4f1ea] hover:underline underline-offset-4">
-              1. Acceptance of Terms & Service Scope
+            <a href="#parties" className="hover:text-[#f4f1ea] hover:underline underline-offset-4">
+              1. Parties & Acceptance of Terms
             </a>
-            <a href="#third-party" className="hover:text-[#f4f1ea] hover:underline underline-offset-4">
-              2. Third-Party Dependency & Affiliation Disclaimer
+            <a href="#service-scope" className="hover:text-[#f4f1ea] hover:underline underline-offset-4">
+              2. Service Scope & Third-Party Affiliation Disclaimer
             </a>
-            <a href="#no-guarantee" className="hover:text-[#f4f1ea] hover:underline underline-offset-4">
-              3. No Guarantee of Ad Spend or Approval
+            <a href="#api-dependencies" className="hover:text-[#f4f1ea] hover:underline underline-offset-4">
+              3. Google API Delivery Dependencies & Performance
             </a>
-            <a href="#accounts" className="hover:text-[#f4f1ea] hover:underline underline-offset-4">
+            <a href="#merchant-authority" className="hover:text-[#f4f1ea] hover:underline underline-offset-4">
               4. Merchant Authority & Acceptable Use
             </a>
             <a href="#subscriptions" className="hover:text-[#f4f1ea] hover:underline underline-offset-4">
-              5. Subscriptions, Invoicing & Cancellations
+              5. Subscriptions, Fees & Cancellations
             </a>
             <a href="#intellectual-property" className="hover:text-[#f4f1ea] hover:underline underline-offset-4">
-              6. Intellectual Property & Customer Feeds
+              6. Intellectual Property & Telemetry Data
             </a>
             <a href="#liability" className="hover:text-[#f4f1ea] hover:underline underline-offset-4">
               7. Limitation of Liability
             </a>
             <a href="#governing-law" className="hover:text-[#f4f1ea] hover:underline underline-offset-4">
-              8. Governing Law & Dispute Resolution
+              8. Governing Law & Contact Information
             </a>
           </div>
         </nav>
 
-        {/* SECTION 1 */}
-        <section id="acceptance" className="space-y-3 scroll-mt-20">
+        {/* SECTION 1 - PARTIES & ACCEPTANCE */}
+        <section id="parties" className="space-y-3 scroll-mt-20">
           <h2 className="text-xl font-semibold font-display text-[#f4f1ea]">
-            1. Acceptance of Terms & Service Scope
+            1. Parties & Acceptance of Terms
           </h2>
           <p className="text-[14.5px] leading-[1.65] text-[#b9b3a5]">
             These Terms of Service (&quot;Terms&quot;) constitute a legally binding agreement between you (&quot;Customer&quot;, &quot;you&quot;, or &quot;your&quot;)
-            and Kultra Inc. (&quot;Kultra&quot;, &quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) regarding your access to and use of{' '}
+            and <strong className="text-[#f4f1ea] font-medium">Kultra</strong> (&quot;we&quot;, &quot;us&quot;, or &quot;our&quot;), based in{' '}
+            <strong className="text-[#f4f1ea] font-medium">Ouarzazate, Morocco</strong>, governing your access to and use of{' '}
             <a href="https://www.usekultra.com" className="text-[#f4f1ea] underline underline-offset-4">
               https://www.usekultra.com
             </a>{' '}
-            and associated automated monitoring and notification services (the &quot;Service&quot;).
+            and associated automated monitoring and alerting services (the &quot;Service&quot;).
           </p>
           <p className="text-[14.5px] leading-[1.65] text-[#b9b3a5]">
-            Kultra provides real-time automated telemetry and diagnostic notification software for Google Merchant Center
-            accounts, enabling merchants and advertising agencies to receive alerts when products are disapproved, restricted,
-            or affected by policy violations.
-          </p>
-          <p className="text-[14.5px] leading-[1.65] text-[#b9b3a5]">
-            By registering an account, connecting a Google Merchant Center store, or using the Service, you confirm that you
-            have read, understood, and agree to be bound by these Terms and our Privacy Policy.
+            By registering an account, connecting a Google Merchant Center store, or using any part of the Service, you confirm
+            that you have read, understood, and agree to be bound by these Terms and our Privacy Policy. If you are entering into
+            this agreement on behalf of a company or agency, you represent that you possess the authority to bind that entity.
           </p>
         </section>
 
-        {/* SECTION 2 - THIRD PARTY DISCLAIMER */}
-        <section id="third-party" className="space-y-4 scroll-mt-20">
+        {/* SECTION 2 - SERVICE SCOPE & DISCLAIMERS */}
+        <section id="service-scope" className="space-y-4 scroll-mt-20">
           <h2 className="text-xl font-semibold font-display text-[#f4f1ea]">
-            2. Third-Party Dependency & Affiliation Disclaimer
+            2. Service Scope & Third-Party Affiliation Disclaimer
           </h2>
 
           <div className="p-5 rounded-[4px] bg-[#0e0f11] border border-[rgba(255,255,255,0.14)] space-y-2.5">
             <div className="flex items-center gap-2 text-[#f2a93b] font-mono text-xs tracking-wide">
               <Scale className="w-4 h-4" />
-              <span>INDEPENDENT PROVIDER DISCLAIMER</span>
+              <span>INDEPENDENT DIAGNOSTIC TOOL DISCLAIMER</span>
             </div>
             <p className="text-[14.5px] leading-[1.65] text-[#f4f1ea] font-medium">
-              Kultra is an independent monitoring tool and is not affiliated with, endorsed by, sponsored by, or operated by
-              Google LLC, Alphabet Inc., Shopify Inc., or Slack Technologies.
+              Kultra is an independent diagnostic software tool and is not affiliated with, authorized by, sponsored by, or endorsed by Google LLC, Alphabet Inc., Shopify Inc., or Slack Technologies.
             </p>
             <p className="text-xs text-[#b9b3a5] leading-[1.5]">
-              Google Merchant Center, Google Shopping, Google Cloud, Shopify, and Slack are registered trademarks of their
-              respective owners. Kultra utilizes official public APIs (such as the Google Content API for Shopping) in compliance
-              with third-party terms of service and developer guidelines.
+              Google, Google Merchant Center, Google Shopping, Google Cloud, Shopify, and Slack are registered trademarks of their respective owners. Kultra accesses official public APIs in strict accordance with third-party terms of service and developer guidelines.
             </p>
           </div>
         </section>
 
-        {/* SECTION 3 - NO GUARANTEE OF APPROVAL */}
-        <section id="no-guarantee" className="space-y-4 scroll-mt-20">
+        {/* SECTION 3 - API DELIVERY DEPENDENCIES */}
+        <section id="api-dependencies" className="space-y-4 scroll-mt-20">
           <h2 className="text-xl font-semibold font-display text-[#f4f1ea]">
-            3. No Guarantee of Ad Spend, Ranking, or Product Re-Approval
+            3. Google API Delivery Dependencies & Performance
           </h2>
           <p className="text-[14.5px] leading-[1.65] text-[#b9b3a5]">
-            Kultra functions strictly as an operational monitoring, diagnostics, and notification mechanism. You acknowledge
-            and agree that:
+            Kultra provides real-time automated telemetry and diagnostic notification mechanisms. You acknowledge and agree that:
           </p>
 
           <ul className="list-disc list-inside space-y-2.5 text-[14px] text-[#b9b3a5] pl-2">
             <li>
-              <strong className="text-[#f4f1ea]">Observation Only:</strong> Kultra reads and surfaces disapproval states as reported
-              by Google&apos;s Content API for Shopping and Cloud Pub/Sub events. Kultra does not alter, write, overwrite, or edit your
-              product catalog feed data, campaign settings, bids, or pricing.
+              <strong className="text-[#f4f1ea] font-medium">API Dependency:</strong> Detection of product disapprovals, policy violations, and account suspensions is fundamentally dependent on data delivered by Google APIs and Google Cloud Pub/Sub events. Kultra is not liable for undetected issues or notification delays resulting from upstream Google API outages, propagation latencies, or third-party delivery service failures.
             </li>
             <li>
-              <strong className="text-[#f4f1ea]">No Approval Guarantee:</strong> Resolving product issues reported by Kultra does not
-              guarantee that Google&apos;s automated review algorithms or human policy teams will re-approve your products or reinstate
-              suspended accounts.
+              <strong className="text-[#f4f1ea] font-medium">Ad Spend & Campaign Decisions:</strong> Kultra provides monitoring notifications and diagnostic telemetry to assist your team. You retain sole responsibility for managing your Google Ads campaigns, budgets, product catalogs, and compliance with Google Shopping policies. Kultra is not liable for campaign losses, lost sales, or wasted advertising spend resulting from third-party API delivery delays.
             </li>
             <li>
-              <strong className="text-[#f4f1ea]">No Advertising Performance Guarantee:</strong> Kultra makes no representations or
-              guarantees regarding Google Ads performance, return on ad spend (ROAS), click-through rates, impression volumes, or sales conversions.
-            </li>
-            <li>
-              <strong className="text-[#f4f1ea]">Merchant Feed Responsibility:</strong> You retain sole legal responsibility for the
-              accuracy, legality, pricing, and compliance of your product catalog feeds with Google Shopping Policies and applicable consumer protection laws.
+              <strong className="text-[#f4f1ea] font-medium">Passive Diagnostic Nature:</strong> Kultra does not modify, edit, or manage your inventory, pricing, or product descriptions. Resolving disapprovals remains the sole responsibility of the merchant.
             </li>
           </ul>
         </section>
 
         {/* SECTION 4 - ACCEPTABLE USE */}
-        <section id="accounts" className="space-y-4 scroll-mt-20">
+        <section id="merchant-authority" className="space-y-4 scroll-mt-20">
           <h2 className="text-xl font-semibold font-display text-[#f4f1ea]">
             4. Merchant Authority & Acceptable Use
           </h2>
           <p className="text-[14.5px] leading-[1.65] text-[#b9b3a5]">
-            To access and use the Service, you represent and warrant that:
+            By connecting a store or Merchant Center Account to Kultra, you represent and warrant that:
           </p>
-
-          <div className="space-y-2 text-[14px] text-[#b9b3a5]">
-            <p>
-              (a) You are at least 18 years old and possess the legal capacity to enter into binding agreements on behalf of yourself or the entity you represent;
-            </p>
-            <p>
-              (b) You hold lawful ownership, administrative authority, or explicit client authorization to grant OAuth access to the Google Merchant Center accounts you connect;
-            </p>
-            <p>
-              (c) You will not use the Service for any unlawful purpose, to transmit malicious software, or to attempt unauthorized access to other tenant workspaces;
-            </p>
-            <p>
-              (d) You will not reverse engineer, decompile, disassemble, or derive the source code of Kultra&apos;s proprietary telemetry pipeline or dispatch workers.
-            </p>
-          </div>
-        </section>
-
-        {/* SECTION 5 - BILLING & CANCELLATIONS */}
-        <section id="subscriptions" className="space-y-4 scroll-mt-20">
-          <h2 className="text-xl font-semibold font-display text-[#f4f1ea]">
-            5. Subscriptions, Invoicing & Cancellations
-          </h2>
-          <p className="text-[14.5px] leading-[1.65] text-[#b9b3a5]">
-            Kultra offers recurring subscription tiers (including Solo Merchant and PPC Agency plans) as published on our
-            pricing page.
-          </p>
-
           <ul className="list-disc list-inside space-y-2 text-[14px] text-[#b9b3a5] pl-2">
-            <li>
-              <strong className="text-[#f4f1ea]">Billing Cycle:</strong> Subscription fees are billed in advance on a recurring monthly or annual basis via Stripe.
-            </li>
-            <li>
-              <strong className="text-[#f4f1ea]">Pilot & Trial Periods:</strong> Trial access provides full monitoring capabilities for the specified trial duration. Upon conclusion, paid subscription activation is required to maintain continuous alerting.
-            </li>
-            <li>
-              <strong className="text-[#f4f1ea]">Cancellation:</strong> You may cancel your subscription at any time through your dashboard billing settings. Cancellation becomes effective at the end of the current paid billing cycle. No prorated refunds are issued for partial billing periods.
-            </li>
+            <li>You are the authorized owner, administrator, or designated agency operator of the connected Google Merchant Center Account ID.</li>
+            <li>You will maintain the confidentiality of your account credentials and immediately notify Kultra of any unauthorized access.</li>
+            <li>You will not use the Service for any unlawful purpose or in violation of Google Merchant Center program policies.</li>
+            <li>You will not attempt to reverse engineer, probe, or disrupt Kultra&apos;s infrastructure or monitoring pipelines.</li>
           </ul>
         </section>
 
-        {/* SECTION 6 - INTELLECTUAL PROPERTY */}
-        <section id="intellectual-property" className="space-y-3 scroll-mt-20">
+        {/* SECTION 5 - SUBSCRIPTIONS & FEES */}
+        <section id="subscriptions" className="space-y-4 scroll-mt-20">
           <h2 className="text-xl font-semibold font-display text-[#f4f1ea]">
-            6. Intellectual Property & Customer Feeds
+            5. Subscriptions, Fees & Cancellations
           </h2>
           <p className="text-[14.5px] leading-[1.65] text-[#b9b3a5]">
-            Kultra retains all rights, title, and interest in and to the Service, including all software, algorithms, user
-            interfaces, designs, documentation, and trademarks.
+            Kultra provides flat-rate monthly subscriptions for merchants and agencies. Subscriptions renew automatically each billing cycle unless cancelled prior to the renewal date. You may cancel your subscription at any time through your dashboard settings. Upon cancellation, access to monitoring continues through the end of the current paid billing period.
           </p>
+        </section>
+
+        {/* SECTION 6 - INTELLECTUAL PROPERTY */}
+        <section id="intellectual-property" className="space-y-4 scroll-mt-20">
+          <h2 className="text-xl font-semibold font-display text-[#f4f1ea]">
+            6. Intellectual Property & Telemetry Data
+          </h2>
           <p className="text-[14.5px] leading-[1.65] text-[#b9b3a5]">
-            You retain all rights, title, and ownership in your product data, brand assets, and Merchant Center feeds. You grant
-            Kultra a limited, non-exclusive license to process your feed telemetry solely to the extent necessary to deliver the
-            monitoring and alert services.
+            As between the parties, you retain all right, title, and interest in and to your product catalogs and store data. Kultra retains all intellectual property rights in and to the Service, including software, algorithms, telemetry interfaces, and brand assets.
           </p>
         </section>
 
@@ -258,7 +214,7 @@ export default function TermsOfServicePage() {
               TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW:
             </p>
             <p className="text-[14px] leading-[1.65] text-[#b9b3a5]">
-              (A) IN NO EVENT SHALL KULTRA, ITS DIRECTORS, EMPLOYEES, AGENTS, OR SUPPLIERS BE LIABLE FOR ANY INDIRECT,
+              (A) IN NO EVENT SHALL KULTRA, ITS FOUNDERS, EMPLOYEES, OR SUPPLIERS BE LIABLE FOR ANY INDIRECT,
               INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING WITHOUT LIMITATION, LOSS OF PROFITS, LOST
               ADVERTISING SPEND, LOST REVENUE, LOSS OF REPUTATION, OR BUSINESS INTERRUPTION, ARISING OUT OF OR IN CONNECTION
               WITH THE SERVICE OR THESE TERMS.
@@ -274,30 +230,32 @@ export default function TermsOfServicePage() {
         {/* SECTION 8 - GOVERNING LAW */}
         <section id="governing-law" className="space-y-4 scroll-mt-20 border-t border-[rgba(255,255,255,0.08)] pt-8">
           <h2 className="text-xl font-semibold font-display text-[#f4f1ea]">
-            8. Governing Law & Dispute Resolution
+            8. Governing Law & Contact Information
           </h2>
           <p className="text-[14.5px] leading-[1.65] text-[#b9b3a5]">
-            These Terms shall be governed by and construed in accordance with the laws of the State of Delaware, United States,
-            without regard to conflict of law principles. Any dispute arising out of or relating to these Terms shall be resolved
-            through good-faith informal negotiation before initiating formal legal proceedings.
+            These Terms shall be governed by and construed in accordance with the applicable commercial laws of the Kingdom of Morocco, without regard to conflict of law principles. Any dispute arising out of or in connection with these Terms shall be resolved through good-faith amicable negotiation before submitting to the competent commercial courts of Morocco.
           </p>
 
           <div className="p-4 rounded-[4px] bg-[#0e0f11] border border-[rgba(255,255,255,0.08)] space-y-2 font-mono text-xs text-[#b9b3a5]">
             <div>
-              <span className="text-[#6b7078]">Legal Inquiries: </span>
-              <a href="mailto:legal@usekultra.com" className="text-[#f2a93b] underline underline-offset-4">
-                legal@usekultra.com
+              <span className="text-[#6b7078]">Operator: </span>
+              <span className="text-[#f4f1ea]">Kultra</span>
+            </div>
+            <div>
+              <span className="text-[#6b7078]">Location: </span>
+              <span className="text-[#f4f1ea]">Ouarzazate, Morocco</span>
+            </div>
+            <div>
+              <span className="text-[#6b7078]">Single Contact Email: </span>
+              <a href="mailto:contact@usekultra.com" className="text-[#f2a93b] underline underline-offset-4">
+                contact@usekultra.com
               </a>
             </div>
             <div>
-              <span className="text-[#6b7078]">Support: </span>
-              <a href="mailto:support@usekultra.com" className="text-[#f2a93b] underline underline-offset-4">
-                support@usekultra.com
+              <span className="text-[#6b7078]">Website: </span>
+              <a href="https://www.usekultra.com" className="text-[#f4f1ea] underline underline-offset-4">
+                https://www.usekultra.com
               </a>
-            </div>
-            <div>
-              <span className="text-[#6b7078]">Headquarters: </span>
-              <span className="text-[#f4f1ea]">Kultra Inc., Wilmington, DE, USA</span>
             </div>
           </div>
         </section>
@@ -306,7 +264,7 @@ export default function TermsOfServicePage() {
       {/* Minimal Footer */}
       <footer className="border-t border-[rgba(255,255,255,0.08)] bg-[#0a0b0d] py-8 text-center text-xs font-mono text-[#6b7078]">
         <div className="max-w-4xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>© {new Date().getFullYear()} Kultra. All rights reserved.</p>
+          <p>© 2026 Kultra. All rights reserved.</p>
           <div className="flex items-center gap-4 text-[#b9b3a5]">
             <Link href="/" className="hover:text-[#f4f1ea] transition-colors">
               Home

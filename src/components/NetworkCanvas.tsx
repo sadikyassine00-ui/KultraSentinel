@@ -35,7 +35,7 @@ interface BrandHub {
 interface SignalPacket {
   fromNodeIdx: number;
   toHubIdx: number;
-  progress: number; // 0 to 1
+  progress: number;
   speed: number;
 }
 
@@ -61,11 +61,20 @@ export function NetworkCanvas() {
     let nodes: ConstellationNode[] = [];
     let packets: SignalPacket[] = [];
 
+    // Interactive mouse state
+    const mouse = {
+      x: -1000,
+      y: -1000,
+      targetX: -1000,
+      targetY: -1000,
+      active: false,
+    };
+
     // 4 designated brand hubs connecting the network to real merchant integrations
     const hubs: BrandHub[] = [
       {
         id: 'google',
-        name: 'Google Merchant',
+        name: 'Google Merchant Center',
         baseXRatio: 0.12,
         baseYRatio: 0.28,
         x: 0,
@@ -93,7 +102,7 @@ export function NetworkCanvas() {
       },
       {
         id: 'slack',
-        name: 'Slack Telemetry',
+        name: 'Slack Channel',
         baseXRatio: 0.86,
         baseYRatio: 0.24,
         x: 0,
@@ -139,8 +148,8 @@ export function NetworkCanvas() {
         hub.y = height * hub.baseYRatio;
       }
 
-      // Constellation node distribution: 20-36 nodes total
-      const count = Math.max(18, Math.min(36, Math.floor((width * height) / 40000)));
+      // Higher density of constellation nodes: 45 to 85 nodes depending on viewport area
+      const count = Math.max(45, Math.min(85, Math.floor((width * height) / 18000)));
       nodes = [];
 
       for (let i = 0; i < count; i++) {
@@ -151,26 +160,38 @@ export function NetworkCanvas() {
           y: by,
           baseX: bx,
           baseY: by,
-          radius: 1.5 + Math.random() * 0.75, // 1.5 - 2.25px
+          radius: 1.4 + Math.random() * 0.7,
           phaseX: Math.random() * Math.PI * 2,
           phaseY: Math.random() * Math.PI * 2,
-          speedX: 0.00035 + Math.random() * 0.0003,
-          speedY: 0.0003 + Math.random() * 0.0003,
-          amplitudeX: 12 + Math.random() * 18,
-          amplitudeY: 10 + Math.random() * 14,
-          isSignal: i % 7 === 0, // Strategic signal accent nodes
+          speedX: 0.00032 + Math.random() * 0.00028,
+          speedY: 0.00028 + Math.random() * 0.00028,
+          amplitudeX: 10 + Math.random() * 16,
+          amplitudeY: 8 + Math.random() * 14,
+          isSignal: i % 6 === 0, // Strategic signal accent nodes
         });
       }
 
-      // Seed packets
+      // Seed packets along hubs
       packets = [
         { fromNodeIdx: 0, toHubIdx: 0, progress: 0.1, speed: 0.0025 },
-        { fromNodeIdx: 2, toHubIdx: 1, progress: 0.5, speed: 0.003 },
-        { fromNodeIdx: 4, toHubIdx: 2, progress: 0.3, speed: 0.0028 },
-        { fromNodeIdx: 6, toHubIdx: 3, progress: 0.7, speed: 0.0026 },
+        { fromNodeIdx: 3, toHubIdx: 1, progress: 0.5, speed: 0.003 },
+        { fromNodeIdx: 6, toHubIdx: 2, progress: 0.3, speed: 0.0028 },
+        { fromNodeIdx: 9, toHubIdx: 3, progress: 0.7, speed: 0.0026 },
       ];
     }
 
+    const handlePointerMove = (e: PointerEvent) => {
+      mouse.targetX = e.clientX;
+      mouse.targetY = e.clientY;
+      mouse.active = true;
+    };
+
+    const handlePointerLeave = () => {
+      mouse.active = false;
+    };
+
+    window.addEventListener('pointermove', handlePointerMove, { passive: true });
+    window.addEventListener('pointerleave', handlePointerLeave, { passive: true });
     window.addEventListener('resize', resize, { passive: true });
     resize();
 
@@ -183,7 +204,16 @@ export function NetworkCanvas() {
 
       ctx.clearRect(0, 0, width, height);
 
-      // 1. Update Hub and Node positions with smooth continuous motion
+      // Smooth mouse interpolation for fluid interactive response
+      if (mouse.active) {
+        mouse.x += (mouse.targetX - mouse.x) * 0.12;
+        mouse.y += (mouse.targetY - mouse.y) * 0.12;
+      } else {
+        mouse.x += (-1000 - mouse.x) * 0.08;
+        mouse.y += (-1000 - mouse.y) * 0.08;
+      }
+
+      // 1. Update Hub and Node positions with smooth organic motion
       if (!motionQuery.matches) {
         // Update brand hubs
         for (const hub of hubs) {
@@ -199,8 +229,25 @@ export function NetworkCanvas() {
         for (const n of nodes) {
           n.phaseX += n.speedX * dt;
           n.phaseY += n.speedY * dt;
-          n.x = n.baseX + Math.sin(n.phaseX) * n.amplitudeX;
-          n.y = n.baseY + Math.cos(n.phaseY) * n.amplitudeY;
+
+          let targetX = n.baseX + Math.sin(n.phaseX) * n.amplitudeX;
+          let targetY = n.baseY + Math.cos(n.phaseY) * n.amplitudeY;
+
+          // Interactive hover attraction: nodes near cursor pull gently toward mouse
+          if (mouse.active) {
+            const dx = mouse.x - targetX;
+            const dy = mouse.y - targetY;
+            const dist = Math.hypot(dx, dy);
+            const hoverRadius = 180;
+            if (dist < hoverRadius) {
+              const pullStrength = (1 - dist / hoverRadius) * 14;
+              targetX += (dx / dist) * pullStrength;
+              targetY += (dy / dist) * pullStrength;
+            }
+          }
+
+          n.x += (targetX - n.x) * 0.1;
+          n.y += (targetY - n.y) * 0.1;
         }
       }
 
@@ -218,33 +265,66 @@ export function NetworkCanvas() {
         smsHubRef.current.style.transform = `translate3d(${hubs[3].x}px, ${hubs[3].y}px, 0) translate(-50%, -50%)`;
       }
 
-      // 2. Draw lines between nearby constellation nodes (Loose, organic web)
-      const maxLineDist = Math.min(width * 0.28, 250);
+      // 2. Draw lines between nearby constellation nodes (Enhanced Density + Hover Interconnection)
+      const baseLineDist = Math.min(width * 0.22, 190);
+      const mouseInteractionRadius = 200;
       ctx.lineWidth = 1;
 
       for (let i = 0; i < nodes.length; i++) {
         const n1 = nodes[i];
         let connectionCount = 0;
 
+        // Proximity to mouse increases connection reach and intensity
+        const distToMouse1 = mouse.active ? Math.hypot(n1.x - mouse.x, n1.y - mouse.y) : 9999;
+        const isNearMouse = distToMouse1 < mouseInteractionRadius;
+
         for (let j = i + 1; j < nodes.length; j++) {
-          if (connectionCount >= 2) break;
+          // Allow up to 3 connections normally, or 4 if hovering near cursor
+          const maxConnections = isNearMouse ? 4 : 3;
+          if (connectionCount >= maxConnections) break;
+
           const n2 = nodes[j];
           const dist = Math.hypot(n1.x - n2.x, n1.y - n2.y);
 
-          if (dist < maxLineDist) {
-            const alpha = (1 - dist / maxLineDist) * 0.12;
-            ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+          // If both nodes are near cursor, line distance threshold expands to connect them together
+          const distToMouse2 = mouse.active ? Math.hypot(n2.x - mouse.x, n2.y - mouse.y) : 9999;
+          const bothNearMouse = isNearMouse && distToMouse2 < mouseInteractionRadius;
+          const effectiveLineDist = bothNearMouse ? baseLineDist * 1.4 : baseLineDist;
+
+          if (dist < effectiveLineDist) {
+            let alpha = (1 - dist / effectiveLineDist) * 0.12;
+
             ctx.beginPath();
             ctx.moveTo(n1.x, n1.y);
             ctx.lineTo(n2.x, n2.y);
+
+            if (bothNearMouse) {
+              // Interactive hover connection: nodes near cursor light up with amber signal tint
+              const mouseProximityAlpha = (1 - (distToMouse1 + distToMouse2) / (mouseInteractionRadius * 2));
+              alpha = 0.15 + mouseProximityAlpha * 0.35;
+              ctx.strokeStyle = `rgba(242, 169, 59, ${alpha})`;
+            } else {
+              ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+            }
+
             ctx.stroke();
             connectionCount++;
           }
         }
+
+        // Direct interactive line from node to cursor when hovering within range
+        if (isNearMouse) {
+          const cursorAlpha = (1 - distToMouse1 / mouseInteractionRadius) * 0.28;
+          ctx.beginPath();
+          ctx.moveTo(n1.x, n1.y);
+          ctx.lineTo(mouse.x, mouse.y);
+          ctx.strokeStyle = `rgba(242, 169, 59, ${cursorAlpha})`;
+          ctx.stroke();
+        }
       }
 
       // 3. Connect constellation nodes to the 4 Brand Hubs (Slack, Google Merchant, SMS, Shopify)
-      const maxHubDist = Math.min(width * 0.35, 340);
+      const maxHubDist = Math.min(width * 0.35, 320);
 
       for (let h = 0; h < hubs.length; h++) {
         const hub = hubs[h];
@@ -256,7 +336,7 @@ export function NetworkCanvas() {
           const dist = Math.hypot(n.x - hub.x, n.y - hub.y);
 
           if (dist < maxHubDist) {
-            const alpha = (1 - dist / maxHubDist) * 0.18;
+            const alpha = (1 - dist / maxHubDist) * 0.2;
             ctx.beginPath();
             ctx.moveTo(n.x, n.y);
             ctx.lineTo(hub.x, hub.y);
@@ -292,7 +372,13 @@ export function NetworkCanvas() {
       for (const n of nodes) {
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
-        if (n.isSignal) {
+
+        // Highlight nodes near mouse
+        const distToMouse = mouse.active ? Math.hypot(n.x - mouse.x, n.y - mouse.y) : 9999;
+        if (distToMouse < mouseInteractionRadius) {
+          const boost = (1 - distToMouse / mouseInteractionRadius);
+          ctx.fillStyle = `rgba(242, 169, 59, ${0.45 + boost * 0.4})`;
+        } else if (n.isSignal) {
           ctx.fillStyle = 'rgba(242, 169, 59, 0.45)';
         } else {
           ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
@@ -313,6 +399,8 @@ export function NetworkCanvas() {
 
     return () => {
       cancelAnimationFrame(animFrameId);
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerleave', handlePointerLeave);
       window.removeEventListener('resize', resize);
     };
   }, []);
@@ -325,74 +413,70 @@ export function NetworkCanvas() {
         className="absolute inset-0 w-full h-full"
       />
 
-      {/* 1. Google Merchant Center Brand Hub Node */}
+      {/* 1. Google Merchant Center Brand Hub (Icon only, no text) */}
       <div
         ref={googleHubRef}
-        className="absolute left-0 top-0 hidden md:inline-flex items-center gap-2 px-3 py-1.5 rounded-[100px] bg-[#0e0f11]/90 backdrop-blur-md border border-[rgba(255,255,255,0.12)] shadow-[0_8px_24px_rgba(0,0,0,0.5)] transition-opacity duration-300 select-none will-change-transform"
+        className="absolute left-0 top-0 hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-[#0e0f11]/90 backdrop-blur-md border border-[rgba(255,255,255,0.14)] shadow-[0_8px_24px_rgba(0,0,0,0.5)] transition-opacity duration-300 select-none will-change-transform group"
+        title="Google Merchant Center"
+        aria-label="Google Merchant Center"
       >
         {/* Google G Vector Icon */}
-        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0">
+        <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0">
           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
           <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
           <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
           <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
         </svg>
-        <span className="font-mono text-[10.5px] font-medium text-[#cfcdc8] tracking-[0.02em]">
-          Google Merchant
-        </span>
-        <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" title="Live Feed Connected" />
+        <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#f2a93b] ring-2 ring-[#0a0b0d]" />
       </div>
 
-      {/* 2. Shopify Admin Brand Hub Node */}
+      {/* 2. Shopify Admin Brand Hub (Icon only, no text) */}
       <div
         ref={shopifyHubRef}
-        className="absolute left-0 top-0 hidden md:inline-flex items-center gap-2 px-3 py-1.5 rounded-[100px] bg-[#0e0f11]/90 backdrop-blur-md border border-[rgba(255,255,255,0.12)] shadow-[0_8px_24px_rgba(0,0,0,0.5)] transition-opacity duration-300 select-none will-change-transform"
+        className="absolute left-0 top-0 hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-[#0e0f11]/90 backdrop-blur-md border border-[rgba(255,255,255,0.14)] shadow-[0_8px_24px_rgba(0,0,0,0.5)] transition-opacity duration-300 select-none will-change-transform group"
+        title="Shopify Admin"
+        aria-label="Shopify Admin"
       >
         {/* Shopify Authentic Bag Icon */}
-        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0" fill="none">
+        <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0" fill="none">
           <path d="M15.44 3.33a.75.75 0 0 0-.69-.47h-1.5c-.07-1.45-.88-2.86-2.65-2.86-1.54 0-2.42 1.15-2.67 2.86H6.43a.75.75 0 0 0-.74.65L4 21.65a.75.75 0 0 0 .74.85h14.52a.75.75 0 0 0 .74-.85l-1.69-18a.75.75 0 0 0-.87-.32zM10.5 1.5c.98 0 1.25.96 1.3 1.36H9.2c.05-.4.32-1.36 1.3-1.36z" fill="#95BF47"/>
           <path d="M11.8 8.75c-1.3 0-1.8.8-1.8 1.45 0 1.5 2.45 1.7 2.45 3.05 0 .8-.65 1.3-1.5 1.3-.9 0-1.45-.55-1.5-1.35h-1c.05 1.4 1.1 2.2 2.5 2.2 1.45 0 2.5-.85 2.5-2.2 0-1.75-2.45-1.95-2.45-3.15 0-.55.45-.9 1.25-.9.75 0 1.2.45 1.25 1.05h1c-.05-1.2-.95-1.9-2.2-1.9z" fill="#ffffff"/>
         </svg>
-        <span className="font-mono text-[10.5px] font-medium text-[#cfcdc8] tracking-[0.02em]">
-          Shopify Admin
-        </span>
-        <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" title="1-Click Triage Deep Link" />
+        <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#f2a93b] ring-2 ring-[#0a0b0d]" />
       </div>
 
-      {/* 3. Slack Telemetry Brand Hub Node */}
+      {/* 3. Slack Channel Brand Hub (Icon only, no text) */}
       <div
         ref={slackHubRef}
-        className="absolute left-0 top-0 hidden md:inline-flex items-center gap-2 px-3 py-1.5 rounded-[100px] bg-[#0e0f11]/90 backdrop-blur-md border border-[rgba(255,255,255,0.12)] shadow-[0_8px_24px_rgba(0,0,0,0.5)] transition-opacity duration-300 select-none will-change-transform"
+        className="absolute left-0 top-0 hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-[#0e0f11]/90 backdrop-blur-md border border-[rgba(255,255,255,0.14)] shadow-[0_8px_24px_rgba(0,0,0,0.5)] transition-opacity duration-300 select-none will-change-transform group"
+        title="Slack Channel"
+        aria-label="Slack Channel"
       >
         {/* Slack Authentic Logo */}
-        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0">
+        <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0">
           <path d="M5.04 13.52c0-.85-.69-1.54-1.54-1.54s-1.54.69-1.54 1.54v3.85c0 .85.69 1.54 1.54 1.54s1.54-.69 1.54-1.54v-3.85zm1.54 0c0-.85.69-1.54 1.54-1.54s1.54.69 1.54 1.54-.69 1.54-1.54 1.54h-1.54v-1.54z" fill="#E01E5A"/>
           <path d="M10.48 5.04c-.85 0-1.54-.69-1.54-1.54S9.63 1.96 10.48 1.96h3.85c.85 0 1.54.69 1.54 1.54s-.69 1.54-1.54 1.54h-3.85zm0 1.54c-.85 0-1.54.69-1.54 1.54s.69 1.54 1.54 1.54 1.54-.69 1.54-1.54V6.58h-1.54z" fill="#36C5F0"/>
           <path d="M18.96 10.48c0 .85.69 1.54 1.54 1.54s1.54-.69 1.54-1.54V6.63c0-.85-.69-1.54-1.54-1.54s-1.54.69-1.54 1.54v3.85zm-1.54 0c0 .85-.69 1.54-1.54 1.54s-1.54-.69-1.54-1.54.69-1.54 1.54-1.54h1.54v1.54z" fill="#2EB67D"/>
           <path d="M13.52 18.96c.85 0 1.54.69 1.54 1.54s-.69 1.54-1.54 1.54H9.67c-.85 0-1.54-.69-1.54-1.54s.69-1.54 1.54-1.54h3.85zm0-1.54c.85 0 1.54-.69 1.54-1.54s-.69-1.54-1.54-1.54-1.54.69-1.54 1.54v1.54h1.54z" fill="#ECB22E"/>
         </svg>
-        <span className="font-mono text-[10.5px] font-medium text-[#cfcdc8] tracking-[0.02em]">
-          Slack Channel
-        </span>
-        <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" title="Instant Incident Dispatch" />
+        <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#f2a93b] ring-2 ring-[#0a0b0d]" />
       </div>
 
-      {/* 4. SMS Alerts Brand Hub Node */}
+      {/* 4. SMS Alerts Brand Hub (Icon only, no text) */}
       <div
         ref={smsHubRef}
-        className="absolute left-0 top-0 hidden md:inline-flex items-center gap-2 px-3 py-1.5 rounded-[100px] bg-[#0e0f11]/90 backdrop-blur-md border border-[rgba(255,255,255,0.12)] shadow-[0_8px_24px_rgba(0,0,0,0.5)] transition-opacity duration-300 select-none will-change-transform"
+        className="absolute left-0 top-0 hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-[#0e0f11]/90 backdrop-blur-md border border-[rgba(255,255,255,0.14)] shadow-[0_8px_24px_rgba(0,0,0,0.5)] transition-opacity duration-300 select-none will-change-transform group"
+        title="SMS Watchdog"
+        aria-label="SMS Watchdog"
       >
         {/* SMS Chat Bubble Vector */}
-        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0" fill="none" stroke="#f2a93b" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0" fill="none" stroke="#f2a93b" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
           <circle cx="8" cy="10" r="0.75" fill="#f2a93b"/>
           <circle cx="12" cy="10" r="0.75" fill="#f2a93b"/>
           <circle cx="16" cy="10" r="0.75" fill="#f2a93b"/>
         </svg>
-        <span className="font-mono text-[10.5px] font-medium text-[#cfcdc8] tracking-[0.02em]">
-          SMS Alerts
-        </span>
-        <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" title="Emergency Escalation Paging" />
+        <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#f2a93b] ring-2 ring-[#0a0b0d]" />
       </div>
     </div>
   );

@@ -63,8 +63,8 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <a href="mailto:support@usekultra.com" className="hover:text-[var(--ink-primary)] hover:underline underline-offset-4 transition-colors duration-120">
-                  Contact and support
+                <a href="mailto:contact@usekultra.com" className="hover:text-[var(--ink-primary)] hover:underline underline-offset-4 transition-colors duration-120">
+                  Contact
                 </a>
               </li>
             </ul>
@@ -97,7 +97,7 @@ export function Footer() {
 
         {/* Bottom Metadata Bar */}
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 font-mono text-[11px] text-[var(--ghost-text-dim)]">
-          <p>© {new Date().getFullYear()} Kultra. All rights reserved.</p>
+          <p>© 2026 Kultra. All rights reserved.</p>
           <div className="flex items-center gap-4">
             <Link href="/privacy" className="hover:text-[var(--ink-primary)] transition-colors">
               Privacy Policy
