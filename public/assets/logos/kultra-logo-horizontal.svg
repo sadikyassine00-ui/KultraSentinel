@@ -1,0 +1,21 @@
+<svg width="220" height="48" viewBox="0 0 220 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- mark: a ghost network with one live signal connection -->
+  <g transform="translate(4,4)">
+    <line x1="20" y1="20" x2="6" y2="10"  stroke="#3a3d43" stroke-width="1.2"/>
+    <line x1="20" y1="20" x2="8" y2="32"  stroke="#3a3d43" stroke-width="1.2"/>
+    <line x1="20" y1="20" x2="33" y2="33" stroke="#3a3d43" stroke-width="1.2"/>
+    <line x1="20" y1="20" x2="34" y2="9"  stroke="#f2a93b" stroke-width="1.6"/>
+
+    <circle cx="6"  cy="10" r="2.4" fill="#3a3d43"/>
+    <circle cx="8"  cy="32" r="2.4" fill="#3a3d43"/>
+    <circle cx="33" cy="33" r="2"   fill="#3a3d43"/>
+    <circle cx="34" cy="9"  r="3"   fill="#f2a93b"/>
+    <circle cx="34" cy="9"  r="5.5" fill="none" stroke="#f2a93b" stroke-width="1" opacity="0.35"/>
+
+    <circle cx="20" cy="20" r="4.5" fill="#f2a93b"/>
+    <circle cx="20" cy="20" r="4.5" fill="none" stroke="#0a0b0d" stroke-width="1.5"/>
+  </g>
+
+  <!-- wordmark in Inter 700 uppercase -->
+  <text x="56" y="30" font-family="Inter, -apple-system, sans-serif" font-weight="700" font-size="22" letter-spacing="0.5" fill="#f4f1ea">KULTRA</text>
+</svg>

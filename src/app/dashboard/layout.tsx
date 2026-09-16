@@ -94,7 +94,7 @@ export default function TenantDashboardLayout({
               aria-label="Kultra Dashboard"
             >
               <Image
-                src="/assets/logos/kultraLogo-trimmed.png"
+                src="/assets/logos/kultra-logo-horizontal.svg"
                 alt="Kultra"
                 width={125}
                 height={26}

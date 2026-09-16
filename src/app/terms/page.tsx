@@ -23,7 +23,7 @@ export default function TermsOfServicePage() {
               aria-label="Kultra Homepage"
             >
               <Image
-                src="/assets/logos/kultraLogo-trimmed.png"
+                src="/assets/logos/kultra-logo-horizontal.svg"
                 alt="Kultra"
                 width={110}
                 height={22}

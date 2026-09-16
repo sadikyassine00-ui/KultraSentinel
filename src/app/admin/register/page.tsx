@@ -96,7 +96,7 @@ export default function RegisterPage() {
           <div className="text-center mb-6">
             <Link href="/" className="inline-block mb-3">
               <Image
-                src="/assets/logos/kultraLogo-trimmed.png"
+                src="/assets/logos/kultra-logo-horizontal.svg"
                 alt="Kultra"
                 width={130}
                 height={26}

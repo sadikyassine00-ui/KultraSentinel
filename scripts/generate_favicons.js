@@ -2,227 +2,292 @@ const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp');
 
-function createIco(pngBuffers) {
-  const count = pngBuffers.length;
+// 1. Cleaned Vector SVG for kultra-logo-horizontal.svg (Primary Logo)
+const horizontalSvgContent = `<svg width="220" height="48" viewBox="0 0 220 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- mark: a ghost network with one live signal connection -->
+  <g transform="translate(4,4)">
+    <line x1="20" y1="20" x2="6" y2="10"  stroke="#3a3d43" stroke-width="1.2"/>
+    <line x1="20" y1="20" x2="8" y2="32"  stroke="#3a3d43" stroke-width="1.2"/>
+    <line x1="20" y1="20" x2="33" y2="33" stroke="#3a3d43" stroke-width="1.2"/>
+    <line x1="20" y1="20" x2="34" y2="9"  stroke="#f2a93b" stroke-width="1.6"/>
+
+    <circle cx="6"  cy="10" r="2.4" fill="#3a3d43"/>
+    <circle cx="8"  cy="32" r="2.4" fill="#3a3d43"/>
+    <circle cx="33" cy="33" r="2"   fill="#3a3d43"/>
+    <circle cx="34" cy="9"  r="3"   fill="#f2a93b"/>
+    <circle cx="34" cy="9"  r="5.5" fill="none" stroke="#f2a93b" stroke-width="1" opacity="0.35"/>
+
+    <circle cx="20" cy="20" r="4.5" fill="#f2a93b"/>
+    <circle cx="20" cy="20" r="4.5" fill="none" stroke="#0a0b0d" stroke-width="1.5"/>
+  </g>
+
+  <!-- wordmark in Inter 700 uppercase -->
+  <text x="56" y="30" font-family="Inter, -apple-system, sans-serif" font-weight="700" font-size="22" letter-spacing="0.5" fill="#f4f1ea">KULTRA</text>
+</svg>`;
+
+// 2. Extracted Vector Icon Mark (without background, pure vector)
+const pureIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" fill="none">
+  <g transform="translate(4,4)">
+    <line x1="20" y1="20" x2="6" y2="10"  stroke="#525862" stroke-width="1.3"/>
+    <line x1="20" y1="20" x2="8" y2="32"  stroke="#525862" stroke-width="1.3"/>
+    <line x1="20" y1="20" x2="33" y2="33" stroke="#525862" stroke-width="1.3"/>
+    <line x1="20" y1="20" x2="34" y2="9"  stroke="#f2a93b" stroke-width="1.8"/>
+
+    <circle cx="6"  cy="10" r="2.5" fill="#525862"/>
+    <circle cx="8"  cy="32" r="2.5" fill="#525862"/>
+    <circle cx="33" cy="33" r="2.2" fill="#525862"/>
+    <circle cx="34" cy="9"  r="3.2" fill="#f2a93b"/>
+    <circle cx="34" cy="9"  r="5.5" fill="none" stroke="#f2a93b" stroke-width="1" opacity="0.4"/>
+
+    <circle cx="20" cy="20" r="4.8" fill="#f2a93b"/>
+    <circle cx="20" cy="20" r="4.8" fill="none" stroke="#0a0b0d" stroke-width="1.5"/>
+  </g>
+</svg>`;
+
+// 3. Favicon Vector SVG with dark surface container (looks stunning on light & dark tabs & Google search)
+const faviconTileSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" fill="none">
+  <rect width="48" height="48" rx="10" fill="#0a0b0d"/>
+  <rect x="0.5" y="0.5" width="47" height="47" rx="9.5" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+  <g transform="translate(4,4)">
+    <line x1="20" y1="20" x2="6" y2="10"  stroke="#6b7078" stroke-width="1.4"/>
+    <line x1="20" y1="20" x2="8" y2="32"  stroke="#6b7078" stroke-width="1.4"/>
+    <line x1="20" y1="20" x2="33" y2="33" stroke="#6b7078" stroke-width="1.4"/>
+    <line x1="20" y1="20" x2="34" y2="9"  stroke="#f2a93b" stroke-width="1.8"/>
+
+    <circle cx="6"  cy="10" r="2.6" fill="#6b7078"/>
+    <circle cx="8"  cy="32" r="2.6" fill="#6b7078"/>
+    <circle cx="33" cy="33" r="2.2" fill="#6b7078"/>
+    <circle cx="34" cy="9"  r="3.2" fill="#f2a93b"/>
+    <circle cx="34" cy="9"  r="5.5" fill="none" stroke="#f2a93b" stroke-width="1" opacity="0.4"/>
+
+    <circle cx="20" cy="20" r="4.8" fill="#f2a93b"/>
+    <circle cx="20" cy="20" r="4.8" fill="none" stroke="#0a0b0d" stroke-width="1.5"/>
+  </g>
+</svg>`;
+
+// 4. Apple Touch Icon & Full-Bleed Tile SVG (square solid background without outer rounded rect, as iOS masks it)
+const touchIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="180" height="180" fill="none">
+  <rect width="180" height="180" fill="#0a0b0d"/>
+  <g transform="translate(18, 18) scale(3)">
+    <line x1="20" y1="20" x2="6" y2="10"  stroke="#6b7078" stroke-width="1.4"/>
+    <line x1="20" y1="20" x2="8" y2="32"  stroke="#6b7078" stroke-width="1.4"/>
+    <line x1="20" y1="20" x2="33" y2="33" stroke="#6b7078" stroke-width="1.4"/>
+    <line x1="20" y1="20" x2="34" y2="9"  stroke="#f2a93b" stroke-width="1.8"/>
+
+    <circle cx="6"  cy="10" r="2.6" fill="#6b7078"/>
+    <circle cx="8"  cy="32" r="2.6" fill="#6b7078"/>
+    <circle cx="33" cy="33" r="2.2" fill="#6b7078"/>
+    <circle cx="34" cy="9"  r="3.2" fill="#f2a93b"/>
+    <circle cx="34" cy="9"  r="5.5" fill="none" stroke="#f2a93b" stroke-width="1" opacity="0.4"/>
+
+    <circle cx="20" cy="20" r="4.8" fill="#f2a93b"/>
+    <circle cx="20" cy="20" r="4.8" fill="none" stroke="#0a0b0d" stroke-width="1.5"/>
+  </g>
+</svg>`;
+
+// 5. Maskable Icon (for Android PWA, with 20% safe zone padding)
+const maskableIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" fill="none">
+  <rect width="512" height="512" fill="#0a0b0d"/>
+  <g transform="translate(80, 80) scale(7.33)">
+    <line x1="20" y1="20" x2="6" y2="10"  stroke="#6b7078" stroke-width="1.4"/>
+    <line x1="20" y1="20" x2="8" y2="32"  stroke="#6b7078" stroke-width="1.4"/>
+    <line x1="20" y1="20" x2="33" y2="33" stroke="#6b7078" stroke-width="1.4"/>
+    <line x1="20" y1="20" x2="34" y2="9"  stroke="#f2a93b" stroke-width="1.8"/>
+
+    <circle cx="6"  cy="10" r="2.6" fill="#6b7078"/>
+    <circle cx="8"  cy="32" r="2.6" fill="#6b7078"/>
+    <circle cx="33" cy="33" r="2.2" fill="#6b7078"/>
+    <circle cx="34" cy="9"  r="3.2" fill="#f2a93b"/>
+    <circle cx="34" cy="9"  r="5.5" fill="none" stroke="#f2a93b" stroke-width="1" opacity="0.4"/>
+
+    <circle cx="20" cy="20" r="4.8" fill="#f2a93b"/>
+    <circle cx="20" cy="20" r="4.8" fill="none" stroke="#0a0b0d" stroke-width="1.5"/>
+  </g>
+</svg>`;
+
+/**
+ * Creates an ICO binary buffer from an array of PNG buffers
+ * @param {Array<{size: number, buffer: Buffer}>} images
+ */
+function createIco(images) {
+  const count = images.length;
   const headerSize = 6;
-  const dirEntrySize = 16;
-  let offset = headerSize + (dirEntrySize * count);
+  const entrySize = 16;
+  const totalHeaderSize = headerSize + count * entrySize;
+
+  let currentOffset = totalHeaderSize;
+  const entries = [];
+
+  for (const img of images) {
+    const width = img.size >= 256 ? 0 : img.size;
+    const height = img.size >= 256 ? 0 : img.size;
+    const size = img.buffer.length;
+    const offset = currentOffset;
+
+    const entry = Buffer.alloc(entrySize);
+    entry.writeUInt8(width, 0); // Width
+    entry.writeUInt8(height, 1); // Height
+    entry.writeUInt8(0, 2); // Color palette
+    entry.writeUInt8(0, 3); // Reserved
+    entry.writeUInt16LE(1, 4); // Color planes
+    entry.writeUInt16LE(32, 6); // Bits per pixel
+    entry.writeUInt32LE(size, 8); // Image size in bytes
+    entry.writeUInt32LE(offset, 12); // Offset in file
+    entries.push(entry);
+
+    currentOffset += size;
+  }
 
   const header = Buffer.alloc(headerSize);
-  header.writeUInt16LE(0, 0); // reserved
-  header.writeUInt16LE(1, 2); // ICO type
-  header.writeUInt16LE(count, 4); // count
+  header.writeUInt16LE(0, 0); // Reserved
+  header.writeUInt16LE(1, 2); // Type 1 = ICO
+  header.writeUInt16LE(count, 4); // Number of images
 
-  const dirEntries = [];
-  for (const img of pngBuffers) {
-    const entry = Buffer.alloc(dirEntrySize);
-    entry.writeUInt8(img.width >= 256 ? 0 : img.width, 0);
-    entry.writeUInt8(img.height >= 256 ? 0 : img.height, 1);
-    entry.writeUInt8(0, 2); // color count
-    entry.writeUInt8(0, 3); // reserved
-    entry.writeUInt16LE(1, 4); // color planes
-    entry.writeUInt16LE(32, 6); // bpp
-    entry.writeUInt32LE(img.buffer.length, 8); // size
-    entry.writeUInt32LE(offset, 12); // offset
-    dirEntries.push(entry);
-    offset += img.buffer.length;
-  }
-
-  return Buffer.concat([header, ...dirEntries, ...pngBuffers.map(img => img.buffer)]);
+  return Buffer.concat([header, ...entries, ...images.map((i) => i.buffer)]);
 }
 
-async function run() {
-  const faviconSource = 'public/assets/logos/kultraFavicon.png';
-  const logoSource = 'public/assets/logos/kultraLogo.png';
-  
-  // 1. Trim kultraFavicon
-  const trimmedFaviconBuffer = await sharp(faviconSource).trim().toBuffer();
-  
-  // Helper to create square icon with custom inner padding ratio
-  async function makeSquareIcon(size, paddingRatio = 0.88, bg = { r: 0, g: 0, b: 0, alpha: 0 }) {
-    const innerSize = Math.max(1, Math.round(size * paddingRatio));
-    const innerBuf = await sharp(trimmedFaviconBuffer)
-      .resize(innerSize, innerSize, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-      .toBuffer();
+async function main() {
+  const publicDir = path.join(__dirname, '..', 'public');
+  const logosDir = path.join(publicDir, 'assets', 'logos');
 
-    return await sharp({
-      create: {
-        width: size,
-        height: size,
-        channels: 4,
-        background: bg
-      }
-    })
-    .composite([{ input: innerBuf, gravity: 'center' }])
-    .png()
-    .toBuffer();
+  if (!fs.existsSync(logosDir)) {
+    fs.mkdirSync(logosDir, { recursive: true });
   }
 
-  // Favicon PNG sizes
-  const sizes = [16, 32, 48, 64, 96, 120, 128, 144, 152, 180, 192, 256, 384, 512];
-  const generatedIcons = {};
+  console.log('1. Saving primary horizontal logo and variants...');
+  fs.writeFileSync(path.join(logosDir, 'kultra-logo-horizontal.svg'), horizontalSvgContent, 'utf8');
+  fs.writeFileSync(path.join(logosDir, 'kultra-horizontal-logo.svg'), horizontalSvgContent, 'utf8');
+  fs.writeFileSync(path.join(logosDir, 'kultra-icon.svg'), pureIconSvg, 'utf8');
 
-  for (const s of sizes) {
-    const pad = s <= 48 ? 0.94 : (s <= 180 ? 0.86 : 0.82);
-    const buf = await makeSquareIcon(s, pad);
-    generatedIcons[s] = buf;
-  }
+  // Also write public/favicon.svg
+  fs.writeFileSync(path.join(publicDir, 'favicon.svg'), faviconTileSvg, 'utf8');
 
-  // Ensure directories
-  if (!fs.existsSync('public')) fs.mkdirSync('public', { recursive: true });
-  if (!fs.existsSync('src/app')) fs.mkdirSync('src/app', { recursive: true });
+  console.log('2. Generating raster PNG variants with Sharp...');
 
-  // Standard web favicons
-  fs.writeFileSync('public/favicon-16x16.png', generatedIcons[16]);
-  fs.writeFileSync('public/favicon-32x32.png', generatedIcons[32]);
-  fs.writeFileSync('public/favicon-48x48.png', generatedIcons[48]);
-  fs.writeFileSync('public/favicon-96x96.png', generatedIcons[96]);
+  // Standard Favicons
+  const png16 = await sharp(Buffer.from(faviconTileSvg)).resize(16, 16).png().toBuffer();
+  const png32 = await sharp(Buffer.from(faviconTileSvg)).resize(32, 32).png().toBuffer();
+  const png48 = await sharp(Buffer.from(faviconTileSvg)).resize(48, 48).png().toBuffer();
+  const png96 = await sharp(Buffer.from(faviconTileSvg)).resize(96, 96).png().toBuffer();
 
-  // Apple touch icons
-  fs.writeFileSync('public/apple-touch-icon.png', generatedIcons[180]);
-  fs.writeFileSync('public/apple-touch-icon-180x180.png', generatedIcons[180]);
-  fs.writeFileSync('public/apple-touch-icon-152x152.png', generatedIcons[152]);
-  fs.writeFileSync('public/apple-touch-icon-120x120.png', generatedIcons[120]);
-  fs.writeFileSync('public/apple-touch-icon-precomposed.png', generatedIcons[180]);
-  fs.writeFileSync('src/app/apple-icon.png', generatedIcons[180]);
+  fs.writeFileSync(path.join(publicDir, 'favicon-16x16.png'), png16);
+  fs.writeFileSync(path.join(publicDir, 'favicon-32x32.png'), png32);
+  fs.writeFileSync(path.join(publicDir, 'favicon-48x48.png'), png48); // Google search priority
+  fs.writeFileSync(path.join(publicDir, 'favicon-96x96.png'), png96);
 
-  // Android / PWA icons
-  fs.writeFileSync('public/android-chrome-192x192.png', generatedIcons[192]);
-  fs.writeFileSync('public/android-chrome-512x512.png', generatedIcons[512]);
-  fs.writeFileSync('public/icon-192.png', generatedIcons[192]);
-  fs.writeFileSync('public/icon-512.png', generatedIcons[512]);
-  fs.writeFileSync('src/app/icon.png', generatedIcons[512]);
-
-  // Maskable icon with solid background (#0a0b1d) and safe zone for PWA
-  const maskable512 = await makeSquareIcon(512, 0.68, { r: 10, g: 11, b: 29, alpha: 1 });
-  fs.writeFileSync('public/maskable-icon-512x512.png', maskable512);
-
-  // Microsoft Tiles
-  fs.writeFileSync('public/mstile-150x150.png', generatedIcons[152]);
-  fs.writeFileSync('public/mstile-310x310.png', generatedIcons[384]);
-  fs.writeFileSync('public/mstile-70x70.png', generatedIcons[64]);
-
-  // Multi-size ICO (16, 32, 48)
-  const icoBuf = createIco([
-    { width: 16, height: 16, buffer: generatedIcons[16] },
-    { width: 32, height: 32, buffer: generatedIcons[32] },
-    { width: 48, height: 48, buffer: generatedIcons[48] }
+  // Multi-resolution favicon.ico (16, 32, 48)
+  console.log('3. Building multi-resolution favicon.ico...');
+  const icoBuffer = createIco([
+    { size: 16, buffer: png16 },
+    { size: 32, buffer: png32 },
+    { size: 48, buffer: png48 },
   ]);
-  fs.writeFileSync('public/favicon.ico', icoBuf);
-  fs.writeFileSync('src/app/favicon.ico', icoBuf);
+  fs.writeFileSync(path.join(publicDir, 'favicon.ico'), icoBuffer);
 
-  // 2. Trimmed Horizontal Logo
-  const trimmedLogoBuffer = await sharp(logoSource).trim().toBuffer();
-  const trimmedLogoMeta = await sharp(trimmedLogoBuffer).metadata();
-  const padW = trimmedLogoMeta.width + 16;
-  const padH = trimmedLogoMeta.height + 16;
-  const framedLogo = await sharp({
-    create: {
-      width: padW,
-      height: padH,
-      channels: 4,
-      background: { r: 0, g: 0, b: 0, alpha: 0 }
-    }
-  })
-  .composite([{ input: trimmedLogoBuffer, gravity: 'center' }])
-  .png()
-  .toBuffer();
+  // Apple Touch Icons
+  console.log('4. Generating Apple Touch Icons...');
+  const apple180 = await sharp(Buffer.from(touchIconSvg)).resize(180, 180).png().toBuffer();
+  const apple152 = await sharp(Buffer.from(touchIconSvg)).resize(152, 152).png().toBuffer();
+  const apple120 = await sharp(Buffer.from(touchIconSvg)).resize(120, 120).png().toBuffer();
 
-  fs.writeFileSync('public/assets/logos/kultraLogo-trimmed.png', framedLogo);
-  console.log('Trimmed logo saved: kultraLogo-trimmed.png (' + padW + 'x' + padH + ')');
+  fs.writeFileSync(path.join(publicDir, 'apple-touch-icon.png'), apple180);
+  fs.writeFileSync(path.join(publicDir, 'apple-touch-icon-180x180.png'), apple180);
+  fs.writeFileSync(path.join(publicDir, 'apple-touch-icon-152x152.png'), apple152);
+  fs.writeFileSync(path.join(publicDir, 'apple-touch-icon-120x120.png'), apple120);
+  fs.writeFileSync(path.join(publicDir, 'apple-touch-icon-precomposed.png'), apple180);
 
-  // 3. Generate SVG Favicon for modern browser tabs
-  const favPngBase64 = generatedIcons[180].toString('base64');
-  const svgFavicon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="100%" height="100%">
-  <image width="180" height="180" href="data:image/png;base64,${favPngBase64}" />
-</svg>
-`;
-  fs.writeFileSync('public/favicon.svg', svgFavicon);
-  fs.writeFileSync('src/app/icon.svg', svgFavicon);
+  // Android / Chrome / PWA
+  console.log('5. Generating Android / Chrome PWA Icons...');
+  const chrome192 = await sharp(Buffer.from(touchIconSvg)).resize(192, 192).png().toBuffer();
+  const chrome512 = await sharp(Buffer.from(touchIconSvg)).resize(512, 512).png().toBuffer();
+  const maskable512 = await sharp(Buffer.from(maskableIconSvg)).resize(512, 512).png().toBuffer();
 
-  // 4. OpenGraph Social Card (1200x630)
-  const ogLogo = await sharp(framedLogo)
-    .resize(540, null, { fit: 'inside' })
-    .toBuffer();
-  const ogLogoMeta = await sharp(ogLogo).metadata();
+  fs.writeFileSync(path.join(publicDir, 'android-chrome-192x192.png'), chrome192);
+  fs.writeFileSync(path.join(publicDir, 'android-chrome-512x512.png'), chrome512);
+  fs.writeFileSync(path.join(publicDir, 'icon-192.png'), chrome192);
+  fs.writeFileSync(path.join(publicDir, 'icon-512.png'), chrome512);
+  fs.writeFileSync(path.join(publicDir, 'maskable-icon-512x512.png'), maskable512);
 
-  const ogImage = await sharp({
-    create: {
-      width: 1200,
-      height: 630,
-      channels: 4,
-      background: { r: 10, g: 11, b: 29, alpha: 1 } // #0a0b1d
-    }
-  })
-  .composite([
-    {
-      input: ogLogo,
-      top: Math.round((630 - ogLogoMeta.height) / 2),
-      left: Math.round((1200 - ogLogoMeta.width) / 2)
-    }
-  ])
-  .png()
-  .toBuffer();
-  fs.writeFileSync('public/og-image.png', ogImage);
+  // Windows Tiles
+  console.log('6. Generating Windows Tiles...');
+  const mstile70 = await sharp(Buffer.from(touchIconSvg)).resize(70, 70).png().toBuffer();
+  const mstile150 = await sharp(Buffer.from(touchIconSvg)).resize(150, 150).png().toBuffer();
+  const mstile310 = await sharp(Buffer.from(touchIconSvg)).resize(310, 310).png().toBuffer();
 
-  // 5. site.webmanifest
-  const webmanifest = {
-    name: 'Kultra: Google Merchant Center Disapproval Watchdog',
-    short_name: 'Kultra',
-    description: 'Instant alerts before policy changes kill your bestselling Google Merchant ads.',
-    start_url: '/',
-    display: 'standalone',
-    background_color: '#0a0b1d',
-    theme_color: '#FF788D',
-    icons: [
-      {
-        src: '/favicon-32x32.png',
-        sizes: '32x32',
-        type: 'image/png'
-      },
-      {
-        src: '/android-chrome-192x192.png',
-        sizes: '192x192',
-        type: 'image/png'
-      },
-      {
-        src: '/android-chrome-512x512.png',
-        sizes: '512x512',
-        type: 'image/png'
-      },
-      {
-        src: '/maskable-icon-512x512.png',
-        sizes: '512x512',
-        type: 'image/png',
-        purpose: 'maskable'
-      }
-    ]
-  };
-  fs.writeFileSync('public/site.webmanifest', JSON.stringify(webmanifest, null, 2));
-  fs.writeFileSync('public/manifest.json', JSON.stringify(webmanifest, null, 2));
+  fs.writeFileSync(path.join(publicDir, 'mstile-70x70.png'), mstile70);
+  fs.writeFileSync(path.join(publicDir, 'mstile-150x150.png'), mstile150);
+  fs.writeFileSync(path.join(publicDir, 'mstile-310x310.png'), mstile310);
 
-  // 6. browserconfig.xml for Windows
-  const browserconfig = `<?xml version="1.0" encoding="utf-8"?>
-<browserconfig>
-    <msapplication>
-        <notification>
-            <polling-frequency-in-minutes>1440</polling-frequency-in-minutes>
-        </notification>
-        <windows>
-            <square70x70logo src="/mstile-70x70.png"/>
-            <square150x150logo src="/mstile-150x150.png"/>
-            <square310x310logo src="/mstile-310x310.png"/>
-            <TileColor>#0a0b1d</TileColor>
-        </windows>
-    </msapplication>
-</browserconfig>
-`;
-  fs.writeFileSync('public/browserconfig.xml', browserconfig);
+  // Fallback PNGs for primary horizontal logo
+  console.log('7. Generating horizontal logo PNG fallbacks...');
+  const horizontalPng = await sharp(Buffer.from(horizontalSvgContent)).resize(440, 96).png().toBuffer();
+  fs.writeFileSync(path.join(logosDir, 'kultra-logo-horizontal.png'), horizontalPng);
+  fs.writeFileSync(path.join(logosDir, 'kultra-horizontal-logo.png'), horizontalPng);
+  fs.writeFileSync(path.join(logosDir, 'kultraLogo-trimmed.png'), horizontalPng);
 
-  console.log('SUCCESS: All favicons, manifests, and trimmed logos generated successfully!');
+  // Social OpenGraph Image (1200x630)
+  console.log('8. Generating og-image.png (1200x630)...');
+  const ogSvg = `<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="630" fill="#0a0b0d"/>
+    <rect x="20" y="20" width="1160" height="590" rx="12" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+    
+    <!-- Background subtle network lines -->
+    <line x1="100" y1="120" x2="320" y2="280" stroke="rgba(255,255,255,0.05)" stroke-width="1.5"/>
+    <line x1="320" y1="280" x2="600" y2="180" stroke="rgba(255,255,255,0.05)" stroke-width="1.5"/>
+    <line x1="600" y1="180" x2="880" y2="340" stroke="rgba(255,255,255,0.05)" stroke-width="1.5"/>
+    <line x1="880" y1="340" x2="1100" y2="220" stroke="rgba(242,169,59,0.12)" stroke-width="1.5"/>
+    
+    <circle cx="100" cy="120" r="3" fill="rgba(255,255,255,0.15)"/>
+    <circle cx="320" cy="280" r="3" fill="rgba(255,255,255,0.15)"/>
+    <circle cx="600" cy="180" r="3" fill="rgba(255,255,255,0.15)"/>
+    <circle cx="880" cy="340" r="3" fill="rgba(255,255,255,0.15)"/>
+    <circle cx="1100" cy="220" r="4" fill="#f2a93b"/>
+
+    <!-- Centered Logo -->
+    <g transform="translate(425, 170) scale(1.6)">
+      <!-- mark -->
+      <g transform="translate(4,4)">
+        <line x1="20" y1="20" x2="6" y2="10"  stroke="#3a3d43" stroke-width="1.2"/>
+        <line x1="20" y1="20" x2="8" y2="32"  stroke="#3a3d43" stroke-width="1.2"/>
+        <line x1="20" y1="20" x2="33" y2="33" stroke="#3a3d43" stroke-width="1.2"/>
+        <line x1="20" y1="20" x2="34" y2="9"  stroke="#f2a93b" stroke-width="1.6"/>
+
+        <circle cx="6"  cy="10" r="2.4" fill="#3a3d43"/>
+        <circle cx="8"  cy="32" r="2.4" fill="#3a3d43"/>
+        <circle cx="33" cy="33" r="2"   fill="#3a3d43"/>
+        <circle cx="34" cy="9"  r="3"   fill="#f2a93b"/>
+        <circle cx="34" cy="9"  r="5.5" fill="none" stroke="#f2a93b" stroke-width="1" opacity="0.35"/>
+
+        <circle cx="20" cy="20" r="4.5" fill="#f2a93b"/>
+        <circle cx="20" cy="20" r="4.5" fill="none" stroke="#0a0b0d" stroke-width="1.5"/>
+      </g>
+      <text x="56" y="30" font-family="Inter, -apple-system, sans-serif" font-weight="700" font-size="22" letter-spacing="0.5" fill="#f4f1ea">KULTRA</text>
+    </g>
+
+    <!-- Tagline -->
+    <text x="600" y="330" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-weight="600" font-size="34" fill="#f4f1ea" letter-spacing="-0.01em">
+      Google Merchant Center Disapproval Watchdog
+    </text>
+    
+    <text x="600" y="385" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-weight="400" font-size="18" fill="#b9b3a5">
+      Real-time automated catalog feed monitoring and instant disapproval dispatch
+    </text>
+
+    <!-- Status pill -->
+    <g transform="translate(485, 435)">
+      <rect width="230" height="34" rx="17" fill="rgba(242,169,59,0.06)" stroke="#7a5a26" stroke-width="1"/>
+      <circle cx="22" cy="17" r="3.5" fill="#f2a93b"/>
+      <text x="35" y="22" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="500" fill="#f2a93b">LIVE FEED MONITORING</text>
+    </g>
+  </svg>`;
+
+  const ogBuffer = await sharp(Buffer.from(ogSvg)).resize(1200, 630).png().toBuffer();
+  fs.writeFileSync(path.join(publicDir, 'og-image.png'), ogBuffer);
+
+  console.log('All favicons, touch icons, primary logos, and OG image successfully generated!');
 }
 
-run().catch(err => {
-  console.error('Error generating assets:', err);
+main().catch((err) => {
+  console.error(err);
   process.exit(1);
 });

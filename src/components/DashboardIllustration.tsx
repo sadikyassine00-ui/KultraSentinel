@@ -41,7 +41,7 @@ export function DashboardIllustration() {
       <path d="M 1 4 C 1 2.3 2.3 1 4 1 L 1196 1 C 1197.7 1 1199 2.3 1199 4 L 1199 50 L 1 50 Z" fill="#0e0f11" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
       
       {/* Brand & Console Header */}
-      <image href="/assets/logos/kultraLogo-trimmed.png" x="24" y="17" width="62" height="16" preserveAspectRatio="xMinYMid meet" />
+      <image href="/assets/logos/kultra-logo-horizontal.svg" x="24" y="17" width="62" height="16" preserveAspectRatio="xMinYMid meet" />
       <text className="console-mono" x="100" y="30" fill="#6b7078" fontSize="11" letterSpacing="0.02em">
         TELEMETRY_ENGINE / LIVE_INGEST
       </text>

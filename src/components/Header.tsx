@@ -134,7 +134,7 @@ export function Header() {
             aria-label="Kultra Home"
           >
             <Image
-              src="/assets/logos/kultraLogo-trimmed.png"
+              src="/assets/logos/kultra-logo-horizontal.svg"
               alt="Kultra"
               width={130}
               height={28}

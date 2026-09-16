@@ -13,7 +13,7 @@ export function Footer() {
           <div className="md:col-span-5 flex flex-col items-start gap-4">
             <a href="#" className="flex items-center group outline-none" aria-label="Kultra Home">
               <Image
-                src="/assets/logos/kultraLogo-trimmed.png"
+                src="/assets/logos/kultra-logo-horizontal.svg"
                 alt="Kultra"
                 width={130}
                 height={26}
