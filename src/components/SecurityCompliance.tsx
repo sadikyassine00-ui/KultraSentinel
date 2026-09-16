@@ -13,7 +13,7 @@ export function SecurityCompliance() {
       <div className="relative z-10 max-w-[1140px] mx-auto">
         {/* Section Header */}
         <div className="max-w-[760px] mb-12 sm:mb-14">
-          <span className="font-mono text-[11px] text-[var(--ghost-text-dim)] tracking-[0.02em] block mb-2">
+          <span className="font-mono text-[11px] text-[var(--ghost-text)] tracking-[0.02em] block mb-2">
             Security &amp; compliance
           </span>
           <h2 className="font-display text-[1.85rem] sm:text-[2.25rem] font-semibold text-[var(--ink-primary)] leading-[1.2]">
@@ -42,7 +42,7 @@ export function SecurityCompliance() {
                 OAuth refresh tokens, merchant API credentials, and client webhook targets are encrypted using authenticated Galois/Counter Mode with isolated secret management.
               </p>
             </div>
-            <div className="mt-6 pt-4 border-t border-[var(--hairline)] font-mono text-[10.5px] text-[var(--ghost-text-dim)]">
+            <div className="mt-6 pt-4 border-t border-[var(--hairline)] font-mono text-[10.5px] text-[var(--ghost-text)]">
               FIPS 140-2 aligned
             </div>
           </div>
@@ -63,7 +63,7 @@ export function SecurityCompliance() {
                 All incoming Pub/Sub ingestion webhooks, API dispatches, and dashboard browser traffic enforce TLS 1.3 encryption with strict HSTS headers.
               </p>
             </div>
-            <div className="mt-6 pt-4 border-t border-[var(--hairline)] font-mono text-[10.5px] text-[var(--ghost-text-dim)]">
+            <div className="mt-6 pt-4 border-t border-[var(--hairline)] font-mono text-[10.5px] text-[var(--ghost-text)]">
               Forward secrecy enforced
             </div>
           </div>
@@ -99,7 +99,7 @@ export function SecurityCompliance() {
                 <span className="tag-pill tag-ghost text-[10.5px]">
                   Pre-OAuth transparency
                 </span>
-                <span className="font-mono text-[11px] text-[var(--ghost-text-dim)]">
+                <span className="font-mono text-[11px] text-[var(--ghost-text)]">
                   Strict non-mutation guarantee
                 </span>
               </div>
@@ -119,7 +119,7 @@ export function SecurityCompliance() {
                 href="/register"
                 className="btn-primary text-[13px] py-2.5 px-5 !rounded-[3px] text-center"
               >
-                Start Monitoring Now
+                Start free 7-day trial
               </Link>
               <Link
                 href="/privacy"

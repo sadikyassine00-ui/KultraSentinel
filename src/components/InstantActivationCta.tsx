@@ -13,7 +13,7 @@ export function InstantActivationCta() {
       <div className="relative z-10 max-w-[960px] mx-auto text-center">
         {/* Top Eyebrow Tag */}
         <span className="font-mono text-[11px] text-[var(--signal)] tracking-[0.02em] block mb-3">
-          INSTANT ACTIVATION
+          Instant activation
         </span>
 
         {/* Section Headline in Fraunces */}
@@ -32,7 +32,7 @@ export function InstantActivationCta() {
             href="/register"
             className="btn-primary !rounded-[3px] text-[13.5px] px-7 py-3 font-semibold"
           >
-            Start Monitoring Now
+            Start your free 7-day trial
           </Link>
 
           <a
@@ -51,7 +51,7 @@ export function InstantActivationCta() {
           <div className="flex items-start gap-2.5">
             <ShieldCheck className="w-4 h-4 text-[var(--signal)] shrink-0 mt-0.5" strokeWidth={1.5} />
             <div>
-              <div className="text-[12.5px] font-medium text-[var(--ink-primary)]">14-Day Free Trial</div>
+              <div className="text-[12.5px] font-medium text-[var(--ink-primary)]">Free 7-Day Trial</div>
               <div className="text-[11.5px] text-[var(--ghost-text)]">No credit card required. Full feature access.</div>
             </div>
           </div>

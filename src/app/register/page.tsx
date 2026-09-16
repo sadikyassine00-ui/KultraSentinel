@@ -89,9 +89,9 @@ function RegisterForm() {
           />
         </Link>
         <h1 className="text-[26px] font-semibold text-[#f4f1ea] tracking-tight font-display">
-          Start your 14-day trial
+          Start your free 7-day trial
         </h1>
-        <p className="text-[13px] text-[#6b7078] mt-1">
+        <p className="text-[13px] text-[#b9b3a5] mt-1">
           Sub-30-second disapproval detection for Google Shopping.
         </p>
       </div>
@@ -280,7 +280,7 @@ function RegisterForm() {
             </label>
 
             {!agreedToTerms && (
-              <p className="text-[11px] font-mono text-[#45484f] mt-1.5 pl-6">
+              <p className="text-[11px] font-mono text-[#6b7078] mt-1.5 pl-6">
                 Required for workspace provisioning and API telemetry access.
               </p>
             )}
@@ -298,7 +298,7 @@ function RegisterForm() {
                 <span>Creating workspace...</span>
               </>
             ) : (
-              <span>Start 14-day free trial</span>
+              <span>Start my free trial</span>
             )}
           </button>
         </form>

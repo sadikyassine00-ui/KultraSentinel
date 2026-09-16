@@ -97,9 +97,11 @@ export function Header() {
   };
 
   const navLinks = [
-    { label: 'Features', href: '/#features' },
-    { label: 'Security & Compliance', href: '/#security' },
+    { label: 'How It Works', href: '/#features' },
+    { label: 'Architecture', href: '/#architecture' },
+    { label: 'Integrations', href: '/#integrations' },
     { label: 'Pricing', href: '/#pricing' },
+    { label: 'FAQ', href: '/#faq' },
   ];
 
   const getInitials = (emailOrName: string) => {
@@ -248,7 +250,7 @@ export function Header() {
                 href="/register"
                 className="btn-primary !rounded-[3px] text-[13px] py-2 px-3.5"
               >
-                Start Monitoring
+                Start free 7-day trial
               </Link>
             </div>
           )}
@@ -322,7 +324,7 @@ export function Header() {
                 onClick={() => setMobileMenuOpen(false)}
                 className="btn-primary !rounded-[3px] w-full justify-center text-[13px] py-2"
               >
-                Start Monitoring
+                Start free 7-day trial
               </Link>
             </div>
           )}

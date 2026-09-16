@@ -26,7 +26,7 @@ export function Footer() {
               Real-time Google Merchant Center telemetry and disapproval watchdog. Sub-30-second Slack alerts before silent ad traffic drops.
             </p>
 
-            <div className="flex flex-col gap-1.5 font-mono text-[11px] text-[var(--ghost-text-dim)]">
+            <div className="flex flex-col gap-1.5 font-mono text-[11px] text-[var(--ghost-text)]">
               <div>Headquartered in Ouarzazate, Morocco</div>
               <div>Direct inquiry: <a href="mailto:contact@usekultra.com" className="text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] underline underline-offset-2">contact@usekultra.com</a></div>
             </div>
@@ -39,7 +39,7 @@ export function Footer() {
 
           {/* Navigation Links */}
           <div className="md:col-span-3 flex flex-col gap-3">
-            <h4 className="font-mono text-[11px] text-[var(--ghost-text-dim)] tracking-[0.02em]">
+            <h4 className="font-mono text-[11px] text-[var(--ghost-text)] tracking-[0.02em]">
               Navigation
             </h4>
             <ul className="space-y-2 text-[13px] text-[var(--ink-secondary)]">
@@ -65,7 +65,7 @@ export function Footer() {
               </li>
               <li>
                 <Link href="/register" className="hover:text-[var(--ink-primary)] hover:underline underline-offset-4 transition-colors duration-120">
-                  Start Monitoring
+                  Start free 7-day trial
                 </Link>
               </li>
               <li>
@@ -78,7 +78,7 @@ export function Footer() {
 
           {/* Compliance & Legal */}
           <div className="md:col-span-4 flex flex-col gap-3">
-            <h4 className="font-mono text-[11px] text-[var(--ghost-text-dim)] tracking-[0.02em]">
+            <h4 className="font-mono text-[11px] text-[var(--ghost-text)] tracking-[0.02em]">
               Compliance &amp; Legal
             </h4>
             <ul className="space-y-2 text-[13px] text-[var(--ink-secondary)]">
@@ -124,13 +124,13 @@ export function Footer() {
 
         {/* Official Trademark & Platform Disclaimer (§3 Directive) */}
         <div className="py-6 border-b border-[var(--hairline)]">
-          <p className="text-[12px] text-[var(--ghost-text-dim)] leading-[1.6]">
+          <p className="text-[12px] text-[var(--ghost-text)] leading-[1.6]">
             Kultra is an independent monitoring platform and is not affiliated with, sponsored by, or endorsed by Google LLC or Shopify Inc. Google Merchant Center and Shopify are registered trademarks of their respective owners.
           </p>
         </div>
 
         {/* Bottom Metadata Bar */}
-        <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 font-mono text-[11px] text-[var(--ghost-text-dim)]">
+        <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 font-mono text-[11px] text-[var(--ghost-text)]">
           <p>© 2026 Kultra. All rights reserved.</p>
           <div className="flex items-center gap-4">
             <Link href="/privacy" className="hover:text-[var(--ink-primary)] transition-colors">

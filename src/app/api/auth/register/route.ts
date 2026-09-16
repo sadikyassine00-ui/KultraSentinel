@@ -116,7 +116,7 @@ export async function POST(request: Request) {
       },
       message: isAdmin
         ? 'Platform owner registered. Redirecting to Mission Control.'
-        : 'Platform account provisioned. 14-day trial active.',
+        : 'Platform account provisioned. 7-day free trial active.',
     });
 
     response.headers.set('Set-Cookie', cookieHeader);

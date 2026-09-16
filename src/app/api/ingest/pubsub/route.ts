@@ -236,7 +236,7 @@ export async function POST(request: Request) {
               type: 'section',
               text: {
                 type: 'mrkdwn',
-                text: `*Store:* \`${store.store_name || store.store_url}\` (GMC #${merchantId})\n*Environment:* \`[Production]\`\n*SKU:* \`${sku}\` — *${title}*\n*Status:* \`${severityLabel}\`\n*Policy Failure:* \`${issueCode}\``,
+                text: `*Store:* \`${store.store_name || store.store_url}\` (GMC #${merchantId})\n*Environment:* \`[Production]\`\n*SKU:* \`${sku}\` - *${title}*\n*Status:* \`${severityLabel}\`\n*Policy Failure:* \`${issueCode}\``,
               },
             },
             {

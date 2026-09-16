@@ -110,7 +110,7 @@ export default function RegisterPage() {
               Create platform account
             </h1>
             <p className="text-[13px] text-[var(--ghost-text)] mt-1.5">
-              Start your 14-day trial or connect your Merchant Center MCA.
+              Start your free 7-day trial or connect your Merchant Center MCA.
             </p>
           </div>
 
@@ -130,7 +130,7 @@ export default function RegisterPage() {
                 <div>
                   <h3 className="font-display text-lg font-semibold text-[var(--ink-primary)]">Account initialized</h3>
                   <p className="text-[13px] text-[var(--ghost-text)] mt-1">
-                    Your 14-day trial for <strong className="text-[var(--ink-primary)]">{provisionedData.company_name}</strong> is ready.
+                    Your 7-day trial for <strong className="text-[var(--ink-primary)]">{provisionedData.company_name}</strong> is ready.
                   </p>
                 </div>
 

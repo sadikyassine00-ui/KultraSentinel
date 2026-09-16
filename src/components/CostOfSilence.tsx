@@ -57,7 +57,7 @@ export function CostOfSilence() {
       <div className="relative z-10 max-w-[1140px] mx-auto">
         {/* Section Header */}
         <div className="max-w-[760px] mb-12 sm:mb-14">
-          <span className="font-mono text-[11px] text-[var(--ghost-text-dim)] tracking-[0.02em] block mb-2">
+          <span className="font-mono text-[11px] text-[var(--ghost-text)] tracking-[0.02em] block mb-2">
             The cost of silence
           </span>
           <h2 className="font-display text-[1.85rem] sm:text-[2.25rem] font-semibold text-[var(--ink-primary)] leading-[1.2]">
@@ -143,11 +143,11 @@ export function CostOfSilence() {
               </div>
             </div>
 
-            {/* Bottom KPI Metric */}
-            <div className="mt-6 pt-4 border-t border-[var(--hairline)] flex items-end justify-between">
+            {/* Bottom KPI Metric (--text-mono-xl per §16 and A3) */}
+            <div className="mt-6 pt-4 border-t border-[var(--hairline)] flex items-end justify-between gap-3">
               <div>
-                <span className="text-[12px] text-[var(--ghost-text)] block mb-1">Average lost revenue per incident</span>
-                <span className="font-mono text-[24px] text-[var(--ghost-heading)] font-medium leading-none">$4,800+</span>
+                <span className="text-[12.5px] font-semibold text-[var(--ghost-text)] block mb-1.5">Average lost revenue per incident</span>
+                <span className="font-mono text-[32px] leading-[1.1] text-[var(--ghost-heading)] font-medium block">$4,800+</span>
               </div>
               <span className="tag-pill tag-ghost text-[10px]">
                 Momentum lost
@@ -228,11 +228,11 @@ export function CostOfSilence() {
               </div>
             </div>
 
-            {/* Bottom KPI Metric */}
-            <div className="mt-6 pt-4 border-t border-[var(--hairline)] flex items-end justify-between">
+            {/* Bottom KPI Metric (--text-mono-xl per §16 and A3) */}
+            <div className="mt-6 pt-4 border-t border-[var(--hairline)] flex items-end justify-between gap-3">
               <div>
-                <span className="text-[12px] text-[var(--ink-secondary)] block mb-1">Protected ad spend</span>
-                <span className="font-mono text-[24px] text-[var(--signal)] font-medium leading-none">$0.00 downtime</span>
+                <span className="text-[12.5px] font-semibold text-[var(--ink-secondary)] block mb-1.5">Protected ad spend</span>
+                <span className="font-mono text-[32px] leading-[1.1] text-[var(--signal)] font-medium block">$0.00 downtime</span>
               </div>
               <span className="tag-pill tag-signal text-[10px]">
                 Continuous

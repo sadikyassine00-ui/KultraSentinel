@@ -28,11 +28,16 @@ export function PricingMatrix({ onSelectPlan }: PricingMatrixProps) {
           </p>
         </div>
 
-        {/* Live Onboarding Trust Line */}
-        <div className="max-w-[960px] mx-auto mb-10 rounded-[var(--radius-sm)] bg-[var(--bg-surface)] border border-[var(--hairline)] p-3.5 text-center">
-          <span className="text-[13px] text-[var(--ink-secondary)]">
-            14-day full feature trial. Instant activation with read-only catalog access. Cancel anytime.
-          </span>
+        {/* Cost-of-Inaction Re-Anchor & Billing Transition Line (§B4 & §B6) */}
+        <div className="max-w-[960px] mx-auto mb-8 text-center space-y-2.5">
+          <p className="text-[14px] text-[var(--ink-secondary)]">
+            One prevented disapproval covers <strong className="text-[var(--signal)] font-semibold">250 months</strong> of Solo Merchant pricing.
+          </p>
+          <div className="rounded-[var(--radius-sm)] bg-[var(--bg-surface)] border border-[var(--hairline)] p-3 text-center">
+            <span className="text-[12.5px] text-[var(--ghost-text)]">
+              Free for 7 days, no credit card required. After your trial ends, continue for $19/mo (Solo Merchant) or $99/mo (PPC Agency); cancel anytime before then and you will not be charged.
+            </span>
+          </div>
         </div>
 
         {/* 2-Column Pricing Grid: Ghost vs Signal */}
@@ -57,11 +62,16 @@ export function PricingMatrix({ onSelectPlan }: PricingMatrixProps) {
               </p>
 
               {/* Price */}
-              <div className="mt-6 mb-6 pb-6 border-b border-[var(--hairline)] flex items-baseline gap-2">
-                <span className="font-mono text-[2.5rem] font-medium text-[var(--ink-primary)] leading-none">
-                  $19
-                </span>
-                <span className="font-mono text-[12px] text-[var(--ghost-text-dim)]">/ month flat</span>
+              <div className="mt-6 mb-6 pb-6 border-b border-[var(--hairline)]">
+                <div className="flex items-baseline gap-2">
+                  <span className="font-mono text-[2.5rem] font-medium text-[var(--ink-primary)] leading-none">
+                    $19
+                  </span>
+                  <span className="font-mono text-[12px] text-[var(--ghost-text)]">/ month flat</span>
+                </div>
+                <div className="font-mono text-[12px] text-[var(--ghost-text)] mt-1.5">
+                  Free for 7 days, then $19/mo
+                </div>
               </div>
 
               {/* Features List */}
@@ -100,7 +110,7 @@ export function PricingMatrix({ onSelectPlan }: PricingMatrixProps) {
                 onClick={() => onSelectPlan?.('merchant')}
                 className="btn-secondary w-full justify-center text-[13px] py-2.5 !rounded-[3px]"
               >
-                Start 14-day free trial
+                Start free 7-day trial
               </Link>
             </div>
           </div>
@@ -128,11 +138,16 @@ export function PricingMatrix({ onSelectPlan }: PricingMatrixProps) {
               </p>
 
               {/* Price */}
-              <div className="mt-6 mb-6 pb-6 border-b border-[var(--hairline)] flex items-baseline gap-2">
-                <span className="font-mono text-[2.5rem] font-medium text-[var(--signal)] leading-none">
-                  $99
-                </span>
-                <span className="font-mono text-[12px] text-[var(--ghost-text-dim)]">/ month ($5/mo per extra account)</span>
+              <div className="mt-6 mb-6 pb-6 border-b border-[var(--hairline)]">
+                <div className="flex items-baseline gap-2">
+                  <span className="font-mono text-[2.5rem] font-medium text-[var(--signal)] leading-none">
+                    $99
+                  </span>
+                  <span className="font-mono text-[12px] text-[var(--ghost-text)]">/ month ($5/mo per extra account)</span>
+                </div>
+                <div className="font-mono text-[12px] text-[var(--signal)] mt-1.5">
+                  Free for 7 days, then $99/mo
+                </div>
               </div>
 
               {/* Features List */}
@@ -171,7 +186,7 @@ export function PricingMatrix({ onSelectPlan }: PricingMatrixProps) {
                 onClick={() => onSelectPlan?.('agency')}
                 className="btn-primary w-full justify-center text-[13px] py-2.5 !rounded-[3px]"
               >
-                Start 14-day free trial
+                Start free 7-day trial
               </Link>
             </div>
           </div>

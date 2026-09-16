@@ -18,7 +18,7 @@ export function Hero() {
 
         {/* Subheadline in Inter (High-contrast ink-secondary per §13) */}
         <p className="mt-6 text-[15.5px] sm:text-[16.5px] text-[var(--ink-secondary)] leading-[1.65] max-w-[680px] mx-auto text-balance">
-          Instant sub-30-second Slack alerts with direct one-click fix links the moment Google&apos;s crawler flags a product violation.
+          Google will not text you when policy changes break your catalog. Instant sub-30-second Slack alerts with direct one-click fix links the moment Google&apos;s crawler flags a product violation.
         </p>
 
         {/* Action Group: Primary and Secondary buttons (§4 radius 3px) */}
@@ -27,7 +27,7 @@ export function Hero() {
             href="/register"
             className="btn-primary !rounded-[3px] text-[13.5px] px-6 py-3"
           >
-            Start Monitoring Now
+            Start your free 7-day trial
           </Link>
 
           <a
@@ -36,6 +36,13 @@ export function Hero() {
           >
             View Live Triage Demo
           </a>
+        </div>
+
+        {/* Urgency and Free Trial Mono Line (§B5, no em-dashes per §A8) */}
+        <div className="mt-3.5 text-center">
+          <span className="font-mono text-[11px] text-[var(--ghost-text)] tracking-[0.02em]">
+            Free 7-day trial, no credit card required. Limited pilot cohort this month (10 agency / 25 merchant seats).
+          </span>
         </div>
 
         {/* Three Friction Reducer Pills Directly Below Primary Action (§2 Landing Page Directive) */}

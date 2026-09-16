@@ -15,7 +15,7 @@ export function SlackPreview() {
       <div className="relative z-10 max-w-[1140px] mx-auto">
         {/* Section Header */}
         <div className="max-w-[760px] mb-12">
-          <span className="font-mono text-[11px] text-[var(--ghost-text-dim)] tracking-[0.02em] block mb-2">
+          <span className="font-mono text-[11px] text-[var(--ghost-text)] tracking-[0.02em] block mb-2">
             Incident dispatch
           </span>
           <h2 className="font-display text-[1.85rem] sm:text-[2.25rem] font-semibold text-[var(--ink-primary)] leading-[1.2]">
@@ -34,11 +34,13 @@ export function SlackPreview() {
               <span className="font-mono text-[11px] text-[var(--ink-primary)] font-medium">
                 #alerts-google-merchant
               </span>
-              <span className="font-mono text-[10.5px] text-[var(--ghost-text-dim)] pl-2 border-l border-[var(--hairline)]">
+              <span className="font-mono text-[10.5px] text-[var(--ghost-text)] pl-2 border-l border-[var(--hairline)] flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--ghost-line)] shrink-0 inline-block" />
                 Webhook active
               </span>
             </div>
-            <span className="font-mono text-[10.5px] text-[var(--signal)]">
+            <span className="font-mono text-[10.5px] text-[var(--signal)] flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)] shrink-0 inline-block" />
               Pub/Sub stream live
             </span>
           </div>
@@ -61,7 +63,7 @@ export function SlackPreview() {
                 <span className="font-mono text-[10px] text-[var(--ghost-text-dim)] px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-[var(--bg-surface-2)] border border-[var(--hairline)]">
                   APP
                 </span>
-                <span className="font-mono text-[11px] text-[var(--ghost-text-dim)]">10:42:18 UTC</span>
+                <span className="font-mono text-[11px] text-[var(--ghost-text)]">10:42:18 UTC</span>
               </div>
             </div>
 
@@ -110,7 +112,7 @@ export function SlackPreview() {
                   href="https://admin.shopify.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="btn-primary text-[12.5px] py-2 px-3.5"
+                  className="btn-primary !rounded-[3px] text-[12.5px] py-2 px-3.5"
                 >
                   <span>Edit in Shopify Admin</span>
                   <ExternalLink className="w-3.5 h-3.5" strokeWidth={1.5} />
@@ -119,7 +121,7 @@ export function SlackPreview() {
                 <button
                   type="button"
                   onClick={() => setShowRawPayload(!showRawPayload)}
-                  className="btn-secondary text-[12.5px] py-2 px-3.5"
+                  className="btn-secondary !rounded-[3px] text-[12.5px] py-2 px-3.5"
                 >
                   <Code2 className="w-3.5 h-3.5" strokeWidth={1.5} />
                   <span>Inspect raw payload</span>

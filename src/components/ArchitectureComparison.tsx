@@ -52,7 +52,7 @@ export function ArchitectureComparison() {
       <div className="relative z-10 max-w-[1140px] mx-auto">
         {/* Section Header */}
         <div className="max-w-[760px] mb-12">
-          <span className="font-mono text-[11px] text-[var(--ghost-text-dim)] tracking-[0.02em] block mb-2">
+          <span className="font-mono text-[11px] text-[var(--ghost-text)] tracking-[0.02em] block mb-2">
             Architecture comparison
           </span>
           <h2 className="font-display text-[1.85rem] sm:text-[2.25rem] font-semibold text-[var(--ink-primary)] leading-[1.2]">
@@ -63,26 +63,26 @@ export function ArchitectureComparison() {
           </p>
         </div>
 
-        {/* Responsive Table: Desktop View per §16 */}
-        <div className="hidden lg:block overflow-hidden rounded-[var(--radius-md)] border border-[var(--hairline)] bg-[var(--bg-surface)]">
-          <table className="w-full text-left border-collapse">
+        {/* Responsive Table: Desktop View with overflow-x-auto per §16 and A5 */}
+        <div className="hidden lg:block w-full overflow-x-auto rounded-[var(--radius-md)] border border-[var(--hairline)] bg-[var(--bg-surface)]">
+          <table className="w-full text-left border-collapse min-w-[700px]">
             <thead>
-              <tr className="border-b border-[var(--hairline)] bg-[var(--bg-surface-2)] font-mono text-[11px] text-[var(--ghost-text-dim)]">
+              <tr className="border-b border-[var(--hairline)] bg-[var(--bg-surface-2)] font-mono text-[11px] text-[var(--ghost-text)]">
                 <th className="py-3.5 px-6 w-[28%] font-normal">
                   Architecture metric
                 </th>
                 <th className="py-3.5 px-6 w-[36%] font-normal">
                   <div className="flex items-center gap-2">
-                    <span>Legacy feed tools (Batch cron)</span>
-                    <span className="tag-pill tag-ghost text-[10px] py-0.5">
+                    <span className="text-[var(--ghost-text)]">Legacy feed tools (Batch cron)</span>
+                    <span className="tag-pill tag-ghost text-[10.5px]">
                       Dormant
                     </span>
                   </div>
                 </th>
                 <th className="py-3.5 px-6 w-[36%] font-normal text-[var(--signal)] bg-[var(--signal-wash)] border-l border-[var(--hairline)]">
                   <div className="flex items-center gap-2">
-                    <span>Kultra Sentinel Engine</span>
-                    <span className="tag-pill tag-signal text-[10px] py-0.5">
+                    <span className="text-[var(--ink-primary)] font-medium">Kultra Sentinel Engine</span>
+                    <span className="tag-pill tag-signal text-[10.5px]">
                       Merchant API v1
                     </span>
                   </div>
