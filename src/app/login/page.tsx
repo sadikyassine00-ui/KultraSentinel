@@ -105,9 +105,9 @@ function LoginForm() {
           <Image
             src="/assets/logos/kultra-logo-horizontal.svg"
             alt="Kultra"
-            width={130}
-            height={28}
-            className="h-[28px] w-auto mx-auto object-contain brightness-110"
+            width={150}
+            height={42}
+            className="h-[34px] sm:h-[36px] w-auto mx-auto object-contain brightness-110"
             priority
           />
         </Link>

@@ -1,6 +1,6 @@
-<svg width="220" height="48" viewBox="0 0 220 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg width="128" height="36" viewBox="0 0 128 36" fill="none" xmlns="http://www.w3.org/2000/svg">
   <!-- mark: a ghost network with one live signal connection -->
-  <g transform="translate(4,4)">
+  <g transform="translate(-1, -1)">
     <line x1="20" y1="20" x2="6" y2="10"  stroke="#3a3d43" stroke-width="1.2"/>
     <line x1="20" y1="20" x2="8" y2="32"  stroke="#3a3d43" stroke-width="1.2"/>
     <line x1="20" y1="20" x2="33" y2="33" stroke="#3a3d43" stroke-width="1.2"/>
@@ -17,5 +17,5 @@
   </g>
 
   <!-- wordmark in Inter 700 uppercase -->
-  <text x="56" y="30" font-family="Inter, -apple-system, sans-serif" font-weight="700" font-size="22" letter-spacing="0.5" fill="#f4f1ea">KULTRA</text>
+  <text x="44.5" y="24" font-family="Inter, -apple-system, sans-serif" font-weight="700" font-size="20" letter-spacing="0.5" fill="#f4f1ea">KULTRA</text>
 </svg>

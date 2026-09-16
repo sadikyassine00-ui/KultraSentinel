@@ -136,9 +136,9 @@ export function Header() {
             <Image
               src="/assets/logos/kultra-logo-horizontal.svg"
               alt="Kultra"
-              width={130}
-              height={28}
-              className="h-[24px] sm:h-[26px] w-auto object-contain brightness-105"
+              width={140}
+              height={36}
+              className="h-[28px] sm:h-[30px] w-auto object-contain brightness-105"
               priority
             />
           </Link>

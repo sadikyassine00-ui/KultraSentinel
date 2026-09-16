@@ -96,9 +96,9 @@ export default function TenantDashboardLayout({
               <Image
                 src="/assets/logos/kultra-logo-horizontal.svg"
                 alt="Kultra"
-                width={125}
-                height={26}
-                className="h-[24px] w-auto object-contain brightness-110"
+                width={140}
+                height={36}
+                className="h-[28px] sm:h-[30px] w-auto object-contain brightness-110"
                 priority
               />
             </Link>

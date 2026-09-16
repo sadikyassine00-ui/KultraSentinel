@@ -109,9 +109,9 @@ export default function AdminLoginPage() {
               <Image
                 src="/assets/logos/kultra-logo-horizontal.svg"
                 alt="Kultra"
-                width={130}
-                height={26}
-                className="h-[26px] w-auto mx-auto object-contain brightness-105"
+                width={140}
+                height={36}
+                className="h-[28px] sm:h-[30px] w-auto mx-auto object-contain brightness-105"
               />
             </Link>
             <div className="tag-pill tag-signal text-[11px] mb-3">

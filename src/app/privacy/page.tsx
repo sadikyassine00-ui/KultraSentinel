@@ -25,9 +25,9 @@ export default function PrivacyPolicyPage() {
               <Image
                 src="/assets/logos/kultra-logo-horizontal.svg"
                 alt="Kultra"
-                width={110}
-                height={22}
-                className="h-[22px] w-auto object-contain brightness-105"
+                width={120}
+                height={34}
+                className="h-[26px] w-auto object-contain brightness-105"
                 priority
               />
             </Link>
