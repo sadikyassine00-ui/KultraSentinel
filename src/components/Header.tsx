@@ -153,7 +153,7 @@ export function Header() {
             <Link
               key={link.label}
               href={link.href}
-              className="text-[14px] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] transition-colors duration-120 outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal-glow)] rounded-[var(--radius-sm)]"
+              className="text-[14px] text-[var(--ghost-text)] hover:text-[var(--ink-primary)] transition-colors duration-120 outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal-glow)] rounded-[var(--radius-sm)]"
             >
               {link.label}
             </Link>
@@ -163,7 +163,7 @@ export function Header() {
         {/* Header Action & Mobile Menu Toggle */}
         <div className="flex items-center gap-3">
           {user ? (
-            /* Logged-In User Profile Pill & Dropdown (§16 Top bar) */
+            /* Logged-In User Profile Pill & Dropdown (§16 Top bar) - Static Status Dot with ZERO animation (§17) */
             <div className="relative" ref={dropdownRef}>
               <button
                 type="button"
@@ -238,17 +238,17 @@ export function Header() {
               )}
             </div>
           ) : (
-            /* Logged-Out Actions: Ghost secondary / Signal primary */
+            /* Logged-Out Actions: Ghost secondary / Signal primary (radius 3px) */
             <div className="flex items-center gap-2">
               <Link
                 href="/login"
-                className="text-[13px] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] px-3 py-1.5 transition-colors duration-120"
+                className="text-[13px] text-[var(--ghost-text)] hover:text-[var(--ink-primary)] px-3 py-1.5 transition-colors duration-120"
               >
                 Log in
               </Link>
               <Link
                 href="/register"
-                className="btn-primary"
+                className="btn-primary !rounded-[3px]"
               >
                 Start trial
               </Link>
@@ -284,7 +284,7 @@ export function Header() {
               key={link.label}
               href={link.href}
               onClick={() => setMobileMenuOpen(false)}
-              className="block text-[14px] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] py-2 transition-colors border-b border-[var(--hairline)] last:border-none"
+              className="block text-[14px] text-[var(--ghost-text)] hover:text-[var(--ink-primary)] py-2 transition-colors border-b border-[var(--hairline)] last:border-none"
             >
               {link.label}
             </Link>
@@ -295,7 +295,7 @@ export function Header() {
               <Link
                 href="/dashboard"
                 onClick={() => setMobileMenuOpen(false)}
-                className="btn-primary w-full justify-center"
+                className="btn-primary !rounded-[3px] w-full justify-center"
               >
                 Open Catalog Shield
               </Link>
@@ -305,7 +305,7 @@ export function Header() {
                   setMobileMenuOpen(false);
                   handleLogout();
                 }}
-                className="btn-secondary w-full justify-center"
+                className="btn-secondary !rounded-[3px] w-full justify-center"
               >
                 Sign out
               </button>
@@ -315,14 +315,14 @@ export function Header() {
               <Link
                 href="/login"
                 onClick={() => setMobileMenuOpen(false)}
-                className="btn-secondary w-full justify-center"
+                className="btn-secondary !rounded-[3px] w-full justify-center"
               >
                 Log in
               </Link>
               <Link
                 href="/register"
                 onClick={() => setMobileMenuOpen(false)}
-                className="btn-primary w-full justify-center"
+                className="btn-primary !rounded-[3px] w-full justify-center"
               >
                 Start trial
               </Link>
