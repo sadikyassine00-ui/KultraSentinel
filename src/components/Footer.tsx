@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 
 export function Footer() {
   return (
@@ -72,21 +73,21 @@ export function Footer() {
           {/* Legal Links */}
           <div className="md:col-span-3 flex flex-col gap-3">
             <h4 className="font-mono text-[11px] text-[var(--ghost-text-dim)] tracking-[0.02em]">
-              Compliance
+              Compliance & Legal
             </h4>
             <ul className="space-y-2 text-[13px] text-[var(--ink-secondary)]">
               <li>
-                <a href="#privacy" className="hover:text-[var(--ink-primary)] hover:underline underline-offset-4 transition-colors duration-120">
+                <Link href="/privacy" className="hover:text-[var(--ink-primary)] hover:underline underline-offset-4 transition-colors duration-120">
                   Privacy Policy
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#terms" className="hover:text-[var(--ink-primary)] hover:underline underline-offset-4 transition-colors duration-120">
+                <Link href="/terms" className="hover:text-[var(--ink-primary)] hover:underline underline-offset-4 transition-colors duration-120">
                   Terms of Service
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#beta" className="hover:text-[var(--ink-primary)] hover:underline underline-offset-4 transition-colors duration-120">
+                <a href="#pilot" className="hover:text-[var(--ink-primary)] hover:underline underline-offset-4 transition-colors duration-120">
                   Pilot access
                 </a>
               </li>
@@ -97,10 +98,18 @@ export function Footer() {
         {/* Bottom Metadata Bar */}
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 font-mono text-[11px] text-[var(--ghost-text-dim)]">
           <p>© {new Date().getFullYear()} Kultra. All rights reserved.</p>
-          <div className="flex items-center gap-3">
-            <span>Google Merchant API v1</span>
+          <div className="flex items-center gap-4">
+            <Link href="/privacy" className="hover:text-[var(--ink-primary)] transition-colors">
+              Privacy Policy
+            </Link>
             <span>/</span>
-            <span>Cloud Pub/Sub Push</span>
+            <Link href="/terms" className="hover:text-[var(--ink-primary)] transition-colors">
+              Terms of Service
+            </Link>
+            <span>/</span>
+            <span>Google Content API v2.1</span>
+            <span>/</span>
+            <span>Pub/Sub Push</span>
           </div>
         </div>
       </div>

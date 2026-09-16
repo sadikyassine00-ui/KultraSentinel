@@ -188,6 +188,18 @@ function RegisterForm() {
           >
             {loading ? 'Creating workspace...' : 'Start 14-day free trial'}
           </button>
+
+          <p className="text-[11.5px] text-[#6b7078] text-center pt-1 leading-normal">
+            By signing up, you agree to our{' '}
+            <Link href="/terms" className="text-[#b9b3a5] hover:text-[#f4f1ea] underline underline-offset-2">
+              Terms of Service
+            </Link>{' '}
+            and{' '}
+            <Link href="/privacy" className="text-[#b9b3a5] hover:text-[#f4f1ea] underline underline-offset-2">
+              Privacy Policy
+            </Link>
+            .
+          </p>
         </form>
       </div>
 
