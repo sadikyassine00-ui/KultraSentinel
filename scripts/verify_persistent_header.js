@@ -56,7 +56,7 @@ async function verifyAuthFlow() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      email: 'yassinesadik0@gmail.com',
+      email: 'support@usekultra.com',
       password: 'KultraSentinel2026!',
     }),
   });

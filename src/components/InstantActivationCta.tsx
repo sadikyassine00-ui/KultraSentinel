@@ -32,7 +32,7 @@ export function InstantActivationCta() {
             href="/register"
             className="btn-primary !rounded-[3px] text-[13.5px] px-7 py-3 font-semibold"
           >
-            Start your free 7-day trial
+            Start your free 14-day trial
           </Link>
 
           <a
@@ -51,7 +51,7 @@ export function InstantActivationCta() {
           <div className="flex items-start gap-2.5">
             <ShieldCheck className="w-4 h-4 text-[var(--signal)] shrink-0 mt-0.5" strokeWidth={1.5} />
             <div>
-              <div className="text-[12.5px] font-medium text-[var(--ink-primary)]">Free 7-Day Trial</div>
+              <div className="text-[12.5px] font-medium text-[var(--ink-primary)]">Free 14-Day Trial</div>
               <div className="text-[11.5px] text-[var(--ghost-text)]">No credit card required. Full feature access.</div>
             </div>
           </div>

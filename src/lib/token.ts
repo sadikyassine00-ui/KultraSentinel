@@ -50,8 +50,7 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
 }
 
 export const ALLOWED_ADMIN_EMAILS: string[] = [
-  'yassinesadik0@gmail.com',
-  'contact@usekultra.com',
+  'support@usekultra.com',
 ];
 
 export function isAllowedAdminEmail(email: string | null | undefined): boolean {

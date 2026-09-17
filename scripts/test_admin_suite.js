@@ -123,7 +123,7 @@ async function runSuite() {
     // 3.1 Invalid password rejection
     const badLogin = await makeRequest('/api/auth/login', {
       method: 'POST',
-      body: { email: 'yassinesadik0@gmail.com', password: 'WrongPassword999!' },
+      body: { email: 'support@usekultra.com', password: 'WrongPassword999!' },
     });
     assert(badLogin.status === 401, 'Rejects invalid password with 401 Unauthorized');
     passed++;
@@ -136,14 +136,14 @@ async function runSuite() {
     assert(nonAdminLogin.status === 403, 'Rejects non-admin user email with 403 Forbidden');
     passed++;
 
-    // 3.3 Valid authorized admin login (yassinesadik0@gmail.com)
+    // 3.3 Valid authorized admin login (support@usekultra.com)
     const goodLogin = await makeRequest('/api/auth/login', {
       method: 'POST',
-      body: { email: 'yassinesadik0@gmail.com', password: 'KultraSentinel2026!' },
+      body: { email: 'support@usekultra.com', password: 'KultraSentinel2026!' },
     });
-    assert(goodLogin.status === 200, 'Authenticates authorized admin (yassinesadik0@gmail.com) with 200 OK');
+    assert(goodLogin.status === 200, 'Authenticates authorized admin (support@usekultra.com) with 200 OK');
     assert(goodLogin.data.success === true, 'Returns success: true payload');
-    assert(goodLogin.data.user.email === 'yassinesadik0@gmail.com', 'Returns correct admin user object');
+    assert(goodLogin.data.user.email === 'support@usekultra.com', 'Returns correct admin user object');
     assert(Boolean(goodLogin.setCookie), 'Issues HttpOnly kultra_admin_session cookie');
     sessionCookie = goodLogin.setCookie.split(';')[0];
     passed += 4;
@@ -226,12 +226,12 @@ async function runSuite() {
     assert(nonAdminGoogle.status === 403, 'Rejects non-admin Google account with 403 Forbidden');
     passed++;
 
-    // 5.3 Accepts authorized administrator Google identity (contact@usekultra.com)
+    // 5.3 Accepts authorized administrator Google identity (support@usekultra.com)
     const adminGoogle = await makeRequest('/api/auth/google', {
       method: 'POST',
-      body: { demoEmail: 'contact@usekultra.com', demoName: 'Kultra Founder' },
+      body: { demoEmail: 'support@usekultra.com', demoName: 'Kultra Founder' },
     });
-    assert(adminGoogle.status === 200, 'Authenticates authorized admin Google identity (contact@usekultra.com) with 200 OK');
+    assert(adminGoogle.status === 200, 'Authenticates authorized admin Google identity (support@usekultra.com) with 200 OK');
     assert(Boolean(adminGoogle.setCookie), 'Issues session cookie on authorized Google sign-in');
     passed += 2;
   } catch (err) {

@@ -36,7 +36,7 @@ try {
 }
 
 const BASE_URL = 'http://localhost:3000';
-const ADMIN_EMAIL = 'yassinesadik0@gmail.com';
+const ADMIN_EMAIL = 'support@usekultra.com';
 const ADMIN_PASS = 'KultraSentinel2026!';
 const TENANT_A_EMAIL = 'marcus.vance@apexmedia.io';
 const TENANT_B_EMAIL = 'elena.rostova@solarestudio.com';

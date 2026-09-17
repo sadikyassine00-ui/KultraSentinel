@@ -27,7 +27,7 @@ export function Hero() {
             href="/register"
             className="btn-primary !rounded-[3px] text-[13.5px] px-6 py-3"
           >
-            Start your free 7-day trial
+            Start your free 14-day trial
           </Link>
 
           <a
@@ -41,7 +41,7 @@ export function Hero() {
         {/* Urgency and Free Trial Mono Line (§B5, no em-dashes per §A8) */}
         <div className="mt-3.5 text-center">
           <span className="font-mono text-[11px] text-[var(--ghost-text)] tracking-[0.02em]">
-            Free 7-day trial, no credit card required. Limited pilot cohort this month (10 agency / 25 merchant seats).
+            Free 14-day trial, no credit card required. Limited pilot cohort this month (10 agency / 25 merchant seats).
           </span>
         </div>
 

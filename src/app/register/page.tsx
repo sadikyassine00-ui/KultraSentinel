@@ -89,7 +89,7 @@ function RegisterForm() {
           />
         </Link>
         <h1 className="text-[26px] font-semibold text-[#f4f1ea] tracking-tight font-display">
-          Start your free 7-day trial
+          Start your free 14-day trial
         </h1>
         <p className="text-[13px] text-[#b9b3a5] mt-1">
           Sub-30-second disapproval detection for Google Shopping.

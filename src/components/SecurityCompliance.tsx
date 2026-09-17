@@ -119,7 +119,7 @@ export function SecurityCompliance() {
                 href="/register"
                 className="btn-primary text-[13px] py-2.5 px-5 !rounded-[3px] text-center"
               >
-                Start free 7-day trial
+                Start free 14-day trial
               </Link>
               <Link
                 href="/privacy"

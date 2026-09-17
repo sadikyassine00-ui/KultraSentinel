@@ -79,9 +79,9 @@ async function runSuperAdminSuite() {
   try {
     const loginRes = await makeRequest('/api/auth/login', {
       method: 'POST',
-      body: { email: 'yassinesadik0@gmail.com', password: 'KultraSentinel2026!' },
+      body: { email: 'support@usekultra.com', password: 'KultraSentinel2026!' },
     });
-    assert(loginRes.status === 200, 'Authenticated sole platform owner yassinesadik0@gmail.com');
+    assert(loginRes.status === 200, 'Authenticated sole platform owner support@usekultra.com');
     adminCookie = loginRes.setCookie.split(';')[0];
     passed++;
   } catch (err) {

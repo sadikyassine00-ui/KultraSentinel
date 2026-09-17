@@ -110,7 +110,7 @@ export default function RegisterPage() {
               Create platform account
             </h1>
             <p className="text-[13px] text-[var(--ghost-text)] mt-1.5">
-              Start your free 7-day trial or connect your Merchant Center MCA.
+              Start your free 14-day trial or connect your Merchant Center MCA.
             </p>
           </div>
 
@@ -130,7 +130,7 @@ export default function RegisterPage() {
                 <div>
                   <h3 className="font-display text-lg font-semibold text-[var(--ink-primary)]">Account initialized</h3>
                   <p className="text-[13px] text-[var(--ghost-text)] mt-1">
-                    Your 7-day trial for <strong className="text-[var(--ink-primary)]">{provisionedData.company_name}</strong> is ready.
+                    Your 14-day trial for <strong className="text-[var(--ink-primary)]">{provisionedData.company_name}</strong> is ready.
                   </p>
                 </div>
 
@@ -310,7 +310,16 @@ export default function RegisterPage() {
       </main>
 
       <footer className="w-full py-4 border-t border-[var(--hairline)] bg-[var(--bg-canvas)] text-center font-mono text-[11px] text-[var(--ghost-text-dim)]">
-        &copy; {new Date().getFullYear()} Kultra Sentinel. Dedicated Google Merchant Center Watchdog.
+        <div>&copy; {new Date().getFullYear()} Kultra. Dedicated Google Merchant Center Watchdog.</div>
+        <div className="flex items-center justify-center gap-3 mt-1 text-[11px]">
+          <Link href="/privacy" className="text-[var(--ghost-text)] hover:text-[var(--ink-primary)] hover:underline">
+            Privacy Policy
+          </Link>
+          <span>/</span>
+          <Link href="/terms" className="text-[var(--ghost-text)] hover:text-[var(--ink-primary)] hover:underline">
+            Terms of Service
+          </Link>
+        </div>
       </footer>
     </div>
   );

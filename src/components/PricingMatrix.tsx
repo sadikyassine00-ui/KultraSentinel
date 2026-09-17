@@ -35,7 +35,7 @@ export function PricingMatrix({ onSelectPlan }: PricingMatrixProps) {
           </p>
           <div className="rounded-[var(--radius-sm)] bg-[var(--bg-surface)] border border-[var(--hairline)] p-3 text-center">
             <span className="text-[12.5px] text-[var(--ghost-text)]">
-              Free for 7 days, no credit card required. After your trial ends, continue for $19/mo (Solo Merchant) or $99/mo (PPC Agency); cancel anytime before then and you will not be charged.
+              Free for 14 days, no credit card required. After your trial ends, continue for $19/mo (Solo Merchant) or $99/mo (PPC Agency); cancel anytime before then and you will not be charged.
             </span>
           </div>
         </div>
@@ -70,7 +70,7 @@ export function PricingMatrix({ onSelectPlan }: PricingMatrixProps) {
                   <span className="font-mono text-[12px] text-[var(--ghost-text)]">/ month flat</span>
                 </div>
                 <div className="font-mono text-[12px] text-[var(--ghost-text)] mt-1.5">
-                  Free for 7 days, then $19/mo
+                  Free for 14 days, then $19/mo
                 </div>
               </div>
 
@@ -110,7 +110,7 @@ export function PricingMatrix({ onSelectPlan }: PricingMatrixProps) {
                 onClick={() => onSelectPlan?.('merchant')}
                 className="btn-secondary w-full justify-center text-[13px] py-2.5 !rounded-[3px]"
               >
-                Start free 7-day trial
+                Start free 14-day trial
               </Link>
             </div>
           </div>
@@ -146,7 +146,7 @@ export function PricingMatrix({ onSelectPlan }: PricingMatrixProps) {
                   <span className="font-mono text-[12px] text-[var(--ghost-text)]">/ month ($5/mo per extra account)</span>
                 </div>
                 <div className="font-mono text-[12px] text-[var(--signal)] mt-1.5">
-                  Free for 7 days, then $99/mo
+                  Free for 14 days, then $99/mo
                 </div>
               </div>
 
@@ -186,7 +186,7 @@ export function PricingMatrix({ onSelectPlan }: PricingMatrixProps) {
                 onClick={() => onSelectPlan?.('agency')}
                 className="btn-primary w-full justify-center text-[13px] py-2.5 !rounded-[3px]"
               >
-                Start free 7-day trial
+                Start free 14-day trial
               </Link>
             </div>
           </div>

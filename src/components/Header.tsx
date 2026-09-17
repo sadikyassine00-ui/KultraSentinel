@@ -250,7 +250,7 @@ export function Header() {
                 href="/register"
                 className="btn-primary !rounded-[3px] text-[13px] py-2 px-3.5"
               >
-                Start free 7-day trial
+                Start free 14-day trial
               </Link>
             </div>
           )}
@@ -324,7 +324,7 @@ export function Header() {
                 onClick={() => setMobileMenuOpen(false)}
                 className="btn-primary !rounded-[3px] w-full justify-center text-[13px] py-2"
               >
-                Start free 7-day trial
+                Start free 14-day trial
               </Link>
             </div>
           )}

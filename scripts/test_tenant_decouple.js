@@ -20,8 +20,7 @@ try {
 
 const DEFAULT_SECRET = authSecret;
 const ALLOWED_ADMIN_EMAILS = [
-  'yassinesadik0@gmail.com',
-  'contact@usekultra.com',
+  'support@usekultra.com',
 ];
 
 function isAllowedAdminEmail(email) {
@@ -143,7 +142,7 @@ async function runTests() {
   console.log('\n[TEST 3] Platform Owner Admin Login');
   let adminCookie = '';
   try {
-    const adminEmail = 'contact@usekultra.com';
+    const adminEmail = 'support@usekultra.com';
     const adminRes = await makeRequest('/api/auth/login', {
       method: 'POST',
       body: {

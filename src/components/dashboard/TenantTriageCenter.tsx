@@ -174,7 +174,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
         await fetchDashboardData(null);
       } else {
         const resJson = await res.json();
-        setArmingFeedback(resJson.error || 'Failed to disconnect store. Please contact contact@usekultra.com.');
+        setArmingFeedback(resJson.error || 'Failed to disconnect store. Please contact support@usekultra.com.');
         setArmingStatus('error');
       }
     } catch {
@@ -641,10 +641,10 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
               <div className="font-mono text-[11px] text-[var(--ghost-text-dim)] pt-3 border-t border-[var(--hairline)]">
                 Need assistance with custom billing or high-SKU enterprise catalogs? Contact{' '}
                 <a
-                  href="mailto:contact@usekultra.com"
+                  href="mailto:support@usekultra.com"
                   className="text-[var(--ink-secondary)] hover:underline"
                 >
-                  contact@usekultra.com
+                  support@usekultra.com
                 </a>
               </div>
             </div>
@@ -1024,8 +1024,8 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
               </div>
               <p className="text-[12px] text-[var(--ghost-text)] leading-[1.5] mb-3">
                 You retain 100% ownership of your catalog telemetry. Disconnecting immediately terminates Pub/Sub ingestion and purges all cached incidents from Kultra&apos;s database. For full account deletion or verification inquiries, email{' '}
-                <a href="mailto:contact@usekultra.com" className="text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] underline">
-                  contact@usekultra.com
+                <a href="mailto:support@usekultra.com" className="text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] underline">
+                  support@usekultra.com
                 </a>.
               </p>
 

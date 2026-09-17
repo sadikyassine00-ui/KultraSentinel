@@ -28,7 +28,7 @@ export function Footer() {
 
             <div className="flex flex-col gap-1.5 font-mono text-[11px] text-[var(--ghost-text)]">
               <div>Headquartered in Ouarzazate, Morocco</div>
-              <div>Direct inquiry: <a href="mailto:contact@usekultra.com" className="text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] underline underline-offset-2">contact@usekultra.com</a></div>
+              <div>Direct inquiry: <a href="mailto:support@usekultra.com" className="text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] underline underline-offset-2">support@usekultra.com</a></div>
             </div>
 
             {/* System Status */}
@@ -65,7 +65,7 @@ export function Footer() {
               </li>
               <li>
                 <Link href="/register" className="hover:text-[var(--ink-primary)] hover:underline underline-offset-4 transition-colors duration-120">
-                  Start free 7-day trial
+                  Start free 14-day trial
                 </Link>
               </li>
               <li>
@@ -98,8 +98,8 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <a href="mailto:contact@usekultra.com" className="hover:text-[var(--ink-primary)] hover:underline underline-offset-4 transition-colors duration-120">
-                  contact@usekultra.com
+                <a href="mailto:support@usekultra.com" className="hover:text-[var(--ink-primary)] hover:underline underline-offset-4 transition-colors duration-120">
+                  support@usekultra.com
                 </a>
               </li>
             </ul>
@@ -143,7 +143,7 @@ export function Footer() {
             <span>/</span>
             <span>Ouarzazate, Morocco</span>
             <span>/</span>
-            <span>contact@usekultra.com</span>
+            <span>support@usekultra.com</span>
           </div>
         </div>
       </div>

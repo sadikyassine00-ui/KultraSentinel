@@ -90,7 +90,7 @@ To connect your real Neon Postgres database:
     `;
 
     // 4. Seed sole authorized administrators
-    const adminEmails = ['yassinesadik0@gmail.com', 'contact@usekultra.com'];
+    const adminEmails = ['support@usekultra.com'];
     const defaultPassword = process.env.ADMIN_DEFAULT_PASSWORD || 'KultraSentinel2026!';
     const passwordHash = await bcrypt.hash(defaultPassword, 10);
 
