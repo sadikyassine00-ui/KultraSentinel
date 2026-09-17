@@ -103,9 +103,9 @@ function LoginForm() {
           type="button"
           onClick={handleGoogleLogin}
           disabled={loading}
-          className="w-full flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-[3px] bg-white hover:bg-[#f8f9fa] active:bg-[#f1f3f4] text-[#1f1f1f] text-[13px] font-semibold transition-colors border border-[#dadce0] shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2a93b] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          className="btn-secondary w-full justify-center !rounded-[3px] text-[13px] py-2.5 gap-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <svg className="w-4 h-4" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
             <path
               fill="#EA4335"
               d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.4 1 3.5 3.6 1.6 7.4l3.7 2.9C6.2 7.3 8.8 5 12 5z"

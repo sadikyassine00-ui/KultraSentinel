@@ -124,16 +124,16 @@ function RegisterForm() {
           </div>
         )}
 
-        {/* Google 1-Click Social Registration (§1 UI Layout Updates) */}
+        {/* Google 1-Click Social Registration */}
         <button
           type="button"
           onClick={handleGoogleRegister}
           disabled={loading || googleLoading}
-          className="w-full flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-[3px] bg-white hover:bg-[#f8f9fa] active:bg-[#f1f3f4] text-[#1f1f1f] text-[13px] font-semibold transition-colors border border-[#dadce0] shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2a93b] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          className="btn-secondary w-full justify-center !rounded-[3px] text-[13px] py-2.5 gap-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {googleLoading ? (
             <>
-              <Loader2 className="w-4 h-4 animate-spin text-[#1f1f1f]" />
+              <Loader2 className="w-4 h-4 animate-spin text-[var(--ink-primary)]" />
               <span>Connecting to Google...</span>
             </>
           ) : (
