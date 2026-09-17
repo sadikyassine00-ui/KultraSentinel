@@ -1,9 +1,10 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { cookies } from 'next/headers';
 import { COOKIE_NAME, verifySessionToken } from '@/lib/token';
-import { claimStoreForTenant, findTenantByEmail } from '@/lib/db';
+import { claimStoreForTenant, findTenantByEmail, upsertIncident } from '@/lib/db';
 import { encryptToken, verifyOAuthState, OAUTH_STATE_COOKIE_NAME } from '@/lib/security';
-import { registerMerchantNotificationSubscription } from '@/lib/merchant_api';
+import { registerMerchantNotificationSubscription, auditExistingDisapprovals } from '@/lib/merchant_api';
+import { dispatchInitialAuditSlackNotification } from '@/lib/slack';
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -172,6 +173,46 @@ export async function GET(request: Request) {
       pubsubTopic: claimResult.store?.pubsub_topic,
     });
 
+    // Step 4.5: Non-Blocking Initial Catalog Audit & "Found Money" Slack Notification (§2 & §3)
+    after(async () => {
+      try {
+        console.info(`[Initial Audit] Initiating non-blocking catalog scan for GMC #${gmcId}...`);
+        const auditResult = await auditExistingDisapprovals(gmcId, accessToken);
+        console.info(
+          `[Initial Audit] Discovered ${auditResult.disapprovals.length} disapprovals out of ${auditResult.totalAudited} items.`
+        );
+
+        // Batch upsert detected disapprovals into Neon DB
+        for (const item of auditResult.disapprovals) {
+          await upsertIncident({
+            storeId: claimResult.store?.id || 1,
+            gmcId,
+            sku: item.offerId,
+            title: item.title,
+            issueCode: item.issueCode,
+            severity: 'critical',
+            tenant_email: session.email,
+            details: {
+              destination: item.destination,
+              issueDetail: item.issueDetail,
+            },
+          });
+        }
+
+        // Dispatch "Found Money" Alert to Slack (or "Zero Errors Clean Slate")
+        if (claimResult.store) {
+          await dispatchInitialAuditSlackNotification({
+            store: claimResult.store,
+            disapprovals: auditResult.disapprovals,
+            totalAudited: auditResult.totalAudited,
+            appUrl: origin,
+          });
+        }
+      } catch (auditErr) {
+        console.error('[Initial Audit Background Task Error]', auditErr);
+      }
+    });
+
     // Step 5: Clean redirect to State B (Arm Your Alarm modal)
     const successUrl = session.role === 'admin'
       ? new URL('/admin/dashboard', origin)
@@ -250,6 +291,37 @@ export async function POST(request: Request) {
         { status: claimResult.collision ? 409 : 400 }
       );
     }
+
+    // Trigger non-blocking audit & simulation backfill for test store
+    after(async () => {
+      try {
+        const auditResult = await auditExistingDisapprovals(String(gmcId), 'mock_access_token');
+        for (const item of auditResult.disapprovals) {
+          await upsertIncident({
+            storeId: claimResult.store?.id || 1,
+            gmcId: String(gmcId),
+            sku: item.offerId,
+            title: item.title,
+            issueCode: item.issueCode,
+            severity: 'critical',
+            tenant_email: email,
+            details: {
+              destination: item.destination,
+              issueDetail: item.issueDetail,
+            },
+          });
+        }
+        if (claimResult.store) {
+          await dispatchInitialAuditSlackNotification({
+            store: claimResult.store,
+            disapprovals: auditResult.disapprovals,
+            totalAudited: auditResult.totalAudited,
+          });
+        }
+      } catch (postAuditErr) {
+        console.warn('[Programmatic Connect Audit Error]', postAuditErr);
+      }
+    });
 
     return NextResponse.json({
       success: true,

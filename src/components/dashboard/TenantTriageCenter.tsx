@@ -8,6 +8,7 @@ import {
   RefreshCw,
   SlidersHorizontal,
   Check,
+  Flame,
 } from 'lucide-react';
 import { Store } from '@/lib/db';
 
@@ -79,6 +80,9 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
   const [inlineFeedback, setInlineFeedback] = useState<string | null>(null);
   const [disconnecting, setDisconnecting] = useState(false);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
+
+  const [simulatingFireDrill, setSimulatingFireDrill] = useState(false);
+  const [fireDrillBanner, setFireDrillBanner] = useState<string | null>(null);
 
   const fetchDashboardData = useCallback(async (storeId?: string | null) => {
     try {
@@ -153,6 +157,34 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
       setArmingStatus('error');
     } finally {
       setDisconnecting(false);
+    }
+  };
+
+  const handleRunFireDrill = async () => {
+    if (!data?.activeStore?.id) return;
+    setSimulatingFireDrill(true);
+    setFireDrillBanner(null);
+
+    try {
+      const res = await fetch(`/api/stores/${data.activeStore.id}/simulate`, {
+        method: 'POST',
+      });
+      const json = await res.json();
+      if (res.ok) {
+        setFireDrillBanner(
+          json.message ||
+            'Test disapproval alert sent to your Slack channel. Check your channel to inspect the alert layout.'
+        );
+        // Instant re-hydration so demo incident appears in triage table
+        await fetchDashboardData(String(data.activeStore.id));
+      } else {
+        setError(json.error || 'Failed to trigger simulated fire drill.');
+      }
+    } catch (err: unknown) {
+      const e = err as Error;
+      setError(e.message || 'Error communicating with simulation engine.');
+    } finally {
+      setSimulatingFireDrill(false);
     }
   };
 
@@ -359,7 +391,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
     <div className="space-y-5">
       {/* Top Controls Bar (§16 Top Bar styling) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--hairline)]">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
             <span className="font-mono text-[11px] text-[var(--ghost-text-dim)]">STORE:</span>
             <span className="text-[13.5px] font-medium text-[var(--ink-primary)]">{activeStore?.store_name || 'Active Store'}</span>
@@ -367,6 +399,15 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
           <span className="tag-pill tag-ghost text-[10px] py-0.5">
             GMC #{activeStore?.gmc_id || activeStore?.merchant_id}
           </span>
+          <button
+            onClick={handleRunFireDrill}
+            disabled={simulatingFireDrill}
+            className="btn-secondary text-[12px] py-1 px-2.5 !rounded-[3px] inline-flex items-center gap-1.5"
+            title="Simulate a crawler disapproval to test Slack alert routing"
+          >
+            <Flame className={`w-3 h-3 text-[var(--signal)] ${simulatingFireDrill ? 'animate-spin' : ''}`} />
+            <span>{simulatingFireDrill ? 'Simulating...' : 'Run Test Fire Drill'}</span>
+          </button>
         </div>
 
         <div className="flex items-center gap-2">
@@ -376,20 +417,44 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="btn-secondary text-[12px] py-1.5 px-3"
+            className="btn-secondary text-[12px] py-1.5 px-3 !rounded-[3px]"
           >
             <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />
             Refresh
           </button>
           <button
             onClick={() => setModalOpen(true)}
-            className="btn-secondary text-[12px] py-1.5 px-3"
+            className="btn-secondary text-[12px] py-1.5 px-3 !rounded-[3px]"
           >
             <SlidersHorizontal className="w-3 h-3 text-[var(--signal)]" />
             Configure alerts
           </button>
         </div>
       </div>
+
+      {/* Fire Drill Confirmation Banner (§4) */}
+      {fireDrillBanner && (
+        <div className="bg-[var(--bg-surface-2)] border border-[var(--signal-dim)] rounded-[var(--radius-md)] p-4 flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <Check className="w-4 h-4 text-[var(--signal)] shrink-0 mt-0.5" />
+            <div>
+              <div className="text-[13px] font-medium text-[var(--ink-primary)]">
+                {fireDrillBanner}
+              </div>
+              <div className="font-mono text-[11px] text-[var(--ghost-text)] mt-0.5">
+                Simulated item &apos;DEMO-RUNNER-402&apos; is now visible below in your triage queue (auto-purges in 15 minutes).
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => setFireDrillBanner(null)}
+            className="text-[var(--ghost-text)] hover:text-[var(--ink-primary)] text-[12px] font-mono shrink-0 p-1"
+            aria-label="Dismiss banner"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* --------------------------------------------------------------------- */}
       {/* TIER 1: Global Health & Triage Banner                                 */}
@@ -460,7 +525,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                 href={criticalIncident.shopifyUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn-primary text-[12px] py-1.5 px-3"
+                className="btn-primary text-[12px] py-1.5 px-3 !rounded-[3px]"
               >
                 <span>Fix in Shopify</span>
                 <ExternalLink className="w-3.5 h-3.5" strokeWidth={1.5} />
@@ -470,7 +535,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                 href={criticalIncident.gmcUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn-secondary text-[12px] py-1.5 px-3"
+                className="btn-secondary text-[12px] py-1.5 px-3 !rounded-[3px]"
               >
                 <span>GMC console</span>
                 <ExternalLink className="w-3.5 h-3.5 text-[var(--ghost-text)]" strokeWidth={1.5} />
@@ -479,7 +544,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
               <button
                 onClick={() => handleMarkPendingVerification(criticalIncident.id)}
                 disabled={criticalIncident.status === 'pending_verification' || verifyingIncidentId === criticalIncident.id}
-                className="btn-secondary text-[12px] py-1.5 px-3 disabled:opacity-50"
+                className="btn-secondary text-[12px] py-1.5 px-3 disabled:opacity-50 !rounded-[3px]"
               >
                 {criticalIncident.status === 'pending_verification'
                   ? 'Pending verification'
@@ -667,7 +732,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                               href={inc.shopifyUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="btn-secondary text-[11px] py-1 px-2.5"
+                              className="btn-secondary text-[11px] py-1 px-2.5 !rounded-[3px]"
                             >
                               Shopify <ExternalLink className="w-3 h-3" />
                             </a>

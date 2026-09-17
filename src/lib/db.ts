@@ -76,15 +76,20 @@ export interface Incident {
   id: number | string;
   store_id: number | string;
   gmc_id: string;
+  tenant_email?: string;
   sku: string;
+  offer_id?: string;
   title: string;
+  product_title?: string;
   issue_code: string;
   severity: 'critical' | 'warning';
   status: 'unresolved' | 'resolved' | 'pending_verification';
   first_detected_at: string;
   last_detected_at: string;
+  detected_at?: string;
   resolved_at?: string | null;
   details?: Record<string, unknown> | null;
+  is_simulated?: boolean;
   created_at: string;
 }
 
@@ -586,6 +591,12 @@ export async function ensureSchema(): Promise<boolean> {
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `;
+
+    await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS tenant_email TEXT;`;
+    await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS offer_id TEXT;`;
+    await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS product_title TEXT;`;
+    await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS detected_at TIMESTAMPTZ DEFAULT NOW();`;
+    await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS is_simulated BOOLEAN DEFAULT FALSE;`;
 
 
     // Initial Seeds
@@ -1354,6 +1365,8 @@ export async function upsertIncident(data: {
   title: string;
   issueCode: string;
   severity: 'critical' | 'warning';
+  tenant_email?: string;
+  is_simulated?: boolean;
   details?: Record<string, unknown>;
 }): Promise<{ incident: Incident; isNew: boolean }> {
   // Ultra-fast in-memory state mutation (0ms)
@@ -1373,23 +1386,30 @@ export async function upsertIncident(data: {
     existingMem.title = data.title;
     existingMem.severity = data.severity;
     if (data.details) existingMem.details = data.details;
+    if (data.is_simulated !== undefined) existingMem.is_simulated = data.is_simulated;
     resultIncident = existingMem;
   } else {
     isNew = true;
+    const now = new Date().toISOString();
     const newIncident: Incident = {
       id: inMemoryIncidents.length + 1,
       store_id: data.storeId,
       gmc_id: data.gmcId,
+      tenant_email: data.tenant_email,
       sku: data.sku,
+      offer_id: data.sku,
       title: data.title,
+      product_title: data.title,
       issue_code: data.issueCode,
       severity: data.severity,
       status: 'unresolved',
-      first_detected_at: new Date().toISOString(),
-      last_detected_at: new Date().toISOString(),
+      first_detected_at: now,
+      last_detected_at: now,
+      detected_at: now,
       resolved_at: null,
       details: data.details || null,
-      created_at: new Date().toISOString(),
+      is_simulated: Boolean(data.is_simulated),
+      created_at: now,
     };
     inMemoryIncidents.push(newIncident);
     resultIncident = newIncident;
@@ -1398,7 +1418,7 @@ export async function upsertIncident(data: {
     if (memStore) {
       memStore.open_disapprovals += 1;
       memStore.total_caught += 1;
-      memStore.last_message_at = new Date().toISOString();
+      memStore.last_message_at = now;
     }
   }
 
@@ -1415,11 +1435,12 @@ export async function upsertIncident(data: {
       } else {
         await sql`
           INSERT INTO incidents (
-            store_id, gmc_id, sku, title, issue_code, severity, status,
-            first_detected_at, last_detected_at, details
+            store_id, gmc_id, tenant_email, sku, offer_id, title, product_title, issue_code, severity, status,
+            is_simulated, first_detected_at, last_detected_at, detected_at, details
           ) VALUES (
-            ${String(data.storeId)}, ${data.gmcId}, ${data.sku}, ${data.title}, ${data.issueCode},
-            ${data.severity}, 'unresolved', NOW(), NOW(), ${JSON.stringify(data.details || {})}
+            ${String(data.storeId)}, ${data.gmcId}, ${data.tenant_email || null}, ${data.sku}, ${data.sku},
+            ${data.title}, ${data.title}, ${data.issueCode},
+            ${data.severity}, 'unresolved', ${Boolean(data.is_simulated)}, NOW(), NOW(), NOW(), ${JSON.stringify(data.details || {})}
           );
         `;
         await sql`
@@ -1486,8 +1507,54 @@ export async function getStoreIncidentCountInWindow(storeId: number | string, wi
   ).length;
 }
 
+/**
+ * 15-minute auto-purge for simulated fire drill incidents (§4)
+ */
+export async function purgeExpiredSimulatedIncidents(storeId?: number | string): Promise<number> {
+  const cutoff = Date.now() - 15 * 60 * 1000;
+  let purgedCount = 0;
+
+  for (let i = inMemoryIncidents.length - 1; i >= 0; i--) {
+    const inc = inMemoryIncidents[i];
+    if (inc.is_simulated && (!storeId || String(inc.store_id) === String(storeId))) {
+      if (new Date(inc.created_at).getTime() < cutoff) {
+        inMemoryIncidents.splice(i, 1);
+        purgedCount++;
+      }
+    }
+  }
+
+  const sql = getDb();
+  if (sql) {
+    try {
+      if (storeId) {
+        const deleted = await sql`
+          DELETE FROM incidents
+          WHERE is_simulated = TRUE
+            AND store_id = ${String(storeId)}
+            AND created_at < NOW() - INTERVAL '15 minutes'
+          RETURNING id;
+        `;
+        purgedCount = Math.max(purgedCount, deleted.length);
+      } else {
+        const deleted = await sql`
+          DELETE FROM incidents
+          WHERE is_simulated = TRUE
+            AND created_at < NOW() - INTERVAL '15 minutes'
+          RETURNING id;
+        `;
+        purgedCount = Math.max(purgedCount, deleted.length);
+      }
+    } catch (err) {
+      console.warn('[Neon DB] Error purging expired simulated incidents:', err);
+    }
+  }
+
+  return purgedCount;
+}
 
 export async function getIncidentsByStore(storeId: number | string, tenantEmail: string): Promise<Incident[]> {
+  await purgeExpiredSimulatedIncidents(storeId);
   const cleanEmail = tenantEmail.toLowerCase().trim();
   const sql = getDb();
   if (sql) {
