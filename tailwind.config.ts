@@ -63,7 +63,7 @@ const config: Config = {
         display: ["'Fraunces'", "Georgia", "serif"],
         sans: ["'Inter'", "system-ui", "-apple-system", "sans-serif"],
         body: ["'Inter'", "system-ui", "-apple-system", "sans-serif"],
-        mono: ["'IBM Plex Mono'", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+        mono: ["'Departure Mono'", "'Martian Mono'", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
       borderRadius: {
         none: "0px",

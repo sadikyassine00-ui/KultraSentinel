@@ -255,7 +255,7 @@ async function main() {
     <g transform="translate(485, 445)">
       <rect width="230" height="34" rx="17" fill="rgba(242,169,59,0.06)" stroke="#7a5a26" stroke-width="1"/>
       <circle cx="22" cy="17" r="3.5" fill="#f2a93b"/>
-      <text x="35" y="22" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="500" fill="#f2a93b">LIVE FEED MONITORING</text>
+      <text x="35" y="22" font-family="Departure Mono, Martian Mono, monospace" font-size="12" font-weight="500" fill="#f2a93b">LIVE FEED MONITORING</text>
     </g>
   </svg>`;
 

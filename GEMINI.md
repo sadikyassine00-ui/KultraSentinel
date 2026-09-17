@@ -71,12 +71,12 @@ Three families, three jobs. Do not add a fourth.
 |---|---|---|
 | Display / headings | `Fraunces` (serif, optical sizing) | weights 400/600/700. Used for H1–H3 only. |
 | Body / UI text | `Inter` | weights 400/500/600. Everything that isn't a heading or data. |
-| Data / labels / timestamps / code | `IBM Plex Mono` | weights 400/500. Numbers, timers, eyebrows, badges, table figures. |
+| Data / labels / timestamps / code | `Departure Mono` (preferred) / `Martian Mono` (fallback) | weights 400/500. Numbers, timers, eyebrows, badges, table figures. |
 
 ```css
 --font-display: 'Fraunces', serif;
 --font-body: 'Inter', sans-serif;
---font-mono: 'IBM Plex Mono', monospace;
+--font-mono: 'Departure Mono', 'Martian Mono', monospace;
 ```
 
 Type scale (desktop):
