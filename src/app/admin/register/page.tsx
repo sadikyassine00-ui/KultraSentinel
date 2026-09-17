@@ -13,6 +13,7 @@ export default function RegisterPage() {
   const [companyName, setCompanyName] = useState('');
   const [website, setWebsite] = useState('');
   const [accountType, setAccountType] = useState<'merchant' | 'agency'>('merchant');
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [provisionedData, setProvisionedData] = useState<{
@@ -24,6 +25,10 @@ export default function RegisterPage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!agreedToTerms) {
+      setError('You must agree to the Terms of Service and acknowledge the Privacy Policy.');
+      return;
+    }
     setLoading(true);
     setError(null);
 
@@ -37,6 +42,7 @@ export default function RegisterPage() {
           companyName,
           website,
           accountType,
+          agreedToTerms,
         }),
       });
 
@@ -72,16 +78,7 @@ export default function RegisterPage() {
     setError(null);
 
     try {
-      const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-      if (googleClientId) {
-        const redirectUri = `${window.location.origin}/api/auth/google/callback`;
-        const scope = encodeURIComponent('openid email profile');
-        const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleClientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=consent`;
-        window.location.href = googleAuthUrl;
-        return;
-      }
-
-      router.push('/admin/login');
+      window.location.href = '/api/auth/google?prompt=select_account';
     } catch {
       setError('Google authentication service unavailable.');
       setLoading(false);
@@ -266,26 +263,59 @@ export default function RegisterPage() {
 
                 <div>
                   <label className="block text-[12px] font-semibold text-[var(--ghost-text)] mb-1">
-                    Password (min. 8 characters)
+                    Password (min. 10 chars, uppercase, lowercase, number & symbol)
                   </label>
                   <div className="relative">
                     <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ghost-text-dim)]" />
                     <input
                       type="password"
                       required
-                      minLength={8}
+                      minLength={10}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
+                      placeholder="••••••••••"
                       className="input w-full pl-9"
                     />
                   </div>
                 </div>
 
                 <div className="pt-2">
+                  <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      required
+                      checked={agreedToTerms}
+                      onChange={(e) => setAgreedToTerms(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 rounded-[var(--radius-sm)] bg-[var(--bg-canvas)] border border-[var(--hairline-strong)] text-[var(--signal)] focus:ring-0 focus:ring-offset-0 accent-[var(--signal)] cursor-pointer"
+                    />
+                    <span className="text-[12px] text-[var(--ink-secondary)] leading-[1.5]">
+                      I agree to the{' '}
+                      <Link
+                        href="/terms"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[var(--ink-primary)] underline underline-offset-2 hover:text-[var(--signal)] transition-colors"
+                      >
+                        Terms of Service
+                      </Link>{' '}
+                      and acknowledge the{' '}
+                      <Link
+                        href="/privacy"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[var(--ink-primary)] underline underline-offset-2 hover:text-[var(--signal)] transition-colors"
+                      >
+                        Privacy Policy
+                      </Link>
+                      .
+                    </span>
+                  </label>
+                </div>
+
+                <div className="pt-2">
                   <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || !agreedToTerms}
                     className="btn-primary w-full justify-center text-[13px] py-2.5 disabled:opacity-50"
                   >
                     <span>{loading ? 'Provisioning account...' : 'Create platform account'}</span>

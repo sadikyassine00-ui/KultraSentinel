@@ -91,6 +91,42 @@ export function recordAttempt(key: string): void {
 }
 
 /**
+ * Returns current attempt count within window.
+ */
+export function getAttemptCount(key: string, windowSeconds: number = 15 * 60): number {
+  const record = rateLimitStore.get(key);
+  if (!record) return 0;
+  const now = Date.now();
+  const windowMs = windowSeconds * 1000;
+  record.timestamps = record.timestamps.filter((ts) => now - ts < windowMs);
+  return record.timestamps.length;
+}
+
+/**
+ * Progressive exponential delay (backoff) applied after 3 consecutive failed attempts:
+ * - 3 failures: 500ms
+ * - 4 failures: 1200ms
+ * - 5+ failures: 2500ms
+ */
+export async function applyExponentialBackoff(attemptCount: number): Promise<void> {
+  if (attemptCount < 3) return;
+  let delayMs = 0;
+  if (attemptCount === 3) delayMs = 500;
+  else if (attemptCount === 4) delayMs = 1200;
+  else delayMs = 2500;
+
+  await new Promise((resolve) => setTimeout(resolve, delayMs));
+}
+
+/**
+ * Registration flooding protection: limits account creation per IP address.
+ * Hard limit: 5 account creations per IP per rolling hour.
+ */
+export function checkRegistrationRateLimit(ip: string): RateLimitResult {
+  return checkRateLimit(`register:${ip}`, 5, 60 * 60);
+}
+
+/**
  * Resets rate limit for a key (used upon successful authentication).
  */
 export function resetRateLimit(key: string): void {

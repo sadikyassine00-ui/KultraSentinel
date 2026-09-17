@@ -63,38 +63,9 @@ export default function AdminLoginPage() {
     setError(null);
 
     try {
-      const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-
-      if (googleClientId) {
-        const redirectUri = `${window.location.origin}/api/auth/google/callback`;
-        const scope = encodeURIComponent('openid email profile');
-        const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleClientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=consent`;
-        window.location.href = googleAuthUrl;
-        return;
-      }
-
-      const res = await fetch('/api/auth/google', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          demoEmail: 'admin@kultra.ai',
-          demoName: 'Google Verified Admin',
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Google authentication failed.');
-      }
-
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new Event('auth-change'));
-      }
-      router.push('/admin/dashboard');
-      router.refresh();
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Google authentication failed.');
-    } finally {
+      window.location.href = '/api/auth/google?prompt=select_account';
+    } catch {
+      setError('Google authentication service unavailable.');
       setLoading(false);
     }
   };

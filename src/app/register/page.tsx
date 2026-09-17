@@ -26,46 +26,22 @@ function RegisterForm() {
   const [error, setError] = useState<string | null>(null);
 
   const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
-  const isPasswordValid = password.length >= 8;
+  const isMinLength = password.length >= 10;
+  const hasUpper = /[A-Z]/.test(password);
+  const hasLower = /[a-z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSymbol = /[^A-Za-z0-9]/.test(password);
+  const isPasswordValid = isMinLength && hasUpper && hasLower && hasNumber && hasSymbol;
 
   const handleGoogleRegister = async () => {
     setGoogleLoading(true);
     setError(null);
 
     try {
-      const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-
-      if (googleClientId) {
-        const redirectUri = `${window.location.origin}/api/auth/google/callback`;
-        const scope = encodeURIComponent('openid email profile');
-        const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleClientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=select_account`;
-        window.location.href = googleAuthUrl;
-        return;
-      }
-
-      // Quick fallback for test/dev mode without configured client ID
-      const res = await fetch('/api/auth/google', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          demoEmail: 'demo-merchant@example.com',
-          demoName: 'Merchant',
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Google registration failed.');
-      }
-
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new Event('auth-change'));
-      }
-      router.push('/dashboard');
-      router.refresh();
+      // Direct navigation to server route which generates cryptographically secure state & CSRF cookie
+      window.location.href = '/api/auth/google?prompt=select_account';
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Google registration failed.');
-    } finally {
       setGoogleLoading(false);
     }
   };
@@ -78,7 +54,7 @@ function RegisterForm() {
     }
 
     if (!isPasswordValid) {
-      setError('Password must be at least 8 characters long.');
+      setError('Password must be at least 10 characters long and include an uppercase letter, a lowercase letter, a number, and a symbol.');
       return;
     }
 
@@ -313,7 +289,7 @@ function RegisterForm() {
                     : 'text-[#45484f]'
                 }`}
               >
-                {isPasswordValid ? '✓ Minimum 8 chars met' : 'Min 8 characters'}
+                {isPasswordValid ? '✓ Entropy criteria met' : 'Min 10 chars (A-Z, a-z, 0-9, symbol)'}
               </span>
             </div>
             <div className="relative">
@@ -321,7 +297,7 @@ function RegisterForm() {
               <input
                 type="password"
                 required
-                minLength={8}
+                minLength={10}
                 value={password}
                 onBlur={() => setTouchedPassword(true)}
                 onChange={(e) => {
@@ -332,6 +308,22 @@ function RegisterForm() {
                 className="w-full pl-9 pr-3 py-2 rounded-[3px] bg-[#0a0b0d] border border-[rgba(255,255,255,0.14)] text-[#f4f1ea] text-[13px] placeholder:text-[#45484f] focus:border-[#f2a93b] focus:outline-none focus:ring-1 focus:ring-[#f2a93b] transition-colors"
               />
             </div>
+            {touchedPassword && !isPasswordValid && (
+              <div className="mt-1.5 grid grid-cols-2 gap-1 text-[10.5px] font-mono">
+                <span className={isMinLength ? 'text-[#f2a93b]' : 'text-[#6b7078]'}>
+                  {isMinLength ? '✓' : '○'} 10+ characters
+                </span>
+                <span className={hasUpper ? 'text-[#f2a93b]' : 'text-[#6b7078]'}>
+                  {hasUpper ? '✓' : '○'} 1 uppercase (A-Z)
+                </span>
+                <span className={hasLower ? 'text-[#f2a93b]' : 'text-[#6b7078]'}>
+                  {hasLower ? '✓' : '○'} 1 lowercase (a-z)
+                </span>
+                <span className={hasNumber && hasSymbol ? 'text-[#f2a93b]' : 'text-[#6b7078]'}>
+                  {hasNumber && hasSymbol ? '✓' : '○'} Number & symbol
+                </span>
+              </div>
+            )}
           </div>
 
           {/* MANDATORY LEGAL CONSENT CHECKBOX (§1 Form Compliance) */}

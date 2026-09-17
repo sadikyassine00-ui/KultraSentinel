@@ -1,15 +1,21 @@
 import { NextResponse } from 'next/server';
-import { hashPassword, isAllowedAdminEmail, createSessionToken, getSessionCookieHeader } from '@/lib/auth';
+import {
+  hashPassword,
+  isAllowedAdminEmail,
+  createSessionToken,
+  getSessionCookieHeader,
+  validatePasswordStrength,
+} from '@/lib/auth';
 import { findAdminByEmail, createOrUpdateAdmin, createTenant, createLead } from '@/lib/db';
-import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { checkRegistrationRateLimit, getClientIp } from '@/lib/rate-limit';
 
 export async function POST(request: Request) {
   const clientIp = getClientIp(request);
-  const rateLimit = checkRateLimit(`register:${clientIp}`, 10, 15 * 60);
+  const rateLimit = checkRegistrationRateLimit(clientIp);
   if (!rateLimit.allowed) {
     return NextResponse.json(
       {
-        error: `Too many registration attempts. Please retry in ${Math.ceil(rateLimit.retryAfterSeconds / 60)} minute(s).`,
+        error: `Too many registration attempts from this IP address. Please retry in ${Math.ceil(rateLimit.retryAfterSeconds / 60)} minute(s).`,
       },
       {
         status: 429,
@@ -24,7 +30,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { email, password, companyName, accountType, website, agreedToTerms } = body;
 
-    // 1. Validation
+    // 1. Mandatory Legal Terms Verification
     if (!agreedToTerms) {
       return NextResponse.json(
         { error: 'You must agree to the Terms of Service and acknowledge the Privacy Policy.' },
@@ -32,23 +38,38 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!email || typeof email !== 'string' || !email.includes('@')) {
-      return NextResponse.json({ error: 'A valid email address is required.' }, { status: 400 });
+    // 2. Strict Input Bounds & Schema Validation
+    if (!email || typeof email !== 'string' || !email.includes('@') || email.length > 255) {
+      return NextResponse.json({ error: 'A valid email address (max 255 characters) is required.' }, { status: 400 });
     }
 
-    if (!password || typeof password !== 'string' || password.length < 8) {
-      return NextResponse.json({ error: 'Password must be at least 8 characters long.' }, { status: 400 });
+    if (!companyName || typeof companyName !== 'string' || companyName.trim().length === 0 || companyName.length > 100) {
+      return NextResponse.json({ error: 'Store or agency name is required (max 100 characters).' }, { status: 400 });
     }
 
-    if (!companyName || typeof companyName !== 'string' || companyName.trim().length === 0) {
-      return NextResponse.json({ error: 'Company or agency name is required.' }, { status: 400 });
+    if (website && (typeof website !== 'string' || website.length > 255)) {
+      return NextResponse.json({ error: 'Website URL cannot exceed 255 characters.' }, { status: 400 });
     }
 
-    const cleanEmail = email.toLowerCase().trim();
+    if (!password || typeof password !== 'string' || password.length > 128) {
+      return NextResponse.json({ error: 'Password is required and cannot exceed 128 characters.' }, { status: 400 });
+    }
+
+    // 3. Strict Password Entropy & Anti-Breach Validation
+    const passwordEvaluation = validatePasswordStrength(password);
+    if (!passwordEvaluation.valid) {
+      return NextResponse.json(
+        { error: passwordEvaluation.error || 'Password does not meet enterprise security criteria.' },
+        { status: 400 }
+      );
+    }
+
+    // 4. Email Normalization
+    const cleanEmail = email.trim().toLowerCase();
     const cleanCompany = companyName.trim();
     const cleanAccountType = (accountType === 'agency' ? 'agency' : 'merchant') as 'merchant' | 'agency';
 
-    // 2. Check for duplicate account
+    // 5. Check for duplicate account
     const existing = await findAdminByEmail(cleanEmail);
     if (existing) {
       return NextResponse.json(
@@ -57,12 +78,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // 3. Hash password
+    // 6. Hash password with bcrypt work factor 12
     const passwordHash = await hashPassword(password);
     const isAdmin = isAllowedAdminEmail(cleanEmail);
     const userRole = isAdmin ? 'admin' : 'user';
 
-    // 4. Create user record
+    // 7. Create user record
     const user = await createOrUpdateAdmin({
       email: cleanEmail,
       passwordHash,
@@ -70,7 +91,7 @@ export async function POST(request: Request) {
       role: userRole,
     });
 
-    // 5. Create tenant record
+    // 8. Create tenant record with consistent defaults
     const tenant = await createTenant({
       email: cleanEmail,
       companyName: cleanCompany,
@@ -82,7 +103,7 @@ export async function POST(request: Request) {
       website: website || cleanCompany.toLowerCase().replace(/[^a-z0-9]/g, '') + '.com',
     });
 
-    // 6. Record lead for platform CRM telemetry
+    // 9. Record lead for platform CRM telemetry
     await createLead({
       email: cleanEmail,
       accountType: cleanAccountType,
@@ -90,13 +111,20 @@ export async function POST(request: Request) {
       catalogSize: '1,000 - 5,000 SKUs',
     });
 
-    // 7. Issue session token with tagged role
-    const token = await createSessionToken({
-      email: user.email,
-      role: userRole,
-      name: user.name,
-      id: user.id,
-    });
+    // 10. Issue session token with session ID and tracking metadata
+    const userAgent = request.headers.get('user-agent');
+    const token = await createSessionToken(
+      {
+        email: user.email,
+        role: userRole,
+        name: user.name,
+        id: user.id,
+      },
+      {
+        ipAddress: clientIp,
+        userAgent,
+      }
+    );
 
     const cookieHeader = getSessionCookieHeader(token);
     const redirectUrl = isAdmin ? '/admin/dashboard' : '/dashboard?just_connected=true';

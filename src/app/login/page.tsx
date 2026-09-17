@@ -49,7 +49,7 @@ function LoginForm() {
       router.push(safeDestination);
       router.refresh();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Invalid credentials provided.');
+      setError(err instanceof Error ? err.message : 'Invalid email or password.');
     } finally {
       setLoading(false);
     }
@@ -60,39 +60,10 @@ function LoginForm() {
     setError(null);
 
     try {
-      const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-
-      if (googleClientId) {
-        const redirectUri = `${window.location.origin}/api/auth/google/callback`;
-        const scope = encodeURIComponent('openid email profile');
-        const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleClientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=select_account`;
-        window.location.href = googleAuthUrl;
-        return;
-      }
-
-      // Quick fallback for test/dev mode
-      const res = await fetch('/api/auth/google', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          demoEmail: 'demo-merchant@example.com',
-          demoName: 'Merchant',
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Google sign-in failed.');
-      }
-
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new Event('auth-change'));
-      }
-      router.push('/dashboard');
-      router.refresh();
+      // Direct navigation to server route which sets cryptographically secure state & CSRF cookie
+      window.location.href = '/api/auth/google?prompt=select_account';
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Google sign-in failed.');
-    } finally {
       setLoading(false);
     }
   };

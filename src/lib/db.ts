@@ -149,9 +149,23 @@ export interface SuperTelemetry {
   webhookFailureRate: number;
 }
 
+export interface UserSession {
+  session_id: string;
+  user_id?: number | null;
+  email: string;
+  ip_address?: string | null;
+  user_agent?: string | null;
+  is_revoked: boolean;
+  expires_at: string;
+  created_at: string;
+  last_active_at: string;
+}
+
 // -----------------------------------------------------------------------------
 // In-Memory Seed Fallback Stores
 // -----------------------------------------------------------------------------
+
+const inMemorySessions = new Map<string, UserSession>();
 
 const inMemoryTenants: Tenant[] = [
   {
@@ -624,6 +638,22 @@ export async function ensureSchema(): Promise<boolean> {
     await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS product_title TEXT;`;
     await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS detected_at TIMESTAMPTZ DEFAULT NOW();`;
     await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS is_simulated BOOLEAN DEFAULT FALSE;`;
+
+    // 11. User Sessions Table (Stateful Session Invalidation & Revocation)
+    await sql`
+      CREATE TABLE IF NOT EXISTS user_sessions (
+        session_id TEXT PRIMARY KEY,
+        user_id INT,
+        email TEXT NOT NULL,
+        ip_address TEXT,
+        user_agent TEXT,
+        is_revoked BOOLEAN DEFAULT FALSE,
+        expires_at TIMESTAMPTZ NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        last_active_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS idx_user_sessions_email ON user_sessions(email);`;
 
 
     // Initial Seeds
@@ -2158,5 +2188,117 @@ export async function markIncidentPendingVerification(
     return { success: true, incident };
   }
   return { success: false, error: 'Incident not found' };
+}
+
+// -----------------------------------------------------------------------------
+// Server-Side Session Tracking & Revocation
+// -----------------------------------------------------------------------------
+
+export async function createDbSession(params: {
+  sessionId: string;
+  userId?: number | null;
+  email: string;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  expiresAt: string;
+}): Promise<void> {
+  const cleanEmail = params.email.toLowerCase().trim();
+  const sql = getDb();
+  if (sql) {
+    try {
+      await ensureSchema();
+      await sql`
+        INSERT INTO user_sessions (session_id, user_id, email, ip_address, user_agent, is_revoked, expires_at, created_at, last_active_at)
+        VALUES (${params.sessionId}, ${params.userId || null}, ${cleanEmail}, ${params.ipAddress || null}, ${params.userAgent || null}, FALSE, ${params.expiresAt}, NOW(), NOW())
+        ON CONFLICT (session_id) DO UPDATE
+        SET last_active_at = NOW(), is_revoked = FALSE;
+      `;
+      return;
+    } catch (err) {
+      console.warn('[Neon DB] Error creating user session:', err);
+    }
+  }
+
+  inMemorySessions.set(params.sessionId, {
+    session_id: params.sessionId,
+    user_id: params.userId || null,
+    email: cleanEmail,
+    ip_address: params.ipAddress || null,
+    user_agent: params.userAgent || null,
+    is_revoked: false,
+    expires_at: params.expiresAt,
+    created_at: new Date().toISOString(),
+    last_active_at: new Date().toISOString(),
+  });
+}
+
+export async function isSessionRevoked(sessionId: string): Promise<boolean> {
+  if (!sessionId) return true;
+  const sql = getDb();
+  if (sql) {
+    try {
+      await ensureSchema();
+      const rows = await sql`
+        SELECT is_revoked, expires_at FROM user_sessions WHERE session_id = ${sessionId} LIMIT 1;
+      `;
+      if (rows.length > 0) {
+        if (rows[0].is_revoked) return true;
+        if (new Date(rows[0].expires_at).getTime() < Date.now()) return true;
+        return false;
+      }
+    } catch (err) {
+      console.warn('[Neon DB] Error checking session revocation:', err);
+    }
+  }
+
+  const mem = inMemorySessions.get(sessionId);
+  if (mem) {
+    if (mem.is_revoked) return true;
+    if (new Date(mem.expires_at).getTime() < Date.now()) return true;
+    return false;
+  }
+
+  return false;
+}
+
+export async function revokeSession(sessionId: string): Promise<void> {
+  if (!sessionId) return;
+  const sql = getDb();
+  if (sql) {
+    try {
+      await ensureSchema();
+      await sql`
+        UPDATE user_sessions SET is_revoked = TRUE WHERE session_id = ${sessionId};
+      `;
+    } catch (err) {
+      console.warn('[Neon DB] Error revoking session:', err);
+    }
+  }
+
+  const mem = inMemorySessions.get(sessionId);
+  if (mem) {
+    mem.is_revoked = true;
+  }
+}
+
+export async function revokeAllUserSessions(email: string): Promise<void> {
+  const cleanEmail = email.toLowerCase().trim();
+  const sql = getDb();
+  if (sql) {
+    try {
+      await ensureSchema();
+      await sql`
+        UPDATE user_sessions SET is_revoked = TRUE WHERE LOWER(email) = ${cleanEmail};
+      `;
+    } catch (err) {
+      console.warn('[Neon DB] Error revoking all sessions for user:', err);
+    }
+  }
+
+  for (const session of inMemorySessions.values()) {
+    if (session.email.toLowerCase().trim() === cleanEmail) {
+      session.is_revoked = true;
+    }
+  }
 }
 

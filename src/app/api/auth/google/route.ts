@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { findAdminByEmail, createOrUpdateAdmin, findTenantByEmail, createTenant, createLead } from '@/lib/db';
 import { createSessionToken, getSessionCookieHeader, isAllowedAdminEmail } from '@/lib/auth';
+import { createOAuthState, OAUTH_STATE_COOKIE_NAME } from '@/lib/security';
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -15,6 +16,10 @@ export async function GET(request: Request) {
   }
 
   const redirectUri = `${origin}/api/auth/google/callback`;
+
+  // Generate cryptographically secure random state token & encrypted HTTP-only cookie (10 min expiration)
+  const { state, cookieValue } = await createOAuthState('google-social-auth');
+
   const params = new URLSearchParams({
     client_id: googleClientId,
     redirect_uri: redirectUri,
@@ -22,10 +27,28 @@ export async function GET(request: Request) {
     scope: 'openid email profile',
     access_type: 'offline',
     prompt: url.searchParams.get('prompt') || 'select_account',
+    state,
   });
 
   const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-  return NextResponse.redirect(authUrl);
+
+  const isJson = url.searchParams.get('format') === 'json';
+  const response = isJson
+    ? NextResponse.json({ url: authUrl })
+    : NextResponse.redirect(authUrl);
+
+  // Attach secure, HttpOnly, SameSite=Lax state cookie
+  response.cookies.set({
+    name: OAUTH_STATE_COOKIE_NAME,
+    value: cookieValue,
+    path: '/',
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 600, // 10 minutes
+  });
+
+  return response;
 }
 
 export async function POST(request: Request) {
