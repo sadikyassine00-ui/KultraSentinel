@@ -418,7 +418,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
             <div className="bg-[var(--bg-canvas)] border border-[var(--hairline)] rounded-[var(--radius-sm)] p-3.5">
               <div className="font-mono text-[10.5px] text-[var(--signal)] mb-1">STEP 3</div>
               <div className="text-[13px] font-medium text-[var(--ink-primary)] mb-1">Protect bestsellers</div>
-              <div className="text-[12px] text-[var(--ghost-text)]">Prevent silent drops with 1-click Shopify triage.</div>
+              <div className="text-[12px] text-[var(--ghost-text)]">Prevent silent drops with 1-click product triage.</div>
             </div>
           </div>
 
@@ -460,109 +460,26 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
 
   return (
     <div className="space-y-5">
-      {/* Top Controls Bar (§16 Top Bar styling) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--hairline)]">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-[11px] text-[var(--ghost-text-dim)]">STORE:</span>
-            {data.stores.length > 1 ? (
-              <div className="relative flex items-center">
-                <select
-                  aria-label="Select active store"
-                  value={activeStore?.id ? String(activeStore.id) : ''}
-                  onChange={(e) => {
-                    const newStoreId = e.target.value;
-                    if (newStoreId === '__connect_new__') {
-                      handleConnectGmc();
-                    } else if (newStoreId) {
-                      if (typeof window !== 'undefined') {
-                        const url = new URL(window.location.href);
-                        url.searchParams.set('store_id', newStoreId);
-                        window.history.replaceState({}, '', url.pathname + url.search);
-                      }
-                      fetchDashboardData(newStoreId);
-                    }
-                  }}
-                  className="bg-[var(--bg-surface-2)] border border-[var(--hairline-strong)] hover:border-[var(--signal-dim)] text-[var(--ink-primary)] text-[12.5px] font-medium rounded-[var(--radius-sm)] px-2.5 py-1 pr-7 appearance-none focus:outline-none focus:border-[var(--signal)] focus:ring-1 focus:ring-[var(--signal)] cursor-pointer transition-colors"
-                >
-                  {data.stores.map((s) => (
-                    <option key={s.id} value={String(s.id)} className="bg-[var(--bg-surface)] text-[var(--ink-primary)]">
-                      {s.store_name || s.store_url} (GMC #{s.gmc_id || s.merchant_id})
-                    </option>
-                  ))}
-                  <option value="__connect_new__" className="bg-[var(--bg-surface)] text-[var(--signal)]">
-                    + Connect another GMC store...
-                  </option>
-                </select>
-                <ChevronDown className="w-3.5 h-3.5 text-[var(--ghost-text)] pointer-events-none absolute right-2 top-1/2 -translate-y-1/2" />
-              </div>
-            ) : (
-              <span className="text-[13.5px] font-medium text-[var(--ink-primary)]">
-                {activeStore?.store_name || 'Active Store'}
-              </span>
-            )}
-          </div>
-          <span className="tag-pill tag-ghost text-[10px] py-0.5">
-            GMC #{activeStore?.gmc_id || activeStore?.merchant_id}
-          </span>
-
-          {/* Active Trial Countdown & Status Badge (§4 User Interface) */}
-          {data.billing && (
-            <>
-              {data.billing.status === 'active trial' && data.billing.daysRemaining > 3 && (
-                <a
-                  href={data.billing.upgradeUrl}
-                  className="tag-pill tag-ghost text-[10.5px] py-0.5 inline-flex items-center gap-1.5 hover:border-[var(--signal-dim)] hover:text-[var(--ink-primary)] transition-colors"
-                  title={`14-Day Free Trial active until ${data.billing.formattedTrialEnd}. Click to review plans.`}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)]" />
-                  <span>Trial: {data.billing.daysRemaining} {data.billing.daysRemaining === 1 ? 'day' : 'days'} left</span>
-                </a>
-              )}
-              {data.billing.status === 'active trial' && data.billing.daysRemaining <= 3 && (
-                <a
-                  href={data.billing.upgradeUrl}
-                  className="tag-pill tag-danger text-[10.5px] py-0.5 inline-flex items-center gap-1.5 font-medium hover:bg-[rgba(214,69,69,0.16)] transition-colors"
-                  title={`Urgent: Trial ends on ${data.billing.formattedTrialEnd}. Upgrade now to maintain continuous monitoring.`}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--danger)] animate-pulse" />
-                  <span>Trial ends in {data.billing.daysRemaining} {data.billing.daysRemaining === 1 ? 'day' : 'days'} — Upgrade</span>
-                </a>
-              )}
-              {data.billing.status === 'paid active' && (
-                <span className="tag-pill tag-signal text-[10.5px] py-0.5 inline-flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)]" />
-                  <span>Pro Active</span>
-                </span>
-              )}
-              {data.billing.isLocked && (
-                <a
-                  href={data.billing.upgradeUrl}
-                  className="tag-pill tag-danger text-[10.5px] py-0.5 inline-flex items-center gap-1.5 font-medium"
-                  title="Trial concluded. Real-time crawler monitoring is paused."
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--danger)]" />
-                  <span>Trial Expired — Locked</span>
-                </a>
-              )}
-            </>
-          )}
-
+      {/* Streamlined Operational Action Bar (§1 Header De-Duplication & Layout Hierarchy) */}
+      <div className="flex items-center justify-between gap-3 py-2 border-b border-[var(--hairline)]">
+        {/* Left: Operational Fire Drill Trigger */}
+        <div className="flex items-center gap-2">
           <button
             onClick={handleRunFireDrill}
             disabled={simulatingFireDrill || data.billing?.isLocked}
-            className="btn-secondary text-[12px] py-1 px-2.5 !rounded-[3px] inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn-secondary text-[12px] py-1.5 px-3 !rounded-[3px] inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
             title={
               data.billing?.isLocked
                 ? 'Subscription required to run simulated fire drills'
                 : 'Simulate a crawler disapproval to test Slack alert routing'
             }
           >
-            <Flame className={`w-3 h-3 ${data.billing?.isLocked ? 'text-[var(--ghost-text-dim)]' : 'text-[var(--signal)]'} ${simulatingFireDrill ? 'animate-spin' : ''}`} />
+            <Flame className={`w-3.5 h-3.5 ${data.billing?.isLocked ? 'text-[var(--ghost-text-dim)]' : 'text-[var(--signal)]'} ${simulatingFireDrill ? 'animate-spin' : ''}`} />
             <span>{simulatingFireDrill ? 'Simulating...' : 'Run Test Fire Drill'}</span>
           </button>
         </div>
 
+        {/* Right: Operational Controls (Refresh & Configure alerts) */}
         <div className="flex items-center gap-2">
           {inlineFeedback && (
             <span className="font-mono text-[11px] text-[var(--signal)]">{inlineFeedback}</span>
@@ -570,17 +487,17 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="btn-secondary text-[12px] py-1.5 px-3 !rounded-[3px]"
+            className="btn-secondary text-[12px] py-1.5 px-3 !rounded-[3px] inline-flex items-center gap-1.5"
           >
-            <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />
-            Refresh
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
           </button>
           <button
             onClick={() => setModalOpen(true)}
-            className="btn-secondary text-[12px] py-1.5 px-3 !rounded-[3px]"
+            className="btn-secondary text-[12px] py-1.5 px-3 !rounded-[3px] inline-flex items-center gap-1.5"
           >
-            <SlidersHorizontal className="w-3 h-3 text-[var(--signal)]" />
-            Configure alerts
+            <SlidersHorizontal className="w-3.5 h-3.5 text-[var(--signal)]" />
+            <span>Configure alerts</span>
           </button>
         </div>
       </div>
@@ -706,7 +623,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
               </p>
 
               <p className="text-[13px] text-[var(--ghost-text)] leading-[1.55] max-w-md mx-auto">
-                Your store credentials and SKU mapping remain safely configured. Upgrade to an active plan to reactivate continuous policy enforcement, un-mute Slack notifications, and restore direct Shopify resolution deep links.
+                Your store credentials and SKU mapping remain safely configured. Upgrade to an active plan to reactivate continuous policy enforcement, un-mute Slack notifications, and restore direct product resolution deep links.
               </p>
 
               {/* Primary Action Button (§4 Buttons: .btn-primary with strict --radius-sm: 3px) */}
@@ -802,14 +719,14 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                     href={criticalIncident.shopifyUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="btn-primary text-[12px] py-1.5 px-3 !rounded-[3px]"
+                    className="btn-primary text-[12px] py-1.5 px-3 !rounded-[3px] inline-flex items-center gap-1.5"
                   >
-                    <span>Fix in Shopify</span>
+                    <span>Edit Product</span>
                     <ExternalLink className="w-3.5 h-3.5" strokeWidth={1.5} />
                   </a>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-[var(--ghost-text-dim)] px-2.5 py-1 rounded-[var(--radius-sm)] border border-[var(--hairline)]">
-                    <Lock className="w-3 h-3" /> Fix link locked
+                    <Lock className="w-3 h-3" /> Edit Product locked
                   </span>
                 )}
 
@@ -818,24 +735,28 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                     href={criticalIncident.gmcUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="btn-secondary text-[12px] py-1.5 px-3 !rounded-[3px]"
+                    className="btn-secondary text-[12px] py-1.5 px-3 !rounded-[3px] inline-flex items-center gap-1.5"
                   >
                     <span>GMC console</span>
                     <ExternalLink className="w-3.5 h-3.5 text-[var(--ghost-text)]" strokeWidth={1.5} />
                   </a>
                 )}
 
-                <button
-                  onClick={() => handleMarkPendingVerification(criticalIncident.id)}
-                  disabled={data.billing?.isLocked || criticalIncident.status === 'pending_verification' || verifyingIncidentId === criticalIncident.id}
-                  className="btn-secondary text-[12px] py-1.5 px-3 disabled:opacity-50 !rounded-[3px]"
-                >
-                  {criticalIncident.status === 'pending_verification'
-                    ? 'Pending verification'
-                    : verifyingIncidentId === criticalIncident.id
-                    ? 'Updating...'
-                    : 'Mark fixed'}
-                </button>
+                {/* Non-interactive status badge vs Action button (§3 Disapproval Card Badge Distinction) */}
+                {criticalIncident.status === 'pending_verification' ? (
+                  <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-[var(--ghost-text)] px-2.5 py-1 rounded-[var(--radius-pill)] border border-[var(--ghost-line)] bg-[var(--bg-surface-2)] select-none cursor-default">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--ghost-text)]" aria-hidden="true" />
+                    <span>Pending verification</span>
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => handleMarkPendingVerification(criticalIncident.id)}
+                    disabled={data.billing?.isLocked || verifyingIncidentId === criticalIncident.id}
+                    className="btn-secondary text-[12px] py-1.5 px-3 disabled:opacity-50 !rounded-[3px]"
+                  >
+                    {verifyingIncidentId === criticalIncident.id ? 'Updating...' : 'Mark fixed'}
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -931,17 +852,20 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                           </span>
                         ) : isPending ? (
                           <div className="inline-flex items-center gap-2">
-                            <span className="tag-pill tag-ghost text-[10px]">
-                              Pending verification
+                            {/* Non-interactive static status badge (§3) */}
+                            <span className="inline-flex items-center gap-1.5 font-mono text-[10.5px] text-[var(--ghost-text)] px-2.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--ghost-line)] bg-[var(--bg-surface-2)] select-none cursor-default">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[var(--ghost-text)]" aria-hidden="true" />
+                              <span>Pending verification</span>
                             </span>
                             {inc.shopifyUrl ? (
                               <a
                                 href={inc.shopifyUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="font-mono text-[11px] text-[var(--ghost-text)] hover:text-[var(--ink-primary)] inline-flex items-center gap-1"
+                                className="btn-secondary text-[11px] py-1 px-2.5 !rounded-[3px] inline-flex items-center gap-1"
                               >
-                                Shopify <ExternalLink className="w-3 h-3" />
+                                <span>Edit Product</span>
+                                <ExternalLink className="w-3 h-3" />
                               </a>
                             ) : (
                               <span className="inline-flex items-center gap-1 font-mono text-[10.5px] text-[var(--ghost-text-dim)]">
@@ -954,7 +878,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                             <button
                               onClick={() => handleMarkPendingVerification(inc.id)}
                               disabled={data.billing?.isLocked || verifyingIncidentId === inc.id}
-                              className="font-mono text-[11px] text-[var(--signal)] hover:underline disabled:opacity-50 disabled:no-underline"
+                              className="btn-secondary text-[11px] py-1 px-2.5 !rounded-[3px] inline-flex items-center gap-1 disabled:opacity-50"
                             >
                               {verifyingIncidentId === inc.id ? 'Saving...' : 'Mark fixed'}
                             </button>
@@ -963,9 +887,10 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                                 href={inc.shopifyUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="btn-secondary text-[11px] py-1 px-2.5 !rounded-[3px]"
+                                className="btn-primary text-[11px] py-1 px-2.5 !rounded-[3px] inline-flex items-center gap-1"
                               >
-                                Shopify <ExternalLink className="w-3 h-3" />
+                                <span>Edit Product</span>
+                                <ExternalLink className="w-3 h-3" />
                               </a>
                             ) : (
                               <span className="inline-flex items-center gap-1 font-mono text-[10.5px] text-[var(--ghost-text-dim)]">

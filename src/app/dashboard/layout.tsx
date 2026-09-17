@@ -140,16 +140,16 @@ export default function TenantDashboardLayout({
               />
             </Link>
 
-            {/* Catalog Shield Active/Paused Indicator */}
+            {/* Operational Watcher Status Indicator (§2 Status Indicator Alignment) */}
             {billing?.isLocked ? (
-              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-[100px] border border-[#3a3d43] bg-transparent text-[#6b7078] text-[11px] font-mono tracking-[0.02em]">
+              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-[100px] border border-[#3a3d43] bg-transparent text-[#6b7078] text-[11px] font-mono tracking-[0.02em] shrink-0">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#3a3d43]" aria-hidden="true" />
-                <span>Catalog Shield: Paused</span>
+                <span>Monitoring: Paused</span>
               </div>
             ) : (
-              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-[100px] border border-[#7a5a26] bg-[rgba(242,169,59,0.06)] text-[#f2a93b] text-[11px] font-mono tracking-[0.02em]">
+              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-[100px] border border-[#7a5a26] bg-[rgba(242,169,59,0.06)] text-[#f2a93b] text-[11px] font-mono tracking-[0.02em] shrink-0">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" aria-hidden="true" />
-                <span>Catalog Shield: Active</span>
+                <span>Monitoring: Armed &amp; Watching</span>
               </div>
             )}
 
@@ -159,7 +159,7 @@ export default function TenantDashboardLayout({
                 {billing.status === 'active trial' && billing.daysRemaining > 3 && (
                   <Link
                     href={billing.upgradeUrl}
-                    className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[rgba(255,255,255,0.14)] bg-[#131418] text-[#b9b3a5] hover:text-[#f4f1ea] hover:border-[#7a5a26] text-[10.5px] font-mono tracking-[0.02em] transition-colors"
+                    className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[rgba(255,255,255,0.14)] bg-[#131418] text-[#b9b3a5] hover:text-[#f4f1ea] hover:border-[#7a5a26] text-[10.5px] font-mono tracking-[0.02em] transition-colors shrink-0"
                     title={`14-Day Free Trial ends on ${billing.formattedTrialEnd}. Click to review plan upgrades.`}
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" aria-hidden="true" />
@@ -170,7 +170,7 @@ export default function TenantDashboardLayout({
                 {billing.status === 'active trial' && billing.daysRemaining <= 3 && (
                   <Link
                     href={billing.upgradeUrl}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[#d64545] bg-[rgba(214,69,69,0.08)] text-[#d64545] text-[10.5px] font-mono tracking-[0.02em] font-medium hover:bg-[rgba(214,69,69,0.16)] transition-colors"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[#d64545] bg-[rgba(214,69,69,0.08)] text-[#d64545] text-[10.5px] font-mono tracking-[0.02em] font-medium hover:bg-[rgba(214,69,69,0.16)] transition-colors shrink-0"
                     title={`Urgent: Trial ends on ${billing.formattedTrialEnd}. Upgrade now to avoid losing 24/7 protection.`}
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-[#d64545] animate-pulse" aria-hidden="true" />
@@ -179,7 +179,7 @@ export default function TenantDashboardLayout({
                 )}
 
                 {billing.status === 'paid active' && (
-                  <div className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[#7a5a26] bg-[rgba(242,169,59,0.06)] text-[#f2a93b] text-[10.5px] font-mono tracking-[0.02em]">
+                  <div className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[#7a5a26] bg-[rgba(242,169,59,0.06)] text-[#f2a93b] text-[10.5px] font-mono tracking-[0.02em] shrink-0">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" aria-hidden="true" />
                     <span>PRO SHIELD: ACTIVE</span>
                   </div>
@@ -188,7 +188,7 @@ export default function TenantDashboardLayout({
                 {billing.isLocked && (
                   <Link
                     href={billing.upgradeUrl}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[#d64545] bg-[rgba(214,69,69,0.08)] text-[#d64545] text-[10.5px] font-mono tracking-[0.02em] font-medium hover:bg-[rgba(214,69,69,0.16)] transition-colors"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[#d64545] bg-[rgba(214,69,69,0.08)] text-[#d64545] text-[10.5px] font-mono tracking-[0.02em] font-medium hover:bg-[rgba(214,69,69,0.16)] transition-colors shrink-0"
                     title="Trial has concluded. Click to upgrade and restore live monitoring."
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-[#d64545]" aria-hidden="true" />
@@ -200,7 +200,7 @@ export default function TenantDashboardLayout({
 
             {/* Active Store Selector (§1 Clean Merchant Header) */}
             {stores.length > 0 && (
-              <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-[3px] bg-[#131418] border border-[rgba(255,255,255,0.08)]">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-[3px] bg-[#131418] border border-[rgba(255,255,255,0.08)] shrink-0">
                 <span className="font-mono text-[10.5px] text-[#6b7078]">STORE:</span>
                 {stores.length > 1 ? (
                   <div className="relative flex items-center">
@@ -239,6 +239,7 @@ export default function TenantDashboardLayout({
               </div>
             )}
           </div>
+
 
           {/* Right Controls: User Profile Menu */}
           <div className="flex items-center gap-3">
