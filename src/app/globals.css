@@ -2,16 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Self-hosted Departure Mono */
-@font-face {
-  font-family: 'Departure Mono';
-  src: url('/fonts/DepartureMono-Regular.woff2') format('woff2'),
-       url('/fonts/DepartureMono-Regular.woff') format('woff');
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
-
 :root {
   /* base */
   --bg-canvas: #0a0b0d;
@@ -47,7 +37,7 @@
   /* typography */
   --font-display: 'Fraunces', Georgia, serif;
   --font-body: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'Departure Mono', 'Martian Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+  --font-mono: 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
 
   /* spacing */
   --space-1: 4px;

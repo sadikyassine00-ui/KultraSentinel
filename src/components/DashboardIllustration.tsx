@@ -22,7 +22,7 @@ export function DashboardIllustration() {
             font-family: 'Inter', system-ui, sans-serif;
           }
           .console-mono {
-            font-family: 'Departure Mono', 'Martian Mono', monospace;
+            font-family: 'Roboto Mono', monospace;
           }
           .console-display {
             font-family: 'Fraunces', serif;
