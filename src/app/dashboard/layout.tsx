@@ -126,9 +126,9 @@ export default function TenantDashboardLayout({
           {/* Brand & Catalog Status */}
           <div className="flex items-center gap-4 sm:gap-6">
             <Link
-              href="/dashboard"
+              href="/"
               className="flex items-center gap-2.5 outline-none focus-visible:ring-2 focus-visible:ring-[#f2a93b] rounded-[3px]"
-              aria-label="Kultra Dashboard"
+              aria-label="Kultra Home"
             >
               <Image
                 src="/assets/logos/kultra-logo-horizontal.svg"
