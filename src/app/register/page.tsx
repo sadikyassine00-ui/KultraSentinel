@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -25,6 +25,13 @@ function RegisterForm() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    const err = searchParams.get('error');
+    if (err) {
+      setError(decodeURIComponent(err));
+    }
+  }, [searchParams]);
+
   const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
   const isMinLength = password.length >= 10;
   const hasUpper = /[A-Z]/.test(password);
@@ -38,8 +45,7 @@ function RegisterForm() {
     setError(null);
 
     try {
-      // Direct navigation to server route which generates cryptographically secure state & CSRF cookie
-      window.location.href = '/api/auth/google?prompt=select_account';
+      window.location.href = '/api/auth/google?prompt=select_account&from=/register';
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Google registration failed.');
       setGoogleLoading(false);

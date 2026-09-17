@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createOrUpdateAdmin, findTenantByEmail, createTenant, createLead, findAdminByEmail } from '@/lib/db';
-import { createSessionToken, getSessionCookieHeader, isAllowedAdminEmail } from '@/lib/auth';
+import { createSessionToken, getSessionCookieHeader, isAllowedAdminEmail, isSecureContext, COOKIE_NAME } from '@/lib/auth';
 import { verifyOAuthState, OAUTH_STATE_COOKIE_NAME } from '@/lib/security';
 import { getClientIp } from '@/lib/rate-limit';
 
@@ -11,31 +11,36 @@ export async function GET(request: Request) {
   const state = url.searchParams.get('state');
 
   const origin = url.origin;
-  const loginUrl = new URL('/login', origin);
+
+  // 1. Cryptographic OAuth State & CSRF Mitigation
+  // Robust extraction of state verification cookie
+  const cookieHeader = request.headers.get('cookie') || '';
+  let stateCookieValue: string | null = null;
+  const match = cookieHeader
+    .split(';')
+    .map((c) => c.trim())
+    .find((c) => c.startsWith(`${OAUTH_STATE_COOKIE_NAME}=`));
+  if (match) {
+    stateCookieValue = decodeURIComponent(match.substring(`${OAUTH_STATE_COOKIE_NAME}=`.length));
+  }
+
+  const stateVerification = await verifyOAuthState(state, stateCookieValue);
+  const returnTo = stateVerification.returnTo || '/login';
+  const loginUrl = new URL(returnTo, origin);
 
   if (error || !code) {
     loginUrl.searchParams.set('error', error || 'Google sign-in was cancelled or failed.');
     return NextResponse.redirect(loginUrl);
   }
 
-  // 1. Cryptographic OAuth State & CSRF Mitigation
-  // Extract state verification cookie
-  const cookieHeader = request.headers.get('cookie') || '';
-  const stateCookieMatch = cookieHeader
-    .split(';')
-    .map((c) => c.trim())
-    .find((c) => c.startsWith(`${OAUTH_STATE_COOKIE_NAME}=`));
-  const stateCookieValue = stateCookieMatch
-    ? decodeURIComponent(stateCookieMatch.split('=')[1])
-    : null;
-
-  const stateVerification = await verifyOAuthState(state, stateCookieValue);
   if (!stateVerification.valid) {
+    console.error('[Google Callback] OAuth state validation failed:', stateVerification.error);
     loginUrl.searchParams.set(
       'error',
       'Security verification failed: OAuth state parameter mismatch or expired. Please try signing in again.'
     );
     const response = NextResponse.redirect(loginUrl);
+    const isSecure = isSecureContext(request);
     // Clear state cookie
     response.cookies.set({
       name: OAUTH_STATE_COOKIE_NAME,
@@ -44,7 +49,7 @@ export async function GET(request: Request) {
       maxAge: 0,
       httpOnly: true,
       sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
+      secure: isSecure,
     });
     return response;
   }
@@ -170,9 +175,20 @@ export async function GET(request: Request) {
       : new URL('/dashboard', origin);
 
     const response = NextResponse.redirect(targetUrl);
-    response.headers.set('Set-Cookie', getSessionCookieHeader(token));
+    const isSecure = isSecureContext(request);
 
-    // 8. Invalidate one-time state cookie
+    // 8. Set 7-day secure session cookie directly on response.cookies
+    response.cookies.set({
+      name: COOKIE_NAME,
+      value: token,
+      path: '/',
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: isSecure,
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+    });
+
+    // 9. Invalidate one-time state cookie
     response.cookies.set({
       name: OAUTH_STATE_COOKIE_NAME,
       value: '',
@@ -180,7 +196,7 @@ export async function GET(request: Request) {
       maxAge: 0,
       httpOnly: true,
       sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
+      secure: isSecure,
     });
 
     return response;

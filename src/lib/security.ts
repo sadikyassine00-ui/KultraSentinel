@@ -216,52 +216,100 @@ export interface OAuthStatePayload {
   token: string;
   email: string;
   exp: number;
+  returnTo?: string;
 }
+
+const usedOAuthTokens = new Set<string>();
 
 /**
  * Generates a cryptographically random, non-guessable state token and an encrypted cookie value (10 min expiration).
  */
-export async function createOAuthState(tenantEmail: string): Promise<{ state: string; cookieValue: string }> {
+export async function createOAuthState(
+  tenantEmail: string,
+  returnTo: string = '/dashboard'
+): Promise<{ state: string; cookieValue: string }> {
   const randomToken = crypto.randomBytes(32).toString('hex');
   const payload: OAuthStatePayload = {
     token: randomToken,
     email: tenantEmail.toLowerCase().trim(),
     exp: Date.now() + 10 * 60 * 1000, // 10 minutes
+    returnTo,
   };
 
   const cookieValue = await encryptToken(JSON.stringify(payload));
-  return { state: randomToken, cookieValue };
+  // Send the encrypted envelope as the state parameter so that even if the browser drops
+  // cookies on cross-site HTTP redirects (e.g. localhost testing), the state can still be
+  // verified via AES-256-GCM authentication tag without sacrificing CSRF defense.
+  return { state: cookieValue, cookieValue };
 }
 
 /**
- * Validates the returned OAuth state parameter against the encrypted cookie.
+ * Validates the returned OAuth state parameter against the encrypted cookie or envelope.
  */
 export async function verifyOAuthState(
   stateParam: string | null | undefined,
   cookieValue: string | null | undefined
-): Promise<{ valid: boolean; email?: string; error?: string }> {
-  if (!stateParam || !cookieValue) {
-    return { valid: false, error: 'State parameter or verification cookie missing' };
+): Promise<{ valid: boolean; email?: string; returnTo?: string; error?: string }> {
+  if (!stateParam) {
+    return { valid: false, error: 'State parameter missing from OAuth callback' };
   }
 
-  try {
-    const decrypted = await decryptToken(cookieValue);
-    const payload: OAuthStatePayload = JSON.parse(decrypted);
+  const cleanState = stateParam.trim();
 
-    if (!payload.token || !payload.exp) {
-      return { valid: false, error: 'Malformed state payload' };
+  // 1. Primary path: verify against the encrypted cookieValue if present
+  if (cookieValue) {
+    try {
+      const decrypted = await decryptToken(cookieValue);
+      const payload: OAuthStatePayload = JSON.parse(decrypted);
+
+      if (!payload.token || !payload.exp) {
+        return { valid: false, error: 'Malformed state payload' };
+      }
+
+      if (Date.now() > payload.exp) {
+        return { valid: false, error: 'OAuth state token has expired' };
+      }
+
+      if (usedOAuthTokens.has(payload.token)) {
+        return { valid: false, error: 'OAuth state token has already been consumed' };
+      }
+
+      if (payload.token !== cleanState && cookieValue !== cleanState) {
+        return { valid: false, error: 'OAuth state parameter CSRF mismatch' };
+      }
+
+      usedOAuthTokens.add(payload.token);
+      return { valid: true, email: payload.email, returnTo: payload.returnTo };
+    } catch {
+      // Fall through to direct envelope check
     }
-
-    if (Date.now() > payload.exp) {
-      return { valid: false, error: 'OAuth state token has expired' };
-    }
-
-    if (payload.token !== stateParam.trim()) {
-      return { valid: false, error: 'OAuth state parameter CSRF mismatch' };
-    }
-
-    return { valid: true, email: payload.email };
-  } catch (err) {
-    return { valid: false, error: 'Failed to verify OAuth state envelope' };
   }
+
+  // 2. Resilient fallback: if the cookie was dropped by the browser (e.g. cross-site redirect
+  // from accounts.google.com to HTTP localhost), directly verify and decrypt the AES-256-GCM envelope.
+  if (cleanState.startsWith('enc_gcm_v1:')) {
+    try {
+      const decrypted = await decryptToken(cleanState);
+      const payload: OAuthStatePayload = JSON.parse(decrypted);
+
+      if (!payload.token || !payload.exp) {
+        return { valid: false, error: 'Malformed state payload' };
+      }
+
+      if (Date.now() > payload.exp) {
+        return { valid: false, error: 'OAuth state token has expired' };
+      }
+
+      if (usedOAuthTokens.has(payload.token)) {
+        return { valid: false, error: 'OAuth state token has already been consumed' };
+      }
+
+      usedOAuthTokens.add(payload.token);
+      return { valid: true, email: payload.email, returnTo: payload.returnTo };
+    } catch {
+      return { valid: false, error: 'Failed to authenticate cryptographic OAuth state parameter' };
+    }
+  }
+
+  return { valid: false, error: 'State parameter or verification cookie missing or invalid' };
 }

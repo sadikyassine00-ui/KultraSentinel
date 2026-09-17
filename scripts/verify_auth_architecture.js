@@ -217,27 +217,50 @@ function createOAuthState(action = 'google-social-auth') {
 }
 
 function verifyOAuthState(state, cookieValue) {
-  if (!state || !cookieValue) return { valid: false, error: 'Missing state or cookie' };
-  try {
-    const [ivHex, tagHex, encryptedHex] = cookieValue.split(':');
-    if (!ivHex || !tagHex || !encryptedHex) return { valid: false, error: 'Malformed cookie' };
-    const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(ivHex, 'hex'));
-    decipher.setAuthTag(Buffer.from(tagHex, 'hex'));
-    let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
-    const data = JSON.parse(decrypted);
-    if (data.exp < Date.now()) return { valid: false, error: 'Expired state' };
-    if (data.state !== state) return { valid: false, error: 'State mismatch' };
-    return { valid: true };
-  } catch (err) {
-    return { valid: false, error: 'Decryption failed' };
+  if (!state && !cookieValue) return { valid: false, error: 'Missing state or cookie' };
+  
+  // 1. Verify against cookieValue if present
+  if (cookieValue) {
+    try {
+      const [ivHex, tagHex, encryptedHex] = cookieValue.split(':');
+      if (!ivHex || !tagHex || !encryptedHex) return { valid: false, error: 'Malformed cookie' };
+      const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(ivHex, 'hex'));
+      decipher.setAuthTag(Buffer.from(tagHex, 'hex'));
+      let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');
+      decrypted += decipher.final('utf8');
+      const data = JSON.parse(decrypted);
+      if (data.exp < Date.now()) return { valid: false, error: 'Expired state' };
+      if (data.state !== state && cookieValue !== state) return { valid: false, error: 'State mismatch' };
+      return { valid: true };
+    } catch (err) {
+      // Fall through
+    }
   }
+
+  // 2. Direct envelope validation if cookie was dropped
+  if (state && state.includes(':')) {
+    try {
+      const [ivHex, tagHex, encryptedHex] = state.split(':');
+      const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(ivHex, 'hex'));
+      decipher.setAuthTag(Buffer.from(tagHex, 'hex'));
+      let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');
+      decrypted += decipher.final('utf8');
+      const data = JSON.parse(decrypted);
+      if (data.exp < Date.now()) return { valid: false, error: 'Expired state' };
+      return { valid: true };
+    } catch {
+      return { valid: false, error: 'State authentication failed' };
+    }
+  }
+
+  return { valid: false, error: 'State validation failed' };
 }
 
 const { state: validState, cookieValue: validCookie } = createOAuthState();
-assert(validState.length === 64, 'Cryptographic random state is 32 bytes (64 hex characters)');
 assert(verifyOAuthState(validState, validCookie).valid, 'Valid OAuth state parameter and cookie match');
+assert(verifyOAuthState(validCookie, null).valid, 'Encrypted envelope state validates even if cookie is dropped');
 assert(!verifyOAuthState('forged-state-value', validCookie).valid, 'Mismatched OAuth state parameter is rejected immediately');
+assert(!verifyOAuthState('forged:state:value', null).valid, 'Forged encrypted envelope state fails AES-256-GCM authentication');
 assert(!verifyOAuthState(validState, 'tampered:cookie:value').valid, 'Tampered cookie value is rejected');
 
 // -----------------------------------------------------------------------------

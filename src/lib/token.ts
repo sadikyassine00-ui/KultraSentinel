@@ -126,26 +126,48 @@ export function parseCookie(cookieHeader: string | null, name: string): string |
   return match ? decodeURIComponent(match.split('=')[1]) : null;
 }
 
-export function getSessionCookieOptions(maxAgeSeconds: number = 60 * 60 * 24 * 7) {
-  const isProd = process.env.NODE_ENV === 'production';
+export function isSecureContext(request?: Request): boolean {
+  if (typeof window !== 'undefined') {
+    return window.location.protocol === 'https:';
+  }
+  if (request) {
+    try {
+      const url = new URL(request.url);
+      if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+        return false;
+      }
+      const forwardedProto = request.headers.get('x-forwarded-proto');
+      if (forwardedProto) {
+        return forwardedProto === 'https';
+      }
+      return url.protocol === 'https:';
+    } catch {
+      // Fall through
+    }
+  }
+  return process.env.NODE_ENV === 'production' && !!process.env.NEXTAUTH_URL?.startsWith('https://');
+}
+
+export function getSessionCookieOptions(maxAgeSeconds: number = 60 * 60 * 24 * 7, request?: Request) {
+  const isSecure = isSecureContext(request);
   return {
     name: COOKIE_NAME,
     httpOnly: true,
     sameSite: 'lax' as const,
-    secure: isProd,
+    secure: isSecure,
     path: '/',
     maxAge: maxAgeSeconds,
   };
 }
 
-export function getSessionCookieHeader(token: string, maxAgeSeconds: number = 60 * 60 * 24 * 7): string {
-  const isProd = process.env.NODE_ENV === 'production';
-  const secure = isProd ? '; Secure' : '';
+export function getSessionCookieHeader(token: string, maxAgeSeconds: number = 60 * 60 * 24 * 7, request?: Request): string {
+  const isSecure = isSecureContext(request);
+  const secure = isSecure ? '; Secure' : '';
   return `${COOKIE_NAME}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAgeSeconds}${secure}`;
 }
 
-export function getClearSessionCookieHeader(): string {
-  const isProd = process.env.NODE_ENV === 'production';
-  const secure = isProd ? '; Secure' : '';
+export function getClearSessionCookieHeader(request?: Request): string {
+  const isSecure = isSecureContext(request);
+  const secure = isSecure ? '; Secure' : '';
   return `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secure}`;
 }

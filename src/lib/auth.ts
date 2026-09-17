@@ -9,6 +9,7 @@ import {
   getSessionCookieHeader,
   getClearSessionCookieHeader,
   getSessionCookieOptions,
+  isSecureContext,
   getJwtSecret,
   type SessionPayload,
 } from './token';
@@ -24,6 +25,7 @@ export {
   getSessionCookieHeader,
   getClearSessionCookieHeader,
   getSessionCookieOptions,
+  isSecureContext,
   getJwtSecret,
   type SessionPayload,
 };

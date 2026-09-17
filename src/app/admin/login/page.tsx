@@ -63,7 +63,7 @@ export default function AdminLoginPage() {
     setError(null);
 
     try {
-      window.location.href = '/api/auth/google?prompt=select_account';
+      window.location.href = '/api/auth/google?prompt=select_account&from=/admin/login';
     } catch {
       setError('Google authentication service unavailable.');
       setLoading(false);

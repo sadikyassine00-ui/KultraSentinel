@@ -157,7 +157,7 @@ export async function POST(request: Request) {
     });
 
     // 9. Set hardened HTTP-only, secure, SameSite=Lax cookie with 7-day expiration
-    response.headers.set('Set-Cookie', getSessionCookieHeader(token));
+    response.headers.set('Set-Cookie', getSessionCookieHeader(token, 60 * 60 * 24 * 7, request));
 
     return response;
   } catch (error) {

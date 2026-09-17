@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -16,6 +16,17 @@ export default function RegisterPage() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const err = params.get('error');
+      if (err) {
+        setError(decodeURIComponent(err));
+      }
+    }
+  }, []);
+
   const [provisionedData, setProvisionedData] = useState<{
     company_name: string;
     user_id: string;
@@ -78,7 +89,7 @@ export default function RegisterPage() {
     setError(null);
 
     try {
-      window.location.href = '/api/auth/google?prompt=select_account';
+      window.location.href = '/api/auth/google?prompt=select_account&from=/admin/register';
     } catch {
       setError('Google authentication service unavailable.');
       setLoading(false);

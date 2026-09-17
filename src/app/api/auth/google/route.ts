@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { findAdminByEmail, createOrUpdateAdmin, findTenantByEmail, createTenant, createLead } from '@/lib/db';
-import { createSessionToken, getSessionCookieHeader, isAllowedAdminEmail } from '@/lib/auth';
+import { createSessionToken, getSessionCookieHeader, isAllowedAdminEmail, isSecureContext } from '@/lib/auth';
 import { createOAuthState, OAUTH_STATE_COOKIE_NAME } from '@/lib/security';
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const origin = url.origin;
+  const from = url.searchParams.get('from') || '/login';
   const googleClientId = process.env.GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
   if (!googleClientId) {
@@ -17,8 +18,8 @@ export async function GET(request: Request) {
 
   const redirectUri = `${origin}/api/auth/google/callback`;
 
-  // Generate cryptographically secure random state token & encrypted HTTP-only cookie (10 min expiration)
-  const { state, cookieValue } = await createOAuthState('google-social-auth');
+  // Generate cryptographically secure state token & encrypted HTTP-only cookie (10 min expiration)
+  const { state, cookieValue } = await createOAuthState('google-social-auth', from);
 
   const params = new URLSearchParams({
     client_id: googleClientId,
@@ -37,14 +38,16 @@ export async function GET(request: Request) {
     ? NextResponse.json({ url: authUrl })
     : NextResponse.redirect(authUrl);
 
-  // Attach secure, HttpOnly, SameSite=Lax state cookie
+  const isSecure = isSecureContext(request);
+
+  // Attach HttpOnly, SameSite=Lax state cookie (Secure only when actually in HTTPS context)
   response.cookies.set({
     name: OAUTH_STATE_COOKIE_NAME,
     value: cookieValue,
     path: '/',
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: isSecure,
     maxAge: 600, // 10 minutes
   });
 
@@ -194,7 +197,7 @@ export async function POST(request: Request) {
       },
     });
 
-    response.headers.set('Set-Cookie', getSessionCookieHeader(token));
+    response.headers.set('Set-Cookie', getSessionCookieHeader(token, 60 * 60 * 24 * 7, request));
     return response;
   } catch (error) {
     console.error('[Google Auth Error]', error);

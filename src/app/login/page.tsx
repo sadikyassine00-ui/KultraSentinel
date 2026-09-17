@@ -60,8 +60,7 @@ function LoginForm() {
     setError(null);
 
     try {
-      // Direct navigation to server route which sets cryptographically secure state & CSRF cookie
-      window.location.href = '/api/auth/google?prompt=select_account';
+      window.location.href = '/api/auth/google?prompt=select_account&from=/login';
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Google sign-in failed.');
       setLoading(false);
