@@ -76,6 +76,9 @@ export async function POST(request: Request) {
       companyName: cleanCompany,
       planTier: 'Trial',
       accountType: cleanAccountType,
+      accountPlan: cleanAccountType === 'agency' ? 'agency' : 'solo',
+      subscriptionStatus: 'active trial',
+      trialEndsAt: new Date(Date.now() + 14 * 86400000).toISOString(),
       website: website || cleanCompany.toLowerCase().replace(/[^a-z0-9]/g, '') + '.com',
     });
 

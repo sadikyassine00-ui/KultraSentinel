@@ -1,6 +1,32 @@
 import { NextResponse } from 'next/server';
-import { findAdminByEmail, createOrUpdateAdmin, findTenantByEmail, createTenant } from '@/lib/db';
+import { findAdminByEmail, createOrUpdateAdmin, findTenantByEmail, createTenant, createLead } from '@/lib/db';
 import { createSessionToken, getSessionCookieHeader, isAllowedAdminEmail } from '@/lib/auth';
+
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const origin = url.origin;
+  const googleClientId = process.env.GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+
+  if (!googleClientId) {
+    return NextResponse.json(
+      { error: 'Google Client ID is not configured on the server.' },
+      { status: 500 }
+    );
+  }
+
+  const redirectUri = `${origin}/api/auth/google/callback`;
+  const params = new URLSearchParams({
+    client_id: googleClientId,
+    redirect_uri: redirectUri,
+    response_type: 'code',
+    scope: 'openid email profile',
+    access_type: 'offline',
+    prompt: url.searchParams.get('prompt') || 'select_account',
+  });
+
+  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+  return NextResponse.redirect(authUrl);
+}
 
 export async function POST(request: Request) {
   try {
@@ -99,10 +125,29 @@ export async function POST(request: Request) {
     if (role === 'user') {
       const existingTenant = await findTenantByEmail(cleanEmail);
       if (!existingTenant) {
+        // Automatic Metadata Provisioning:
+        // Initialize store name as [User Display Name]'s Catalog if no name is provided
+        const displayName = (name && name !== 'User' ? name : '').trim() || cleanEmail.split('@')[0];
+        const storeName = `${displayName}'s Catalog`;
+        // Default account_plan to solo ($19/mo) and set trial_ends_at to exactly 14 days from creation
+        const trialEndsAt = new Date(Date.now() + 14 * 86400000).toISOString();
+
         await createTenant({
           email: cleanEmail,
-          companyName: name || cleanEmail.split('@')[0],
+          companyName: storeName,
           planTier: 'Trial',
+          accountType: 'merchant',
+          accountPlan: 'solo',
+          subscriptionStatus: 'active trial',
+          trialEndsAt,
+        });
+
+        // Record lead for platform CRM telemetry
+        await createLead({
+          email: cleanEmail,
+          accountType: 'merchant',
+          website: `${cleanEmail.split('@')[1] || 'store.com'}`,
+          catalogSize: '1,000 - 5,000 SKUs',
         });
       }
     }

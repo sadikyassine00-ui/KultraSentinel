@@ -22,10 +22,53 @@ function RegisterForm() {
   const [touchedEmail, setTouchedEmail] = useState(false);
   const [touchedPassword, setTouchedPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
   const isPasswordValid = password.length >= 8;
+
+  const handleGoogleRegister = async () => {
+    setGoogleLoading(true);
+    setError(null);
+
+    try {
+      const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+
+      if (googleClientId) {
+        const redirectUri = `${window.location.origin}/api/auth/google/callback`;
+        const scope = encodeURIComponent('openid email profile');
+        const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleClientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=select_account`;
+        window.location.href = googleAuthUrl;
+        return;
+      }
+
+      // Quick fallback for test/dev mode without configured client ID
+      const res = await fetch('/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          demoEmail: 'demo-merchant@example.com',
+          demoName: 'Merchant',
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Google registration failed.');
+      }
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('auth-change'));
+      }
+      router.push('/dashboard');
+      router.refresh();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Google registration failed.');
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,6 +147,51 @@ function RegisterForm() {
             <span>{error}</span>
           </div>
         )}
+
+        {/* Google 1-Click Social Registration (§1 UI Layout Updates) */}
+        <button
+          type="button"
+          onClick={handleGoogleRegister}
+          disabled={loading || googleLoading}
+          className="w-full flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-[3px] bg-white hover:bg-[#f8f9fa] active:bg-[#f1f3f4] text-[#1f1f1f] text-[13px] font-semibold transition-colors border border-[#dadce0] shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2a93b] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        >
+          {googleLoading ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin text-[#1f1f1f]" />
+              <span>Connecting to Google...</span>
+            </>
+          ) : (
+            <>
+              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  fill="#EA4335"
+                  d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.4 1 3.5 3.6 1.6 7.4l3.7 2.9C6.2 7.3 8.8 5 12 5z"
+                />
+                <path
+                  fill="#4285F4"
+                  d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.9z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.3 14.7c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.6 7.2C.6 9.2 0 11.5 0 14s.6 4.8 1.6 6.8l3.7-2.9z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3.2 0-5.8-2.2-6.8-5.2L1.5 16c1.9 3.8 5.8 6.4 10.5 6.4z"
+                />
+              </svg>
+              <span>Continue with Google</span>
+            </>
+          )}
+        </button>
+
+        {/* Subtle Horizontal Divider */}
+        <div className="relative my-4 flex items-center justify-center">
+          <div className="w-full border-t border-[rgba(255,255,255,0.08)]" />
+          <span className="absolute bg-[#0e0f11] px-2.5 text-[11px] font-mono text-[#45484f]">
+            or register with email
+          </span>
+        </div>
 
         <form onSubmit={handleRegister} className="space-y-3.5">
           {/* Store or Agency Name */}
@@ -302,6 +390,29 @@ function RegisterForm() {
             )}
           </button>
         </form>
+
+        {/* Universal Legal Disclaimer (§1 Form Compliance - Both Registration Methods) */}
+        <p className="mt-4 text-center text-[11.5px] text-[#6b7078] leading-relaxed">
+          By continuing with Google or registering with email, you agree to Kultra&apos;s{' '}
+          <Link
+            href="/terms"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#b9b3a5] underline underline-offset-2 hover:text-[#f2a93b] transition-colors"
+          >
+            Terms of Service
+          </Link>{' '}
+          and acknowledge the{' '}
+          <Link
+            href="/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#b9b3a5] underline underline-offset-2 hover:text-[#f2a93b] transition-colors"
+          >
+            Privacy Policy
+          </Link>
+          .
+        </p>
       </div>
 
       {/* Footer Login Link */}

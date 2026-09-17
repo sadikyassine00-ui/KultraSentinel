@@ -65,7 +65,7 @@ function LoginForm() {
       if (googleClientId) {
         const redirectUri = `${window.location.origin}/api/auth/google/callback`;
         const scope = encodeURIComponent('openid email profile');
-        const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleClientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=consent`;
+        const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleClientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=select_account`;
         window.location.href = googleAuthUrl;
         return;
       }
@@ -132,7 +132,7 @@ function LoginForm() {
           type="button"
           onClick={handleGoogleLogin}
           disabled={loading}
-          className="w-full flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-[3px] border border-[rgba(255,255,255,0.14)] text-[12.5px] font-semibold text-[#f4f1ea] hover:border-[#7a5a26] hover:bg-[#131418] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2a93b] disabled:opacity-50"
+          className="w-full flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-[3px] bg-white hover:bg-[#f8f9fa] active:bg-[#f1f3f4] text-[#1f1f1f] text-[13px] font-semibold transition-colors border border-[#dadce0] shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2a93b] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24">
             <path

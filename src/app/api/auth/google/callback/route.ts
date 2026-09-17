@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createOrUpdateAdmin, findTenantByEmail, createTenant } from '@/lib/db';
+import { createOrUpdateAdmin, findTenantByEmail, createTenant, createLead } from '@/lib/db';
 import { createSessionToken, getSessionCookieHeader, isAllowedAdminEmail } from '@/lib/auth';
 
 export async function GET(request: Request) {
@@ -83,10 +83,29 @@ export async function GET(request: Request) {
     if (role === 'user') {
       const existingTenant = await findTenantByEmail(email);
       if (!existingTenant) {
+        // Automatic Metadata Provisioning:
+        // Initialize store name as [User Display Name]'s Catalog if no name is provided
+        const displayName = (name && name !== 'User' ? name : '').trim() || email.split('@')[0];
+        const storeName = `${displayName}'s Catalog`;
+        // Default account_plan to solo ($19/mo) and set trial_ends_at to exactly 14 days from creation
+        const trialEndsAt = new Date(Date.now() + 14 * 86400000).toISOString();
+
         await createTenant({
           email,
-          companyName: name || email.split('@')[0],
+          companyName: storeName,
           planTier: 'Trial',
+          accountType: 'merchant',
+          accountPlan: 'solo',
+          subscriptionStatus: 'active trial',
+          trialEndsAt,
+        });
+
+        // Record lead for platform CRM telemetry
+        await createLead({
+          email,
+          accountType: 'merchant',
+          website: `${email.split('@')[1] || 'store.com'}`,
+          catalogSize: '1,000 - 5,000 SKUs',
         });
       }
     }

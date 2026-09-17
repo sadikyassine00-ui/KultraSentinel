@@ -40,6 +40,7 @@ export interface Tenant {
   email: string;
   company_name: string;
   plan_tier: 'Trial' | 'Agency Pilot' | 'Active Pro' | 'Delinquent' | 'Canceled';
+  account_plan?: 'solo' | 'agency' | string;
   connected_stores: number;
   total_skus: number;
   incidents_month: number;
@@ -496,6 +497,7 @@ export async function ensureSchema(): Promise<boolean> {
         email TEXT NOT NULL,
         company_name TEXT NOT NULL,
         plan_tier TEXT DEFAULT 'Trial',
+        account_plan TEXT DEFAULT 'solo',
         connected_stores INT DEFAULT 1,
         total_skus INT DEFAULT 0,
         incidents_month INT DEFAULT 0,
@@ -513,6 +515,7 @@ export async function ensureSchema(): Promise<boolean> {
     // Ensure tenant subscription columns exist if table already exists
     await sql`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS subscription_status TEXT DEFAULT 'active trial';`;
     await sql`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '14 days');`;
+    await sql`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS account_plan TEXT DEFAULT 'solo';`;
     await sql`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT;`;
     await sql`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT;`;
 
@@ -813,6 +816,7 @@ export async function createTenant(data: {
   companyName: string;
   planTier?: 'Trial' | 'Agency Pilot' | 'Active Pro';
   accountType?: string;
+  accountPlan?: string;
   website?: string;
   subscriptionStatus?: 'active trial' | 'paid active' | 'expired' | 'canceled';
   trialEndsAt?: string;
@@ -821,6 +825,7 @@ export async function createTenant(data: {
 }): Promise<Tenant> {
   const userId = `usr_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
   const planTier = data.planTier || 'Trial';
+  const accountPlan = data.accountPlan || (data.accountType === 'agency' ? 'agency' : 'solo');
   const now = new Date().toISOString();
   const subscriptionStatus =
     data.subscriptionStatus ||
@@ -836,11 +841,11 @@ export async function createTenant(data: {
       await ensureSchema();
       const rows = await sql`
         INSERT INTO tenants (
-          user_id, email, company_name, plan_tier, connected_stores, total_skus, incidents_month, oauth_status, status,
+          user_id, email, company_name, plan_tier, account_plan, connected_stores, total_skus, incidents_month, oauth_status, status,
           subscription_status, trial_ends_at, stripe_customer_id, stripe_subscription_id, created_at
         )
         VALUES (
-          ${userId}, ${data.email}, ${data.companyName}, ${planTier}, 1, 0, 0, 'Valid', 'active',
+          ${userId}, ${data.email}, ${data.companyName}, ${planTier}, ${accountPlan}, 1, 0, 0, 'Valid', 'active',
           ${subscriptionStatus}, ${trialEndsAt}, ${stripeCustomerId}, ${stripeSubscriptionId}, NOW()
         )
         RETURNING *;
@@ -857,6 +862,7 @@ export async function createTenant(data: {
     email: data.email,
     company_name: data.companyName,
     plan_tier: planTier,
+    account_plan: accountPlan,
     connected_stores: 1,
     total_skus: 0,
     incidents_month: 0,
@@ -883,6 +889,7 @@ export async function updateTenant(id: number, updates: Partial<Tenant>): Promis
         SET 
           status = COALESCE(${updates.status || null}, status),
           plan_tier = COALESCE(${updates.plan_tier || null}, plan_tier),
+          account_plan = COALESCE(${updates.account_plan || null}, account_plan),
           oauth_status = COALESCE(${updates.oauth_status || null}, oauth_status),
           subscription_status = COALESCE(${updates.subscription_status || null}, subscription_status),
           trial_ends_at = COALESCE(${updates.trial_ends_at || null}, trial_ends_at),
