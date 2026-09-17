@@ -10,6 +10,7 @@ import {
   Check,
   Flame,
   ChevronDown,
+  Lock,
 } from 'lucide-react';
 import { Store } from '@/lib/db';
 
@@ -23,6 +24,15 @@ interface DashboardMetrics {
   };
 }
 
+interface BillingSummary {
+  status: 'active trial' | 'paid active' | 'expired' | 'canceled';
+  daysRemaining: number;
+  trialEndsAt: string;
+  formattedTrialEnd: string;
+  isLocked: boolean;
+  upgradeUrl: string;
+}
+
 interface CriticalIncident {
   id: number | string;
   title: string;
@@ -31,8 +41,8 @@ interface CriticalIncident {
   severity: 'CRITICAL_DISAPPROVAL' | 'DEMOTION';
   status: string;
   first_detected_at: string;
-  shopifyUrl: string;
-  gmcUrl: string;
+  shopifyUrl?: string | null;
+  gmcUrl?: string | null;
 }
 
 interface TableIncident {
@@ -46,14 +56,15 @@ interface TableIncident {
   last_detected_at: string;
   resolved_at?: string | null;
   downtimeDuration?: string | null;
-  shopifyUrl: string;
-  gmcUrl: string;
+  shopifyUrl?: string | null;
+  gmcUrl?: string | null;
 }
 
 interface DashboardApiResponse {
   zeroStore: boolean;
   stores: Store[];
   activeStore: Store | null;
+  billing: BillingSummary;
   metrics: DashboardMetrics;
   criticalIncident: CriticalIncident | null;
   incidents: TableIncident[];
@@ -176,6 +187,10 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
 
   const handleRunFireDrill = async () => {
     if (!data?.activeStore?.id) return;
+    if (data?.billing?.isLocked) {
+      setError('Trial expired. Fire drill simulation is disabled while your account is locked.');
+      return;
+    }
     setSimulatingFireDrill(true);
     setFireDrillBanner(null);
 
@@ -490,13 +505,60 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
           <span className="tag-pill tag-ghost text-[10px] py-0.5">
             GMC #{activeStore?.gmc_id || activeStore?.merchant_id}
           </span>
+
+          {/* Active Trial Countdown & Status Badge (§4 User Interface) */}
+          {data.billing && (
+            <>
+              {data.billing.status === 'active trial' && data.billing.daysRemaining > 3 && (
+                <a
+                  href={data.billing.upgradeUrl}
+                  className="tag-pill tag-ghost text-[10.5px] py-0.5 inline-flex items-center gap-1.5 hover:border-[var(--signal-dim)] hover:text-[var(--ink-primary)] transition-colors"
+                  title={`14-Day Free Trial active until ${data.billing.formattedTrialEnd}. Click to review plans.`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)]" />
+                  <span>Trial: {data.billing.daysRemaining} {data.billing.daysRemaining === 1 ? 'day' : 'days'} left</span>
+                </a>
+              )}
+              {data.billing.status === 'active trial' && data.billing.daysRemaining <= 3 && (
+                <a
+                  href={data.billing.upgradeUrl}
+                  className="tag-pill tag-danger text-[10.5px] py-0.5 inline-flex items-center gap-1.5 font-medium hover:bg-[rgba(214,69,69,0.16)] transition-colors"
+                  title={`Urgent: Trial ends on ${data.billing.formattedTrialEnd}. Upgrade now to maintain continuous monitoring.`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--danger)] animate-pulse" />
+                  <span>Trial ends in {data.billing.daysRemaining} {data.billing.daysRemaining === 1 ? 'day' : 'days'} — Upgrade</span>
+                </a>
+              )}
+              {data.billing.status === 'paid active' && (
+                <span className="tag-pill tag-signal text-[10.5px] py-0.5 inline-flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)]" />
+                  <span>Pro Active</span>
+                </span>
+              )}
+              {data.billing.isLocked && (
+                <a
+                  href={data.billing.upgradeUrl}
+                  className="tag-pill tag-danger text-[10.5px] py-0.5 inline-flex items-center gap-1.5 font-medium"
+                  title="Trial concluded. Real-time crawler monitoring is paused."
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--danger)]" />
+                  <span>Trial Expired — Locked</span>
+                </a>
+              )}
+            </>
+          )}
+
           <button
             onClick={handleRunFireDrill}
-            disabled={simulatingFireDrill}
-            className="btn-secondary text-[12px] py-1 px-2.5 !rounded-[3px] inline-flex items-center gap-1.5"
-            title="Simulate a crawler disapproval to test Slack alert routing"
+            disabled={simulatingFireDrill || data.billing?.isLocked}
+            className="btn-secondary text-[12px] py-1 px-2.5 !rounded-[3px] inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+            title={
+              data.billing?.isLocked
+                ? 'Subscription required to run simulated fire drills'
+                : 'Simulate a crawler disapproval to test Slack alert routing'
+            }
           >
-            <Flame className={`w-3 h-3 text-[var(--signal)] ${simulatingFireDrill ? 'animate-spin' : ''}`} />
+            <Flame className={`w-3 h-3 ${data.billing?.isLocked ? 'text-[var(--ghost-text-dim)]' : 'text-[var(--signal)]'} ${simulatingFireDrill ? 'animate-spin' : ''}`} />
             <span>{simulatingFireDrill ? 'Simulating...' : 'Run Test Fire Drill'}</span>
           </button>
         </div>
@@ -548,108 +610,8 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
       )}
 
       {/* --------------------------------------------------------------------- */}
-      {/* TIER 1: Global Health & Triage Banner                                 */}
-      {/* --------------------------------------------------------------------- */}
-      {!isThreatState ? (
-        // Healthy State (0 active disapprovals): Ghost surface with Signal indicator
-        <div className="bg-[var(--bg-surface)] border border-[var(--hairline)] rounded-[var(--radius-md)] p-5">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-[var(--signal-wash)] border border-[var(--signal-dim)] flex items-center justify-center shrink-0">
-                <ShieldCheck className="w-4 h-4 text-[var(--signal)]" strokeWidth={1.5} />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className="tag-pill tag-signal text-[10.5px] py-0.5">
-                    Catalog shield active
-                  </span>
-                  <span className="font-mono text-[11px] text-[var(--ghost-text)]">
-                    All items eligible
-                  </span>
-                </div>
-                <p className="text-[13px] text-[var(--ghost-text)]">
-                  Google crawler verified:{' '}
-                  <span className="font-mono text-[var(--ink-primary)]">
-                    {activeStore?.last_message_at
-                      ? new Date(activeStore.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-                      : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                </p>
-              </div>
-            </div>
-            <span className="font-mono text-[11px] text-[var(--signal)]">
-              0 clicks at risk
-            </span>
-          </div>
-        </div>
-      ) : (
-        // Threat State (Disapproval detected): Danger band per §11
-        <div className="bg-[var(--bg-surface)] border-l-2 border-l-[var(--danger)] border-y border-r border-[var(--hairline)] rounded-r-[var(--radius-md)] p-5">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <span className="tag-pill tag-danger text-[10.5px]">
-                  Disapproval detected
-                </span>
-                <span className="font-mono text-[11px] text-[var(--danger)]">
-                  Ad traffic blocked
-                </span>
-              </div>
-
-              <div className="text-[14px] text-[var(--ink-primary)]">
-                Impacted: <span className="font-medium">{criticalIncident.title}</span>{' '}
-                <span className="font-mono text-[11px] text-[var(--ghost-text)]">(SKU: {criticalIncident.sku})</span>
-              </div>
-
-              {/* Strict Monospace Isolation */}
-              <div className="flex items-center gap-2 pt-0.5">
-                <span className="font-mono text-[11px] text-[var(--ghost-text-dim)]">ERROR:</span>
-                <code className="font-mono text-[11px] px-2 py-0.5 rounded-[var(--radius-sm)] bg-[var(--bg-canvas)] border border-[var(--hairline)] text-[var(--danger)]">
-                  {criticalIncident.issue_code}
-                </code>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-wrap items-center gap-2 shrink-0">
-              <a
-                href={criticalIncident.shopifyUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-primary text-[12px] py-1.5 px-3 !rounded-[3px]"
-              >
-                <span>Fix in Shopify</span>
-                <ExternalLink className="w-3.5 h-3.5" strokeWidth={1.5} />
-              </a>
-
-              <a
-                href={criticalIncident.gmcUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-secondary text-[12px] py-1.5 px-3 !rounded-[3px]"
-              >
-                <span>GMC console</span>
-                <ExternalLink className="w-3.5 h-3.5 text-[var(--ghost-text)]" strokeWidth={1.5} />
-              </a>
-
-              <button
-                onClick={() => handleMarkPendingVerification(criticalIncident.id)}
-                disabled={criticalIncident.status === 'pending_verification' || verifyingIncidentId === criticalIncident.id}
-                className="btn-secondary text-[12px] py-1.5 px-3 disabled:opacity-50 !rounded-[3px]"
-              >
-                {criticalIncident.status === 'pending_verification'
-                  ? 'Pending verification'
-                  : verifyingIncidentId === criticalIncident.id
-                  ? 'Updating...'
-                  : 'Mark fixed'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* --------------------------------------------------------------------- */}
       {/* TIER 2: Real-Time Metric Counters (§16 Stat Cards)                   */}
+      {/* High-level metrics remain permanently visible to verify catalog scope */}
       {/* --------------------------------------------------------------------- */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Metric 1: Monitored Products */}
@@ -688,8 +650,8 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
             <div className="text-[12px] font-semibold text-[var(--ghost-text)]">Alert Pipeline</div>
             <button
               onClick={handleSendTestPing}
-              disabled={testAlertSending}
-              className="font-mono text-[11px] text-[var(--signal)] hover:underline disabled:opacity-50"
+              disabled={testAlertSending || data.billing?.isLocked}
+              className="font-mono text-[11px] text-[var(--signal)] hover:underline disabled:opacity-50 disabled:no-underline"
             >
               {testAlertSending ? 'Sending...' : 'Send test'}
             </button>
@@ -701,17 +663,188 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
             </span>
           </div>
           <div className="font-mono text-[11px] mt-2 text-[var(--ghost-text-dim)]">
-            {metrics.alertPipelineStatus.verified
-              ? 'Webhook verified and live'
-              : 'Webhook unverified'}
+            {data.billing?.isLocked ? (
+              <span className="text-[var(--danger)]">Alert pipeline paused (Trial expired)</span>
+            ) : metrics.alertPipelineStatus.verified ? (
+              'Webhook verified and live'
+            ) : (
+              'Webhook unverified'
+            )}
           </div>
         </div>
       </div>
 
       {/* --------------------------------------------------------------------- */}
-      {/* TIER 3: Incident History & Resolution Audit Table (§16 Tables)        */}
+      {/* ACTIVE INCIDENT TRIAGE & RESOLUTION QUEUE                             */}
+      {/* When account is locked, un-dismissible paywall mounts over this area  */}
       {/* --------------------------------------------------------------------- */}
-      <div className="bg-[var(--bg-surface)] border border-[var(--hairline)] rounded-[var(--radius-md)] overflow-hidden">
+      <div className="relative space-y-5">
+        {/* Un-dismissible Lockout Paywall Overlay (§4 Expired Trial Lockout Engine) */}
+        {data.billing?.isLocked && (
+          <div className="absolute inset-0 z-30 flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-[5px] rounded-[var(--radius-md)] min-h-[420px]">
+            <div className="bg-[var(--bg-surface)] border border-[var(--hairline-strong)] rounded-[var(--radius-md)] max-w-xl w-full p-7 sm:p-8 space-y-5 shadow-[0_16px_40px_rgba(0,0,0,0.5)] text-center relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-48 h-48 bg-[radial-gradient(ellipse_at_top_right,var(--signal-wash),transparent_70%)] pointer-events-none" />
+
+              {/* Eyebrow / Status Pill */}
+              <div className="flex items-center justify-center gap-2">
+                <span className="tag-pill tag-danger text-[10.5px] py-0.5 font-medium">
+                  14-DAY TRIAL CONCLUDED
+                </span>
+                <span className="font-mono text-[11px] text-[var(--danger)]">
+                  MONITORING PAUSED
+                </span>
+              </div>
+
+              {/* Display Serif Headline (§2 Typography: Fraunces) */}
+              <h2 className="font-serif text-[24px] sm:text-[27px] font-semibold text-[var(--ink-primary)] leading-tight tracking-[-0.01em]">
+                Your 14-Day Free Trial Has Concluded
+              </h2>
+
+              {/* Clear description of paused states */}
+              <p className="text-[14px] text-[var(--ink-secondary)] leading-[1.6] max-w-md mx-auto">
+                Real-time Google Merchant Center crawler monitoring and automated Slack notifications are currently <strong className="text-[var(--ink-primary)] font-medium">paused</strong> for this catalog.
+              </p>
+
+              <p className="text-[13px] text-[var(--ghost-text)] leading-[1.55] max-w-md mx-auto">
+                Your store credentials and SKU mapping remain safely configured. Upgrade to an active plan to reactivate continuous policy enforcement, un-mute Slack notifications, and restore direct Shopify resolution deep links.
+              </p>
+
+              {/* Primary Action Button (§4 Buttons: .btn-primary with strict --radius-sm: 3px) */}
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <a
+                  href={data.billing.upgradeUrl}
+                  className="btn-primary w-full sm:w-auto px-7 py-3 text-[13.5px] font-semibold !rounded-[3px] text-center inline-flex items-center justify-center gap-2 shadow-none"
+                >
+                  <span>Upgrade to restore protection</span>
+                  <ExternalLink className="w-4 h-4" strokeWidth={1.5} />
+                </a>
+              </div>
+
+              {/* Support reference */}
+              <div className="font-mono text-[11px] text-[var(--ghost-text-dim)] pt-3 border-t border-[var(--hairline)]">
+                Need assistance with custom billing or high-SKU enterprise catalogs? Contact{' '}
+                <a
+                  href="mailto:contact@usekultra.com"
+                  className="text-[var(--ink-secondary)] hover:underline"
+                >
+                  contact@usekultra.com
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TIER 1: Global Health & Triage Banner */}
+        {!isThreatState ? (
+          // Healthy State (0 active disapprovals): Ghost surface with Signal indicator
+          <div className="bg-[var(--bg-surface)] border border-[var(--hairline)] rounded-[var(--radius-md)] p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-[var(--signal-wash)] border border-[var(--signal-dim)] flex items-center justify-center shrink-0">
+                  <ShieldCheck className="w-4 h-4 text-[var(--signal)]" strokeWidth={1.5} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="tag-pill tag-signal text-[10.5px] py-0.5">
+                      Catalog shield active
+                    </span>
+                    <span className="font-mono text-[11px] text-[var(--ghost-text)]">
+                      All items eligible
+                    </span>
+                  </div>
+                  <p className="text-[13px] text-[var(--ghost-text)]">
+                    Google crawler verified:{' '}
+                    <span className="font-mono text-[var(--ink-primary)]">
+                      {activeStore?.last_message_at
+                        ? new Date(activeStore.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                        : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </p>
+                </div>
+              </div>
+              <span className="font-mono text-[11px] text-[var(--signal)]">
+                0 clicks at risk
+              </span>
+            </div>
+          </div>
+        ) : (
+          // Threat State (Disapproval detected): Danger band per §11
+          <div className="bg-[var(--bg-surface)] border-l-2 border-l-[var(--danger)] border-y border-r border-[var(--hairline)] rounded-r-[var(--radius-md)] p-5">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="tag-pill tag-danger text-[10.5px]">
+                    Disapproval detected
+                  </span>
+                  <span className="font-mono text-[11px] text-[var(--danger)]">
+                    Ad traffic blocked
+                  </span>
+                </div>
+
+                <div className="text-[14px] text-[var(--ink-primary)]">
+                  Impacted: <span className="font-medium">{criticalIncident.title}</span>{' '}
+                  <span className="font-mono text-[11px] text-[var(--ghost-text)]">(SKU: {criticalIncident.sku})</span>
+                </div>
+
+                {/* Strict Monospace Isolation */}
+                <div className="flex items-center gap-2 pt-0.5">
+                  <span className="font-mono text-[11px] text-[var(--ghost-text-dim)]">ERROR:</span>
+                  <code className="font-mono text-[11px] px-2 py-0.5 rounded-[var(--radius-sm)] bg-[var(--bg-canvas)] border border-[var(--hairline)] text-[var(--danger)]">
+                    {criticalIncident.issue_code}
+                  </code>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                {criticalIncident.shopifyUrl ? (
+                  <a
+                    href={criticalIncident.shopifyUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-primary text-[12px] py-1.5 px-3 !rounded-[3px]"
+                  >
+                    <span>Fix in Shopify</span>
+                    <ExternalLink className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  </a>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-[var(--ghost-text-dim)] px-2.5 py-1 rounded-[var(--radius-sm)] border border-[var(--hairline)]">
+                    <Lock className="w-3 h-3" /> Fix link locked
+                  </span>
+                )}
+
+                {criticalIncident.gmcUrl && (
+                  <a
+                    href={criticalIncident.gmcUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-secondary text-[12px] py-1.5 px-3 !rounded-[3px]"
+                  >
+                    <span>GMC console</span>
+                    <ExternalLink className="w-3.5 h-3.5 text-[var(--ghost-text)]" strokeWidth={1.5} />
+                  </a>
+                )}
+
+                <button
+                  onClick={() => handleMarkPendingVerification(criticalIncident.id)}
+                  disabled={data.billing?.isLocked || criticalIncident.status === 'pending_verification' || verifyingIncidentId === criticalIncident.id}
+                  className="btn-secondary text-[12px] py-1.5 px-3 disabled:opacity-50 !rounded-[3px]"
+                >
+                  {criticalIncident.status === 'pending_verification'
+                    ? 'Pending verification'
+                    : verifyingIncidentId === criticalIncident.id
+                    ? 'Updating...'
+                    : 'Mark fixed'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* --------------------------------------------------------------------- */}
+        {/* TIER 3: Incident History & Resolution Audit Table (§16 Tables)        */}
+        {/* --------------------------------------------------------------------- */}
+        <div className="bg-[var(--bg-surface)] border border-[var(--hairline)] rounded-[var(--radius-md)] overflow-hidden">
         <div className="p-4 sm:p-5 border-b border-[var(--hairline)] flex items-center justify-between">
           <div>
             <h2 className="text-[14.5px] font-semibold text-[var(--ink-primary)]">
@@ -801,32 +934,44 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                             <span className="tag-pill tag-ghost text-[10px]">
                               Pending verification
                             </span>
-                            <a
-                              href={inc.shopifyUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="font-mono text-[11px] text-[var(--ghost-text)] hover:text-[var(--ink-primary)] inline-flex items-center gap-1"
-                            >
-                              Shopify <ExternalLink className="w-3 h-3" />
-                            </a>
+                            {inc.shopifyUrl ? (
+                              <a
+                                href={inc.shopifyUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-mono text-[11px] text-[var(--ghost-text)] hover:text-[var(--ink-primary)] inline-flex items-center gap-1"
+                              >
+                                Shopify <ExternalLink className="w-3 h-3" />
+                              </a>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 font-mono text-[10.5px] text-[var(--ghost-text-dim)]">
+                                <Lock className="w-3 h-3" /> Locked
+                              </span>
+                            )}
                           </div>
                         ) : (
                           <div className="inline-flex items-center gap-2">
                             <button
                               onClick={() => handleMarkPendingVerification(inc.id)}
-                              disabled={verifyingIncidentId === inc.id}
-                              className="font-mono text-[11px] text-[var(--signal)] hover:underline"
+                              disabled={data.billing?.isLocked || verifyingIncidentId === inc.id}
+                              className="font-mono text-[11px] text-[var(--signal)] hover:underline disabled:opacity-50 disabled:no-underline"
                             >
                               {verifyingIncidentId === inc.id ? 'Saving...' : 'Mark fixed'}
                             </button>
-                            <a
-                              href={inc.shopifyUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="btn-secondary text-[11px] py-1 px-2.5 !rounded-[3px]"
-                            >
-                              Shopify <ExternalLink className="w-3 h-3" />
-                            </a>
+                            {inc.shopifyUrl ? (
+                              <a
+                                href={inc.shopifyUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn-secondary text-[11px] py-1 px-2.5 !rounded-[3px]"
+                              >
+                                Shopify <ExternalLink className="w-3 h-3" />
+                              </a>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 font-mono text-[10.5px] text-[var(--ghost-text-dim)]">
+                                <Lock className="w-3 h-3" /> Locked
+                              </span>
+                            )}
                           </div>
                         )}
                       </td>
@@ -837,6 +982,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
             </table>
           </div>
         )}
+      </div>
       </div>
 
       {/* --------------------------------------------------------------------- */}

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAnySession } from '@/lib/auth';
-import { markIncidentPendingVerification } from '@/lib/db';
+import { markIncidentPendingVerification, findTenantByEmail } from '@/lib/db';
+import { evaluateSubscription } from '@/lib/subscription';
 
 export async function POST(
   request: Request,
@@ -10,6 +11,15 @@ export async function POST(
     const session = await getAnySession(request);
     if (!session?.email) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    const tenant = await findTenantByEmail(session.email);
+    const billing = evaluateSubscription(tenant);
+    if (billing.isLocked) {
+      return NextResponse.json(
+        { error: 'Trial expired. Triage actions are disabled while your account is locked. Please upgrade to restore full triage capabilities.' },
+        { status: 403 }
+      );
     }
 
     const { id } = await params;

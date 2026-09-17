@@ -46,6 +46,10 @@ export interface Tenant {
   oauth_status: 'Valid' | 'Expiring Soon' | 'Revoked/Failed';
   last_active: string;
   status: 'active' | 'suspended';
+  subscription_status?: 'active trial' | 'paid active' | 'expired' | 'canceled';
+  trial_ends_at?: string;
+  stripe_customer_id?: string | null;
+  stripe_subscription_id?: string | null;
   created_at: string;
 }
 
@@ -161,6 +165,8 @@ const inMemoryTenants: Tenant[] = [
     oauth_status: 'Valid',
     last_active: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
     status: 'active',
+    subscription_status: 'paid active',
+    trial_ends_at: new Date(Date.now() + 86400000 * 300).toISOString(),
     created_at: new Date(Date.now() - 86400000 * 42).toISOString(),
   },
   {
@@ -175,6 +181,8 @@ const inMemoryTenants: Tenant[] = [
     oauth_status: 'Valid',
     last_active: new Date(Date.now() - 1000 * 60 * 4).toISOString(),
     status: 'active',
+    subscription_status: 'paid active',
+    trial_ends_at: new Date(Date.now() + 86400000 * 300).toISOString(),
     created_at: new Date(Date.now() - 86400000 * 28).toISOString(),
   },
   {
@@ -189,6 +197,8 @@ const inMemoryTenants: Tenant[] = [
     oauth_status: 'Expiring Soon',
     last_active: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
     status: 'active',
+    subscription_status: 'active trial',
+    trial_ends_at: new Date(Date.now() + 86400000 * 5).toISOString(),
     created_at: new Date(Date.now() - 86400000 * 9).toISOString(),
   },
   {
@@ -203,6 +213,8 @@ const inMemoryTenants: Tenant[] = [
     oauth_status: 'Revoked/Failed',
     last_active: new Date(Date.now() - 86400000 * 4).toISOString(),
     status: 'suspended',
+    subscription_status: 'expired',
+    trial_ends_at: new Date(Date.now() - 86400000 * 10).toISOString(),
     created_at: new Date(Date.now() - 86400000 * 65).toISOString(),
   },
   {
@@ -217,6 +229,8 @@ const inMemoryTenants: Tenant[] = [
     oauth_status: 'Valid',
     last_active: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
     status: 'active',
+    subscription_status: 'paid active',
+    trial_ends_at: new Date(Date.now() + 86400000 * 300).toISOString(),
     created_at: new Date(Date.now() - 86400000 * 50).toISOString(),
   },
 ];
@@ -488,9 +502,19 @@ export async function ensureSchema(): Promise<boolean> {
         oauth_status TEXT DEFAULT 'Valid',
         last_active TIMESTAMPTZ DEFAULT NOW(),
         status TEXT DEFAULT 'active',
+        subscription_status TEXT DEFAULT 'active trial',
+        trial_ends_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '14 days'),
+        stripe_customer_id TEXT,
+        stripe_subscription_id TEXT,
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `;
+
+    // Ensure tenant subscription columns exist if table already exists
+    await sql`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS subscription_status TEXT DEFAULT 'active trial';`;
+    await sql`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '14 days');`;
+    await sql`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT;`;
+    await sql`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT;`;
 
     // 5. Stores Registry Table
     await sql`
@@ -604,8 +628,8 @@ export async function ensureSchema(): Promise<boolean> {
     if (tenantCount[0].count === 0) {
       for (const t of inMemoryTenants) {
         await sql`
-          INSERT INTO tenants (user_id, email, company_name, plan_tier, connected_stores, total_skus, incidents_month, oauth_status, last_active, status, created_at)
-          VALUES (${t.user_id}, ${t.email}, ${t.company_name}, ${t.plan_tier}, ${t.connected_stores}, ${t.total_skus}, ${t.incidents_month}, ${t.oauth_status}, ${t.last_active}, ${t.status}, ${t.created_at})
+          INSERT INTO tenants (user_id, email, company_name, plan_tier, connected_stores, total_skus, incidents_month, oauth_status, last_active, status, subscription_status, trial_ends_at, stripe_customer_id, stripe_subscription_id, created_at)
+          VALUES (${t.user_id}, ${t.email}, ${t.company_name}, ${t.plan_tier}, ${t.connected_stores}, ${t.total_skus}, ${t.incidents_month}, ${t.oauth_status}, ${t.last_active}, ${t.status}, ${t.subscription_status || 'active trial'}, ${t.trial_ends_at || null}, ${t.stripe_customer_id || null}, ${t.stripe_subscription_id || null}, ${t.created_at})
           ON CONFLICT (user_id) DO NOTHING;
         `;
       }
@@ -785,27 +809,43 @@ export async function findTenantByEmail(email: string): Promise<Tenant | null> {
 }
 
 export async function createTenant(data: {
-
   email: string;
   companyName: string;
   planTier?: 'Trial' | 'Agency Pilot' | 'Active Pro';
   accountType?: string;
   website?: string;
+  subscriptionStatus?: 'active trial' | 'paid active' | 'expired' | 'canceled';
+  trialEndsAt?: string;
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string | null;
 }): Promise<Tenant> {
   const userId = `usr_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
   const planTier = data.planTier || 'Trial';
   const now = new Date().toISOString();
+  const subscriptionStatus =
+    data.subscriptionStatus ||
+    (planTier === 'Active Pro' || planTier === 'Agency Pilot' ? 'paid active' : 'active trial');
+  // Default trial expiration timestamp strictly 14 days from account creation
+  const trialEndsAt = data.trialEndsAt || new Date(Date.now() + 14 * 86400000).toISOString();
+  const stripeCustomerId = data.stripeCustomerId || null;
+  const stripeSubscriptionId = data.stripeSubscriptionId || null;
 
   const sql = getDb();
   if (sql) {
     try {
       await ensureSchema();
       const rows = await sql`
-        INSERT INTO tenants (user_id, email, company_name, plan_tier, connected_stores, total_skus, incidents_month, oauth_status, status)
-        VALUES (${userId}, ${data.email}, ${data.companyName}, ${planTier}, 1, 0, 0, 'Valid', 'active')
+        INSERT INTO tenants (
+          user_id, email, company_name, plan_tier, connected_stores, total_skus, incidents_month, oauth_status, status,
+          subscription_status, trial_ends_at, stripe_customer_id, stripe_subscription_id, created_at
+        )
+        VALUES (
+          ${userId}, ${data.email}, ${data.companyName}, ${planTier}, 1, 0, 0, 'Valid', 'active',
+          ${subscriptionStatus}, ${trialEndsAt}, ${stripeCustomerId}, ${stripeSubscriptionId}, NOW()
+        )
         RETURNING *;
       `;
-      if (rows.length > 0) return rows[0] as Tenant;
+      if (rows.length > 0) return rows[0] as unknown as Tenant;
     } catch (err) {
       console.warn('[Neon DB] Error creating tenant:', err);
     }
@@ -823,6 +863,10 @@ export async function createTenant(data: {
     oauth_status: 'Valid',
     last_active: now,
     status: 'active',
+    subscription_status: subscriptionStatus,
+    trial_ends_at: trialEndsAt,
+    stripe_customer_id: stripeCustomerId,
+    stripe_subscription_id: stripeSubscriptionId,
     created_at: now,
   };
   inMemoryTenants.unshift(newTenant);
@@ -839,11 +883,15 @@ export async function updateTenant(id: number, updates: Partial<Tenant>): Promis
         SET 
           status = COALESCE(${updates.status || null}, status),
           plan_tier = COALESCE(${updates.plan_tier || null}, plan_tier),
-          oauth_status = COALESCE(${updates.oauth_status || null}, oauth_status)
+          oauth_status = COALESCE(${updates.oauth_status || null}, oauth_status),
+          subscription_status = COALESCE(${updates.subscription_status || null}, subscription_status),
+          trial_ends_at = COALESCE(${updates.trial_ends_at || null}, trial_ends_at),
+          stripe_customer_id = COALESCE(${updates.stripe_customer_id || null}, stripe_customer_id),
+          stripe_subscription_id = COALESCE(${updates.stripe_subscription_id || null}, stripe_subscription_id)
         WHERE id = ${id}
         RETURNING *;
       `;
-      if (rows.length > 0) return rows[0] as Tenant;
+      if (rows.length > 0) return rows[0] as unknown as Tenant;
     } catch (err) {
       console.warn('[Neon DB] Error updating tenant:', err);
     }

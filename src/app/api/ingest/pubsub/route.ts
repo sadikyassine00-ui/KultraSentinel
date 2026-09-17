@@ -10,7 +10,9 @@ import {
   markStoreAlertStatus,
   recordDLQMessage,
   recordDispatchLog,
+  findTenantByEmail,
 } from '@/lib/db';
+import { evaluateSubscription } from '@/lib/subscription';
 
 export async function POST(request: Request) {
   const startTime = performance.now();
@@ -142,6 +144,38 @@ export async function POST(request: Request) {
           status: 'processed',
           action: 'dlq_routed',
           merchantId,
+          latencyMs: Math.round(performance.now() - startTime),
+        },
+        { status: 200 }
+      );
+    }
+
+    // 6b. Subscription Lifecycle & Trial Lockout Gate
+    // If the account status is expired or canceled, immediately halt execution:
+    // do not format or deliver Slack alert cards, do not upsert incidents.
+    const tenant = store.tenant_email ? await findTenantByEmail(store.tenant_email) : null;
+    const subscriptionState = evaluateSubscription(tenant);
+
+    if (subscriptionState.isLocked) {
+      console.log(
+        `[PubSub Ingestion Gate] Muted processing for store '${store.store_url}' (owner: ${store.tenant_email || 'unknown'}): subscription is ${subscriptionState.effectiveStatus} (isLocked=true)`
+      );
+
+      after(async () => {
+        try {
+          await markMessageProcessed(messageId);
+        } catch (workerErr) {
+          console.warn('[PubSub Ingestion Gate] Error marking message processed:', workerErr);
+        }
+      });
+
+      return NextResponse.json(
+        {
+          ok: true,
+          status: 'acknowledged',
+          action: 'muted_expired_subscription',
+          effectiveStatus: subscriptionState.effectiveStatus,
+          messageId,
           latencyMs: Math.round(performance.now() - startTime),
         },
         { status: 200 }

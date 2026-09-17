@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAnySession } from '@/lib/auth';
-import { getStoreByIdAndTenant, upsertIncident } from '@/lib/db';
+import { getStoreByIdAndTenant, upsertIncident, findTenantByEmail } from '@/lib/db';
+import { evaluateSubscription } from '@/lib/subscription';
 import { dispatchFireDrillSlackNotification } from '@/lib/slack';
 
 interface RouteContext {
@@ -18,6 +19,20 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json(
       { error: 'Authentication required to run simulated fire drill.' },
       { status: 401 }
+    );
+  }
+
+  // 14-Day Free Trial & Subscription Lockout Gate
+  const tenant = await findTenantByEmail(session.email);
+  const billing = evaluateSubscription(tenant);
+  if (billing.isLocked) {
+    return NextResponse.json(
+      {
+        error: 'Trial expired. Fire drill simulation is disabled while your account is locked. Please upgrade to restore full protection.',
+        isLocked: true,
+        upgradeUrl: billing.upgradeUrl,
+      },
+      { status: 403 }
     );
   }
 

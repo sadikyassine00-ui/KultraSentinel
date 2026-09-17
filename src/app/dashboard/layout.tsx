@@ -22,6 +22,14 @@ export default function TenantDashboardLayout({
   const [user, setUser] = useState<AuthUser | null>(null);
   const [stores, setStores] = useState<Array<{ id: number | string; name: string; gmcId: string }>>([]);
   const [activeStoreId, setActiveStoreId] = useState<string | null>(null);
+  const [billing, setBilling] = useState<{
+    status: 'active trial' | 'paid active' | 'expired' | 'canceled';
+    daysRemaining: number;
+    trialEndsAt: string;
+    formattedTrialEnd: string;
+    isLocked: boolean;
+    upgradeUrl: string;
+  } | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -46,6 +54,9 @@ export default function TenantDashboardLayout({
       const res = await fetch('/api/dashboard', { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
+        if (data.billing) {
+          setBilling(data.billing);
+        }
         if (data.stores && Array.isArray(data.stores) && data.stores.length > 0) {
           setStores(
             data.stores.map((s: { id: number | string; store_name?: string; store_url?: string; gmc_id?: string; merchant_id?: string }) => ({
@@ -129,11 +140,63 @@ export default function TenantDashboardLayout({
               />
             </Link>
 
-            {/* Catalog Shield Active Indicator */}
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-[100px] border border-[#7a5a26] bg-[rgba(242,169,59,0.06)] text-[#f2a93b] text-[11px] font-mono tracking-[0.02em]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" aria-hidden="true" />
-              <span>Catalog Shield: Active</span>
-            </div>
+            {/* Catalog Shield Active/Paused Indicator */}
+            {billing?.isLocked ? (
+              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-[100px] border border-[#3a3d43] bg-transparent text-[#6b7078] text-[11px] font-mono tracking-[0.02em]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#3a3d43]" aria-hidden="true" />
+                <span>Catalog Shield: Paused</span>
+              </div>
+            ) : (
+              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-[100px] border border-[#7a5a26] bg-[rgba(242,169,59,0.06)] text-[#f2a93b] text-[11px] font-mono tracking-[0.02em]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" aria-hidden="true" />
+                <span>Catalog Shield: Active</span>
+              </div>
+            )}
+
+            {/* Trial Countdown / Subscription Status Badge (§4 User Interface & Paywall Experience) */}
+            {billing && (
+              <>
+                {billing.status === 'active trial' && billing.daysRemaining > 3 && (
+                  <Link
+                    href={billing.upgradeUrl}
+                    className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[rgba(255,255,255,0.14)] bg-[#131418] text-[#b9b3a5] hover:text-[#f4f1ea] hover:border-[#7a5a26] text-[10.5px] font-mono tracking-[0.02em] transition-colors"
+                    title={`14-Day Free Trial ends on ${billing.formattedTrialEnd}. Click to review plan upgrades.`}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" aria-hidden="true" />
+                    <span>TRIAL: {billing.daysRemaining} {billing.daysRemaining === 1 ? 'DAY' : 'DAYS'} LEFT</span>
+                  </Link>
+                )}
+
+                {billing.status === 'active trial' && billing.daysRemaining <= 3 && (
+                  <Link
+                    href={billing.upgradeUrl}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[#d64545] bg-[rgba(214,69,69,0.08)] text-[#d64545] text-[10.5px] font-mono tracking-[0.02em] font-medium hover:bg-[rgba(214,69,69,0.16)] transition-colors"
+                    title={`Urgent: Trial ends on ${billing.formattedTrialEnd}. Upgrade now to avoid losing 24/7 protection.`}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#d64545] animate-pulse" aria-hidden="true" />
+                    <span>TRIAL ENDS IN {billing.daysRemaining} {billing.daysRemaining === 1 ? 'DAY' : 'DAYS'} — UPGRADE</span>
+                  </Link>
+                )}
+
+                {billing.status === 'paid active' && (
+                  <div className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[#7a5a26] bg-[rgba(242,169,59,0.06)] text-[#f2a93b] text-[10.5px] font-mono tracking-[0.02em]">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" aria-hidden="true" />
+                    <span>PRO SHIELD: ACTIVE</span>
+                  </div>
+                )}
+
+                {billing.isLocked && (
+                  <Link
+                    href={billing.upgradeUrl}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[#d64545] bg-[rgba(214,69,69,0.08)] text-[#d64545] text-[10.5px] font-mono tracking-[0.02em] font-medium hover:bg-[rgba(214,69,69,0.16)] transition-colors"
+                    title="Trial has concluded. Click to upgrade and restore live monitoring."
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#d64545]" aria-hidden="true" />
+                    <span>TRIAL EXPIRED — LOCKED</span>
+                  </Link>
+                )}
+              </>
+            )}
 
             {/* Active Store Selector (§1 Clean Merchant Header) */}
             {stores.length > 0 && (

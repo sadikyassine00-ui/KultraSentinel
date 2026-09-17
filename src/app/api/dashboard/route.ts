@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAnySession } from '@/lib/auth';
 import { getStoresForTenant, getIncidentsByStore, findTenantByEmail, Incident, Store } from '@/lib/db';
+import { evaluateSubscription } from '@/lib/subscription';
 
 export async function GET(request: Request) {
   try {
@@ -10,6 +11,9 @@ export async function GET(request: Request) {
     }
 
     const tenantEmail = session.email.toLowerCase().trim();
+    const tenant = await findTenantByEmail(tenantEmail);
+    const billing = evaluateSubscription(tenant);
+
     const url = new URL(request.url);
     const requestedStoreId = url.searchParams.get('store_id');
 
@@ -21,6 +25,14 @@ export async function GET(request: Request) {
         zeroStore: true,
         stores: [],
         activeStore: null,
+        billing: {
+          status: billing.effectiveStatus,
+          daysRemaining: billing.daysRemaining,
+          trialEndsAt: billing.trialEndsAt,
+          formattedTrialEnd: billing.formattedTrialEnd,
+          isLocked: billing.isLocked,
+          upgradeUrl: billing.upgradeUrl,
+        },
         metrics: {
           monitoredProducts: 0,
           activeDisapprovals: 0,
@@ -58,7 +70,8 @@ export async function GET(request: Request) {
       .replace(/^https?:\/\//, '')
       .replace(/\/.*$/, '');
 
-    // Format incidents table items with duration calculation and sanitized deep links
+    // Format incidents table items with duration calculation and sanitized deep links.
+    // If account is locked (expired/canceled trial), redact direct admin fix and deep links.
     const formattedIncidents = incidents.map((inc) => {
       let downtimeDuration: string | null = null;
       if (inc.status === 'resolved') {
@@ -74,9 +87,13 @@ export async function GET(request: Request) {
         }
       }
 
-      const shopifyUrl = `https://${cleanDomain}/admin/products?query=${encodeURIComponent(inc.sku)}`;
+      const shopifyUrl = billing.isLocked
+        ? null
+        : `https://${cleanDomain}/admin/products?query=${encodeURIComponent(inc.sku)}`;
       const gmcId = activeStore.gmc_id || activeStore.merchant_id || '';
-      const gmcUrl = `https://merchants.google.com/mc/products/diagnostics?account=${gmcId}`;
+      const gmcUrl = billing.isLocked
+        ? null
+        : `https://merchants.google.com/mc/products/diagnostics?account=${gmcId}`;
 
       return {
         id: inc.id,
@@ -98,7 +115,6 @@ export async function GET(request: Request) {
     const webhookVerified = Boolean(activeStore.webhook_verified);
 
     // Database-backed monitored products count from tenant record
-    const tenant = await findTenantByEmail(tenantEmail);
     const monitoredProducts = tenant?.total_skus && tenant.total_skus > 0
       ? tenant.total_skus
       : (activeStore.total_caught > 0 ? activeStore.total_caught : Math.max(incidents.length, 0));
@@ -117,6 +133,14 @@ export async function GET(request: Request) {
       zeroStore: false,
       stores,
       activeStore,
+      billing: {
+        status: billing.effectiveStatus,
+        daysRemaining: billing.daysRemaining,
+        trialEndsAt: billing.trialEndsAt,
+        formattedTrialEnd: billing.formattedTrialEnd,
+        isLocked: billing.isLocked,
+        upgradeUrl: billing.upgradeUrl,
+      },
       metrics: {
         monitoredProducts,
         activeDisapprovals: unresolvedIncidents.length,
@@ -135,12 +159,17 @@ export async function GET(request: Request) {
             severity: critical.severity === 'critical' ? 'CRITICAL_DISAPPROVAL' : 'DEMOTION',
             status: critical.status,
             first_detected_at: critical.first_detected_at,
-            shopifyUrl: `https://${cleanDomain}/admin/products?query=${encodeURIComponent(critical.sku)}`,
-            gmcUrl: `https://merchants.google.com/mc/products/diagnostics?account=${activeStore.gmc_id || activeStore.merchant_id || ''}`,
+            shopifyUrl: billing.isLocked
+              ? null
+              : `https://${cleanDomain}/admin/products?query=${encodeURIComponent(critical.sku)}`,
+            gmcUrl: billing.isLocked
+              ? null
+              : `https://merchants.google.com/mc/products/diagnostics?account=${activeStore.gmc_id || activeStore.merchant_id || ''}`,
           }
         : null,
       incidents: formattedIncidents,
     });
+
   } catch (error) {
     console.error('[Dashboard Hydration API Error]', error);
     return NextResponse.json({ error: 'Failed to hydrate dashboard data' }, { status: 500 });
