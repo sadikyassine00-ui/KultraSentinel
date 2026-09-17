@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createOrUpdateAdmin, findTenantByEmail, createTenant, createLead, findAdminByEmail } from '@/lib/db';
-import { createSessionToken, getSessionCookieHeader, isAllowedAdminEmail, isSecureContext, COOKIE_NAME } from '@/lib/auth';
+import { createSessionToken, getSessionCookieHeader, isAllowedAdminEmail, isSuperAdminEmail, isSecureContext, COOKIE_NAME } from '@/lib/auth';
 import { verifyOAuthState, OAUTH_STATE_COOKIE_NAME } from '@/lib/security';
 import { getClientIp } from '@/lib/rate-limit';
 
@@ -110,7 +110,8 @@ export async function GET(request: Request) {
       return NextResponse.redirect(loginUrl);
     }
 
-    const isAdmin = isAllowedAdminEmail(email);
+    const isSuper = isSuperAdminEmail(email);
+    const isAdmin = isAllowedAdminEmail(email) || isSuper;
     const role = isAdmin ? 'admin' : 'user';
 
     // 5. Account Linking: Link Google ID to existing account if user registered via email
@@ -119,30 +120,28 @@ export async function GET(request: Request) {
       email,
       name: existingUser?.name || name,
       googleId,
-      role: existingUser?.role || role,
+      role: isSuper ? 'admin' : (existingUser?.role || role),
       passwordHash: existingUser?.password_hash,
     });
 
-    if (role === 'user') {
-      const existingTenant = await findTenantByEmail(email);
-      if (!existingTenant) {
-        // Automatic Metadata Provisioning:
-        // Initialize store name as [User Display Name]'s Catalog if no name is provided
-        const displayName = (name && name !== 'User' ? name : '').trim() || email.split('@')[0];
-        const storeName = `${displayName}'s Catalog`;
-        // Default account_plan to solo ($19/mo) and set trial_ends_at to exactly 14 days from creation
-        const trialEndsAt = new Date(Date.now() + 14 * 86400000).toISOString();
+    const existingTenant = await findTenantByEmail(email);
+    if (!existingTenant) {
+      // Automatic Metadata Provisioning:
+      // Initialize store name as [User Display Name]'s Catalog if no name is provided
+      const displayName = (name && name !== 'User' ? name : '').trim() || email.split('@')[0];
+      const storeName = `${displayName}'s Catalog`;
 
-        await createTenant({
-          email,
-          companyName: storeName,
-          planTier: 'Trial',
-          accountType: 'merchant',
-          accountPlan: 'solo',
-          subscriptionStatus: 'active trial',
-          trialEndsAt,
-        });
+      await createTenant({
+        email,
+        companyName: storeName,
+        planTier: isSuper ? 'Active Pro' : 'Trial',
+        accountType: 'merchant',
+        accountPlan: 'solo',
+        subscriptionStatus: isSuper ? 'paid active' : 'active trial',
+        trialEndsAt: null, // Trial countdown activates only upon GMC connection
+      });
 
+      if (!isSuper) {
         // Record lead for platform CRM telemetry
         await createLead({
           email,

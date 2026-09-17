@@ -31,6 +31,8 @@ interface BillingSummary {
   formattedTrialEnd: string;
   isLocked: boolean;
   upgradeUrl: string;
+  hasTrialStarted?: boolean;
+  isSuperAdmin?: boolean;
 }
 
 interface CriticalIncident {
@@ -187,7 +189,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
 
   const handleRunFireDrill = async () => {
     if (!data?.activeStore?.id) return;
-    if (data?.billing?.isLocked) {
+    if (data?.billing?.isLocked && !data?.billing?.isSuperAdmin) {
       setError('Trial expired. Fire drill simulation is disabled while your account is locked.');
       return;
     }
@@ -466,15 +468,15 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
         <div className="flex items-center gap-2">
           <button
             onClick={handleRunFireDrill}
-            disabled={simulatingFireDrill || data.billing?.isLocked}
+            disabled={simulatingFireDrill || (data.billing?.isLocked && !data.billing?.isSuperAdmin)}
             className="btn-secondary text-[12px] py-1.5 px-3 !rounded-[3px] inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
             title={
-              data.billing?.isLocked
+              data.billing?.isLocked && !data.billing?.isSuperAdmin
                 ? 'Subscription required to run simulated fire drills'
                 : 'Simulate a crawler disapproval to test Slack alert routing'
             }
           >
-            <Flame className={`w-3.5 h-3.5 ${data.billing?.isLocked ? 'text-[var(--ghost-text-dim)]' : 'text-[var(--signal)]'} ${simulatingFireDrill ? 'animate-spin' : ''}`} />
+            <Flame className={`w-3.5 h-3.5 ${data.billing?.isLocked && !data.billing?.isSuperAdmin ? 'text-[var(--ghost-text-dim)]' : 'text-[var(--signal)]'} ${simulatingFireDrill ? 'animate-spin' : ''}`} />
             <span>{simulatingFireDrill ? 'Simulating...' : 'Run Test Fire Drill'}</span>
           </button>
         </div>
@@ -567,7 +569,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
             <div className="text-[12px] font-semibold text-[var(--ghost-text)]">Alert Pipeline</div>
             <button
               onClick={handleSendTestPing}
-              disabled={testAlertSending || data.billing?.isLocked}
+              disabled={testAlertSending || (data.billing?.isLocked && !data.billing?.isSuperAdmin)}
               className="font-mono text-[11px] text-[var(--signal)] hover:underline disabled:opacity-50 disabled:no-underline"
             >
               {testAlertSending ? 'Sending...' : 'Send test'}
@@ -580,7 +582,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
             </span>
           </div>
           <div className="font-mono text-[11px] mt-2 text-[var(--ghost-text-dim)]">
-            {data.billing?.isLocked ? (
+            {data.billing?.isLocked && !data.billing?.isSuperAdmin ? (
               <span className="text-[var(--danger)]">Alert pipeline paused (Trial expired)</span>
             ) : metrics.alertPipelineStatus.verified ? (
               'Webhook verified and live'
@@ -597,7 +599,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
       {/* --------------------------------------------------------------------- */}
       <div className="relative space-y-5">
         {/* Un-dismissible Lockout Paywall Overlay (§4 Expired Trial Lockout Engine) */}
-        {data.billing?.isLocked && (
+        {data.billing?.isLocked && !data.billing?.isSuperAdmin && (
           <div className="absolute inset-0 z-30 flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-[5px] rounded-[var(--radius-md)] min-h-[420px]">
             <div className="bg-[var(--bg-surface)] border border-[var(--hairline-strong)] rounded-[var(--radius-md)] max-w-xl w-full p-7 sm:p-8 space-y-5 shadow-[0_16px_40px_rgba(0,0,0,0.5)] text-center relative overflow-hidden">
               <div className="absolute top-0 right-0 w-48 h-48 bg-[radial-gradient(ellipse_at_top_right,var(--signal-wash),transparent_70%)] pointer-events-none" />
@@ -751,7 +753,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                 ) : (
                   <button
                     onClick={() => handleMarkPendingVerification(criticalIncident.id)}
-                    disabled={data.billing?.isLocked || verifyingIncidentId === criticalIncident.id}
+                    disabled={(data.billing?.isLocked && !data.billing?.isSuperAdmin) || verifyingIncidentId === criticalIncident.id}
                     className="btn-secondary text-[12px] py-1.5 px-3 disabled:opacity-50 !rounded-[3px]"
                   >
                     {verifyingIncidentId === criticalIncident.id ? 'Updating...' : 'Mark fixed'}

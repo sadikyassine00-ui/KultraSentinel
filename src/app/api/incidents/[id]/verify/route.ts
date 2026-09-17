@@ -15,7 +15,7 @@ export async function POST(
 
     const tenant = await findTenantByEmail(session.email);
     const billing = evaluateSubscription(tenant);
-    if (billing.isLocked) {
+    if (billing.isLocked && !billing.isSuperAdmin) {
       return NextResponse.json(
         { error: 'Trial expired. Triage actions are disabled while your account is locked. Please upgrade to restore full triage capabilities.' },
         { status: 403 }

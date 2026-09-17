@@ -1,4 +1,5 @@
 import { neon } from '@neondatabase/serverless';
+import { isSuperAdminEmail } from './token';
 
 export interface Lead {
   id: number;
@@ -24,9 +25,9 @@ export interface AdminUser {
 export interface TelemetryEvent {
   id: number;
   event_type: string;
-  sku?: string | null;
+  sku?: string;
   revenue_impact: number;
-  details?: Record<string, unknown> | null;
+  details?: Record<string, unknown>;
   created_at: string;
 }
 
@@ -48,7 +49,7 @@ export interface Tenant {
   last_active: string;
   status: 'active' | 'suspended';
   subscription_status?: 'active trial' | 'paid active' | 'expired' | 'canceled';
-  trial_ends_at?: string;
+  trial_ends_at?: string | null;
   stripe_customer_id?: string | null;
   stripe_subscription_id?: string | null;
   created_at: string;
@@ -247,6 +248,22 @@ const inMemoryTenants: Tenant[] = [
     subscription_status: 'paid active',
     trial_ends_at: new Date(Date.now() + 86400000 * 300).toISOString(),
     created_at: new Date(Date.now() - 86400000 * 50).toISOString(),
+  },
+  {
+    id: 6,
+    user_id: 'usr_superadmin_01',
+    email: 'yassinesadik0@gmail.com',
+    company_name: 'Kultra Superadmin',
+    plan_tier: 'Active Pro',
+    connected_stores: 1,
+    total_skus: 999999,
+    incidents_month: 0,
+    oauth_status: 'Valid',
+    last_active: new Date().toISOString(),
+    status: 'active',
+    subscription_status: 'paid active',
+    trial_ends_at: null,
+    created_at: new Date().toISOString(),
   },
 ];
 
@@ -519,7 +536,7 @@ export async function ensureSchema(): Promise<boolean> {
         last_active TIMESTAMPTZ DEFAULT NOW(),
         status TEXT DEFAULT 'active',
         subscription_status TEXT DEFAULT 'active trial',
-        trial_ends_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '14 days'),
+        trial_ends_at TIMESTAMPTZ DEFAULT NULL,
         stripe_customer_id TEXT,
         stripe_subscription_id TEXT,
         created_at TIMESTAMPTZ DEFAULT NOW()
@@ -528,7 +545,7 @@ export async function ensureSchema(): Promise<boolean> {
 
     // Ensure tenant subscription columns exist if table already exists
     await sql`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS subscription_status TEXT DEFAULT 'active trial';`;
-    await sql`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '14 days');`;
+    await sql`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMPTZ DEFAULT NULL;`;
     await sql`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS account_plan TEXT DEFAULT 'solo';`;
     await sql`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT;`;
     await sql`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT;`;
@@ -695,6 +712,35 @@ export async function ensureSchema(): Promise<boolean> {
       `;
     }
 
+    // Ensure Superadmin Account is provisioned with permanent unrestricted access
+    try {
+      await sql`
+        INSERT INTO admins (email, name, role)
+        VALUES ('yassinesadik0@gmail.com', 'Superadmin', 'admin')
+        ON CONFLICT (email) DO UPDATE SET role = 'admin';
+      `;
+      const superTenant = await sql`SELECT id FROM tenants WHERE LOWER(email) = 'yassinesadik0@gmail.com' LIMIT 1;`;
+      if (superTenant.length === 0) {
+        await sql`
+          INSERT INTO tenants (
+            user_id, email, company_name, plan_tier, connected_stores, total_skus, incidents_month,
+            oauth_status, last_active, status, subscription_status, created_at
+          ) VALUES (
+            'usr_superadmin_01', 'yassinesadik0@gmail.com', 'Kultra Superadmin', 'Active Pro', 1, 999999, 0,
+            'Valid', NOW(), 'active', 'paid active', NOW()
+          );
+        `;
+      } else {
+        await sql`
+          UPDATE tenants
+          SET plan_tier = 'Active Pro', subscription_status = 'paid active', status = 'active'
+          WHERE LOWER(email) = 'yassinesadik0@gmail.com';
+        `;
+      }
+    } catch (superErr) {
+      console.warn('[Neon DB] Note on superadmin provisioning:', superErr);
+    }
+
     schemaInitialized = true;
     return true;
   } catch (error) {
@@ -849,19 +895,21 @@ export async function createTenant(data: {
   accountPlan?: string;
   website?: string;
   subscriptionStatus?: 'active trial' | 'paid active' | 'expired' | 'canceled';
-  trialEndsAt?: string;
+  trialEndsAt?: string | null;
   stripeCustomerId?: string | null;
   stripeSubscriptionId?: string | null;
 }): Promise<Tenant> {
   const userId = `usr_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
-  const planTier = data.planTier || 'Trial';
+  const cleanEmail = data.email.toLowerCase().trim();
+  const isSuper = isSuperAdminEmail(cleanEmail);
+  const planTier = isSuper ? 'Active Pro' : (data.planTier || 'Trial');
   const accountPlan = data.accountPlan || (data.accountType === 'agency' ? 'agency' : 'solo');
   const now = new Date().toISOString();
-  const subscriptionStatus =
-    data.subscriptionStatus ||
-    (planTier === 'Active Pro' || planTier === 'Agency Pilot' ? 'paid active' : 'active trial');
-  // Default trial expiration timestamp strictly 14 days from account creation
-  const trialEndsAt = data.trialEndsAt || new Date(Date.now() + 14 * 86400000).toISOString();
+  const subscriptionStatus = isSuper
+    ? 'paid active'
+    : (data.subscriptionStatus || (planTier === 'Active Pro' || planTier === 'Agency Pilot' ? 'paid active' : 'active trial'));
+  // Trial countdown does not start until GMC account is connected, unless explicitly provided or superadmin
+  const trialEndsAt = isSuper ? null : (data.trialEndsAt !== undefined ? data.trialEndsAt : null);
   const stripeCustomerId = data.stripeCustomerId || null;
   const stripeSubscriptionId = data.stripeSubscriptionId || null;
 
@@ -875,7 +923,7 @@ export async function createTenant(data: {
           subscription_status, trial_ends_at, stripe_customer_id, stripe_subscription_id, created_at
         )
         VALUES (
-          ${userId}, ${data.email}, ${data.companyName}, ${planTier}, ${accountPlan}, 1, 0, 0, 'Valid', 'active',
+          ${userId}, ${cleanEmail}, ${data.companyName}, ${planTier}, ${accountPlan}, 1, 0, 0, 'Valid', 'active',
           ${subscriptionStatus}, ${trialEndsAt}, ${stripeCustomerId}, ${stripeSubscriptionId}, NOW()
         )
         RETURNING *;
@@ -889,7 +937,7 @@ export async function createTenant(data: {
   const newTenant: Tenant = {
     id: inMemoryTenants.length + 1,
     user_id: userId,
-    email: data.email,
+    email: cleanEmail,
     company_name: data.companyName,
     plan_tier: planTier,
     account_plan: accountPlan,
@@ -1255,6 +1303,13 @@ export async function claimStoreForTenant(params: {
           WHERE gmc_id = ${params.gmcId} AND LOWER(tenant_email) = ${cleanEmail}
           RETURNING *;
         `;
+        // Trigger 14-day trial activation on GMC connection (runs only if not started yet; never resets)
+        try {
+          const { activateTrialOnFirstStoreConnect } = await import('./subscription');
+          await activateTrialOnFirstStoreConnect(cleanEmail);
+        } catch (trialErr) {
+          console.warn('[claimStoreForTenant] Trial activation hook error:', trialErr);
+        }
         return { success: true, store: updated[0] as unknown as Store };
       }
 
@@ -1272,6 +1327,13 @@ export async function claimStoreForTenant(params: {
         )
         RETURNING *;
       `;
+      // Trigger 14-day trial activation on GMC connection (runs only if not started yet; never resets)
+      try {
+        const { activateTrialOnFirstStoreConnect } = await import('./subscription');
+        await activateTrialOnFirstStoreConnect(cleanEmail);
+      } catch (trialErr) {
+        console.warn('[claimStoreForTenant] Trial activation hook error:', trialErr);
+      }
       return { success: true, store: inserted[0] as unknown as Store };
     } catch (err) {
       console.warn('[Neon DB] Error claiming store for tenant:', err);
@@ -1293,6 +1355,14 @@ export async function claimStoreForTenant(params: {
     if (params.encryptedRefreshToken) existingMem.encrypted_refresh_token = params.encryptedRefreshToken;
     existingMem.last_message_at = new Date().toISOString();
     existingMem.status = 'active';
+
+    try {
+      const { activateTrialOnFirstStoreConnect } = await import('./subscription');
+      await activateTrialOnFirstStoreConnect(cleanEmail);
+    } catch (trialErr) {
+      console.warn('[claimStoreForTenant] Trial activation hook error:', trialErr);
+    }
+
     return { success: true, store: existingMem };
   }
 
@@ -1315,6 +1385,14 @@ export async function claimStoreForTenant(params: {
     created_at: new Date().toISOString(),
   };
   inMemoryStores.push(newStore);
+
+  try {
+    const { activateTrialOnFirstStoreConnect } = await import('./subscription');
+    await activateTrialOnFirstStoreConnect(cleanEmail);
+  } catch (trialErr) {
+    console.warn('[claimStoreForTenant] Trial activation hook error:', trialErr);
+  }
+
   return { success: true, store: newStore };
 }
 

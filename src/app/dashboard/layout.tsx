@@ -29,6 +29,8 @@ export default function TenantDashboardLayout({
     formattedTrialEnd: string;
     isLocked: boolean;
     upgradeUrl: string;
+    hasTrialStarted?: boolean;
+    isSuperAdmin?: boolean;
   } | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -156,44 +158,65 @@ export default function TenantDashboardLayout({
             {/* Trial Countdown / Subscription Status Badge (§4 User Interface & Paywall Experience) */}
             {billing && (
               <>
-                {billing.status === 'active trial' && billing.daysRemaining > 3 && (
-                  <Link
-                    href={billing.upgradeUrl}
-                    className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[rgba(255,255,255,0.14)] bg-[#131418] text-[#b9b3a5] hover:text-[#f4f1ea] hover:border-[#7a5a26] text-[10.5px] font-mono tracking-[0.02em] transition-colors shrink-0"
-                    title={`14-Day Free Trial ends on ${billing.formattedTrialEnd}. Click to review plan upgrades.`}
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" aria-hidden="true" />
-                    <span>TRIAL: {billing.daysRemaining} {billing.daysRemaining === 1 ? 'DAY' : 'DAYS'} LEFT</span>
-                  </Link>
-                )}
-
-                {billing.status === 'active trial' && billing.daysRemaining <= 3 && (
-                  <Link
-                    href={billing.upgradeUrl}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[#d64545] bg-[rgba(214,69,69,0.08)] text-[#d64545] text-[10.5px] font-mono tracking-[0.02em] font-medium hover:bg-[rgba(214,69,69,0.16)] transition-colors shrink-0"
-                    title={`Urgent: Trial ends on ${billing.formattedTrialEnd}. Upgrade now to avoid losing 24/7 protection.`}
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#d64545] animate-pulse" aria-hidden="true" />
-                    <span>TRIAL ENDS IN {billing.daysRemaining} {billing.daysRemaining === 1 ? 'DAY' : 'DAYS'} — UPGRADE</span>
-                  </Link>
-                )}
-
-                {billing.status === 'paid active' && (
+                {/* 1. Superadmin permanent access */}
+                {billing.isSuperAdmin ? (
                   <div className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[#7a5a26] bg-[rgba(242,169,59,0.06)] text-[#f2a93b] text-[10.5px] font-mono tracking-[0.02em] shrink-0">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" aria-hidden="true" />
-                    <span>PRO SHIELD: ACTIVE</span>
+                    <span>SUPERADMIN ACCESS</span>
                   </div>
-                )}
-
-                {billing.isLocked && (
+                ) : !billing.hasTrialStarted ? (
+                  /* 2. Unstarted Trial: Prompt user to connect Google Merchant Center */
                   <Link
-                    href={billing.upgradeUrl}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[#d64545] bg-[rgba(214,69,69,0.08)] text-[#d64545] text-[10.5px] font-mono tracking-[0.02em] font-medium hover:bg-[rgba(214,69,69,0.16)] transition-colors shrink-0"
-                    title="Trial has concluded. Click to upgrade and restore live monitoring."
+                    href="/api/auth/merchant/connect"
+                    className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[#7a5a26] bg-[rgba(242,169,59,0.06)] text-[#f2a93b] hover:border-[#f2a93b] text-[10.5px] font-mono tracking-[0.02em] transition-colors shrink-0"
+                    title="Connect your Google Merchant Center account to start your 14-day free trial."
                   >
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#d64545]" aria-hidden="true" />
-                    <span>TRIAL EXPIRED — LOCKED</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" aria-hidden="true" />
+                    <span>CONNECT GMC TO START 14-DAY TRIAL</span>
                   </Link>
+                ) : (
+                  /* 3. Active or Expired Trial */
+                  <>
+                    {billing.status === 'active trial' && billing.daysRemaining > 3 && (
+                      <Link
+                        href={billing.upgradeUrl}
+                        className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[rgba(255,255,255,0.14)] bg-[#131418] text-[#b9b3a5] hover:text-[#f4f1ea] hover:border-[#7a5a26] text-[10.5px] font-mono tracking-[0.02em] transition-colors shrink-0"
+                        title={`14-Day Free Trial ends on ${billing.formattedTrialEnd}. Click to review plan upgrades.`}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" aria-hidden="true" />
+                        <span>TRIAL: {billing.daysRemaining} {billing.daysRemaining === 1 ? 'DAY' : 'DAYS'} LEFT</span>
+                      </Link>
+                    )}
+
+                    {billing.status === 'active trial' && billing.daysRemaining <= 3 && (
+                      <Link
+                        href={billing.upgradeUrl}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[#d64545] bg-[rgba(214,69,69,0.08)] text-[#d64545] text-[10.5px] font-mono tracking-[0.02em] font-medium hover:bg-[rgba(214,69,69,0.16)] transition-colors shrink-0"
+                        title={`Urgent: Trial ends on ${billing.formattedTrialEnd}. Upgrade now to avoid losing 24/7 protection.`}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#d64545] animate-pulse" aria-hidden="true" />
+                        <span>TRIAL ENDS IN {billing.daysRemaining} {billing.daysRemaining === 1 ? 'DAY' : 'DAYS'} — UPGRADE</span>
+                      </Link>
+                    )}
+
+                    {billing.status === 'paid active' && (
+                      <div className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[#7a5a26] bg-[rgba(242,169,59,0.06)] text-[#f2a93b] text-[10.5px] font-mono tracking-[0.02em] shrink-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" aria-hidden="true" />
+                        <span>PRO SHIELD: ACTIVE</span>
+                      </div>
+                    )}
+
+                    {billing.isLocked && (
+                      <Link
+                        href={billing.upgradeUrl}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[#d64545] bg-[rgba(214,69,69,0.08)] text-[#d64545] text-[10.5px] font-mono tracking-[0.02em] font-medium hover:bg-[rgba(214,69,69,0.16)] transition-colors shrink-0"
+                        title="Trial has concluded. Click to upgrade and restore live monitoring."
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#d64545]" aria-hidden="true" />
+                        <span>TRIAL EXPIRED — LOCKED</span>
+                      </Link>
+                    )}
+                  </>
                 )}
               </>
             )}
@@ -269,7 +292,11 @@ export default function TenantDashboardLayout({
                     {user?.name || user?.email || 'Customer'}
                   </span>
                   <span className="text-[10.5px] font-mono text-[#6b7078] leading-tight">
-                    {user?.role === 'admin' ? 'Platform Owner' : 'Merchant'}
+                    {billing?.isSuperAdmin || user?.email === 'yassinesadik0@gmail.com'
+                      ? 'Superadmin'
+                      : user?.role === 'admin'
+                      ? 'Platform Owner'
+                      : 'Merchant'}
                   </span>
                 </div>
                 <ChevronDown className={`w-3.5 h-3.5 text-[#6b7078] transition-transform duration-120 ${dropdownOpen ? 'rotate-180 text-[#f2a93b]' : ''}`} />

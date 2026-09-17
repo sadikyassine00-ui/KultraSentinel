@@ -1,6 +1,8 @@
 import bcrypt from 'bcryptjs';
 import {
   COOKIE_NAME,
+  SUPERADMIN_EMAILS,
+  isSuperAdminEmail,
   ALLOWED_ADMIN_EMAILS,
   isAllowedAdminEmail,
   parseCookie,
@@ -17,6 +19,8 @@ import {
 // Re-export all token & session utilities for seamless backward compatibility
 export {
   COOKIE_NAME,
+  SUPERADMIN_EMAILS,
+  isSuperAdminEmail,
   ALLOWED_ADMIN_EMAILS,
   isAllowedAdminEmail,
   parseCookie,

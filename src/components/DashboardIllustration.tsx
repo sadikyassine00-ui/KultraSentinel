@@ -1,731 +1,294 @@
 'use client';
 
 import React from 'react';
+import { ExternalLink } from 'lucide-react';
 
 export function DashboardIllustration() {
   return (
-    <svg
-      className="dashboard-illustration w-full h-auto block select-none"
-      viewBox="0 0 1200 680"
-      width="100%"
-      height="100%"
-      fill="none"
-      role="img"
-      aria-label="High-tech proof of work loop: Detection, Interception, and Notification with incident triage card and floating Slack alert"
-    >
-      <defs>
-        {/* Technical Telemetry Grid */}
-        <pattern id="proofGrid" width="36" height="36" patternUnits="userSpaceOnUse">
-          <path d="M 36 0 L 0 0 0 36" fill="none" stroke="rgba(255,255,255,0.035)" strokeWidth="1" />
-        </pattern>
-
-        {/* Ambient Depth of Field Radial Glow */}
-        <radialGradient id="depthOfFieldGlow" cx="42%" cy="48%" r="65%">
-          <stop offset="0%" stopColor="#181d26" stopOpacity="0.85" />
-          <stop offset="45%" stopColor="#0f1117" stopOpacity="0.6" />
-          <stop offset="100%" stopColor="#0a0b0d" stopOpacity="0" />
-        </radialGradient>
-
-        {/* Incident Card Glowing Red Border Filter */}
-        <filter id="incidentGlow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="0" stdDeviation="10" floodColor="#d64545" floodOpacity="0.32" />
-          <feDropShadow dx="0" dy="16" stdDeviation="24" floodColor="#000000" floodOpacity="0.6" />
-        </filter>
-
-        {/* Floating Slack Card Deep Elevation Shadow */}
-        <filter id="slackElevation" x="-25%" y="-25%" width="150%" height="150%">
-          <feDropShadow dx="0" dy="28" stdDeviation="32" floodColor="#000000" floodOpacity="0.75" />
-          <feDropShadow dx="0" dy="8" stdDeviation="12" floodColor="#000000" floodOpacity="0.35" />
-        </filter>
-
-        {/* Laser Glow Filter */}
-        <filter id="laserBeamGlow" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="3.5" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-
-        {/* Data Stream Gradient */}
-        <linearGradient id="dataStreamGrad" x1="0%" y1="100%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#d64545" stopOpacity="0.9" />
-          <stop offset="50%" stopColor="#f2a93b" stopOpacity="0.95" />
-          <stop offset="100%" stopColor="#ffffff" stopOpacity="1" />
-        </linearGradient>
-
-        {/* Laser Vertical Gradient */}
-        <linearGradient id="laserGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#ff5a5a" stopOpacity="0" />
-          <stop offset="25%" stopColor="#ff4d4d" stopOpacity="0.9" />
-          <stop offset="50%" stopColor="#ffffff" stopOpacity="1" />
-          <stop offset="75%" stopColor="#ff4d4d" stopOpacity="0.9" />
-          <stop offset="100%" stopColor="#ff5a5a" stopOpacity="0" />
-        </linearGradient>
-
-        {/* Product Thumbnail Clip */}
-        <clipPath id="productThumbClip">
-          <rect width="84" height="84" rx="4" />
-        </clipPath>
-
-        {/* Card Frame Clip for Laser Sweep */}
-        <clipPath id="errorBoxClip">
-          <rect x="0" y="24" width="492" height="52" rx="3" />
-        </clipPath>
-
-        {/* Embedded Typography & Micro-Animations */}
-        <style>{`
-          .hero-text {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-          }
-          .hero-mono {
-            font-family: 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-          }
-          .hero-display {
-            font-family: 'Fraunces', Georgia, serif;
-          }
-
-          /* Laser Scan Sweeping Keyframe */
-          @keyframes scanLaser {
-            0% {
-              transform: translateX(16px);
-            }
-            48% {
-              transform: translateX(476px);
-            }
-            52% {
-              transform: translateX(476px);
-            }
-            98% {
-              transform: translateX(16px);
-            }
-            100% {
-              transform: translateX(16px);
-            }
-          }
-
-          /* Data Stream Dashoffset Flow */
-          @keyframes streamFlow {
-            from {
-              stroke-dashoffset: 48;
-            }
-            to {
-              stroke-dashoffset: 0;
-            }
-          }
-
-          /* Glowing Pulse for Live Detection Indicators */
-          @keyframes pulseLive {
-            0%, 100% {
-              opacity: 0.9;
-              transform: scale(1);
-            }
-            50% {
-              opacity: 0.45;
-              transform: scale(1.15);
-            }
-          }
-
-          /* Subtle Floating Hover on Slack Card */
-          @keyframes slackLevitate {
-            0%, 100% {
-              transform: translateY(0px);
-            }
-            50% {
-              transform: translateY(-5px);
-            }
-          }
-
-          .laser-scanner {
-            animation: scanLaser 3.6s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
-          }
-
-          .data-stream-path {
-            stroke-dasharray: 6 6;
-            animation: streamFlow 1.2s linear infinite;
-          }
-
-          .floating-slack-card {
-            animation: slackLevitate 5s ease-in-out infinite;
-            transform-origin: 900px 300px;
-          }
-
-          .live-ping-dot {
-            animation: pulseLive 2s ease-in-out infinite;
-            transform-origin: center;
-          }
-
-          @media (prefers-reduced-motion: reduce) {
-            .laser-scanner,
-            .data-stream-path,
-            .floating-slack-card,
-            .live-ping-dot {
-              animation: none !important;
-            }
-          }
-        `}</style>
-      </defs>
-
+    <div className="relative w-full bg-transparent flex flex-col lg:flex-row items-center lg:items-stretch justify-center gap-6 lg:gap-8 xl:gap-10 select-none">
       {/* ============================================================ */}
-      {/* 0. TECHNICAL BACKDROP & SHALLOW DEPTH OF FIELD STAGE          */}
+      {/* 1. LEFT ELEMENT: THE GMC INCIDENT TRIAGE CARD                 */}
       {/* ============================================================ */}
-      {/* Outer Viewport Canvas */}
-      <rect x="0" y="0" width="1200" height="680" fill="#0a0b0d" />
-      <rect x="0" y="0" width="1200" height="680" fill="url(#depthOfFieldGlow)" />
-      <rect x="0" y="0" width="1200" height="680" fill="url(#proofGrid)" />
+      <div className="w-full lg:w-[540px] xl:w-[560px] bg-[var(--bg-surface)] border border-[var(--danger)] rounded-[var(--radius-md)] p-5 sm:p-6 shadow-[0_0_28px_rgba(214,69,69,0.22)] flex flex-col justify-between text-left relative shrink-0">
+        <div>
+          {/* Card Header: Triage Status & Latency Metric */}
+          <div className="flex items-center justify-between gap-2 pb-4 border-b border-[var(--hairline)]">
+            {/* Status Pill Badge */}
+            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[rgba(214,69,69,0.1)] border border-[var(--danger)] text-[var(--danger)] font-mono text-[10.5px] sm:text-[11px] font-semibold tracking-wider">
+              <span className="w-2 h-2 rounded-full bg-[var(--danger)] animate-pulse" />
+              DISAPPROVAL DETECTED
+            </span>
 
-      {/* Subtle Network Constellation Lines (Design Language §15) */}
-      <g stroke="rgba(255,255,255,0.06)" strokeWidth="1" strokeDasharray="3 3">
-        <line x1="80" y1="50" x2="640" y2="50" />
-        <line x1="640" y1="50" x2="1140" y2="50" />
-        <line x1="80" y1="630" x2="1140" y2="630" />
-        <line x1="640" y1="50" x2="640" y2="630" stroke="rgba(255,255,255,0.03)" />
-      </g>
-      <circle cx="80" cy="50" r="2.5" fill="rgba(255,255,255,0.2)" />
-      <circle cx="640" cy="50" r="2.5" fill="#f2a93b" opacity="0.6" />
-      <circle cx="1140" cy="50" r="2.5" fill="rgba(255,255,255,0.2)" />
-      <circle cx="80" cy="630" r="2.5" fill="rgba(255,255,255,0.2)" />
-      <circle cx="1140" cy="630" r="2.5" fill="rgba(255,255,255,0.2)" />
+            {/* Real Latency Metric: Captured in <1s */}
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[rgba(242,169,59,0.08)] border border-[rgba(242,169,59,0.3)] text-[var(--ink-primary)] font-mono text-[11px] font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)]" />
+              Captured in &lt;1s
+            </span>
+          </div>
 
-      {/* ============================================================ */}
-      {/* 3. CONNECTING GLOWING DATA STREAM LINE                       */}
-      {/* Interception point (x: 590, y: 366) -> Slack card (x: 680, y: 220) */}
-      {/* ============================================================ */}
-      <g id="data-stream-connector">
-        {/* Ambient glow tube behind stream */}
-        <path
-          d="M 590 366 C 650 366, 660 230, 684 220"
-          fill="none"
-          stroke="#d64545"
-          strokeWidth="6"
-          strokeOpacity="0.2"
-          filter="url(#laserBeamGlow)"
-        />
-        {/* Solid base stream line */}
-        <path
-          d="M 590 366 C 650 366, 660 230, 684 220"
-          fill="none"
-          stroke="url(#dataStreamGrad)"
-          strokeWidth="2.2"
-          strokeOpacity="0.6"
-        />
-        {/* Animated pulsing data packets */}
-        <path
-          className="data-stream-path"
-          d="M 590 366 C 650 366, 660 230, 684 220"
-          fill="none"
-          stroke="#ffffff"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-        />
-        {/* Origin Target Node at Laser Scan Area */}
-        <circle cx="590" cy="366" r="5" fill="#d64545" filter="url(#laserBeamGlow)" />
-        <circle cx="590" cy="366" r="2.5" fill="#ffffff" />
-
-        {/* Mid-flight telemetry beacon */}
-        <circle cx="645" cy="285" r="3" fill="#f2a93b" opacity="0.85" />
-        <circle cx="645" cy="285" r="6" fill="none" stroke="#f2a93b" strokeWidth="1" opacity="0.4" />
-
-        {/* Destination Target Node at Slack Card */}
-        <circle cx="684" cy="220" r="5" fill="#ffffff" filter="url(#laserBeamGlow)" />
-        <circle cx="684" cy="220" r="2.5" fill="#e01e5a" />
-      </g>
-
-      {/* ============================================================ */}
-      {/* 1. CENTER-LEFT ELEMENT: THE STREAMLINED INCIDENT CARD        */}
-      {/* "Alpine Anorak", vibrant glowing red border, laser scan      */}
-      {/* ============================================================ */}
-      <g id="incident-card" transform="translate(80, 75)">
-        {/* Vibrant Glowing Red Border Backing */}
-        <rect
-          x="0"
-          y="0"
-          width="540"
-          height="520"
-          rx="4"
-          fill="#0e0f11"
-          stroke="#d64545"
-          strokeWidth="1.75"
-          filter="url(#incidentGlow)"
-        />
-
-        {/* Inner Card Background with Hairline Overlay */}
-        <rect
-          x="0"
-          y="0"
-          width="540"
-          height="520"
-          rx="4"
-          fill="#0e0f11"
-          stroke="rgba(255,255,255,0.08)"
-          strokeWidth="1"
-        />
-
-        {/* Card Header: Triage Status & Latency Metric */}
-        <g transform="translate(24, 22)">
-          {/* Status Pill Badge */}
-          <rect
-            x="0"
-            y="0"
-            width="172"
-            height="26"
-            rx="100"
-            fill="rgba(214,69,69,0.1)"
-            stroke="#d64545"
-            strokeWidth="1"
-          />
-          {/* Pulsing indicator dot */}
-          <circle cx="14" cy="13" r="3.5" fill="#d64545" className="live-ping-dot" />
-          <text
-            className="hero-mono"
-            x="24"
-            y="17"
-            fill="#d64545"
-            fontSize="10.5"
-            fontWeight="600"
-            letterSpacing="0.04em"
-          >
-            DISAPPROVAL DETECTED
-          </text>
-
-          {/* Real Latency Metric: "Captured in <1s" */}
-          <rect
-            x="368"
-            y="0"
-            width="124"
-            height="26"
-            rx="100"
-            fill="rgba(242,169,59,0.08)"
-            stroke="rgba(242,169,59,0.3)"
-            strokeWidth="1"
-          />
-          <circle cx="380" cy="13" r="3" fill="#f2a93b" />
-          <text
-            className="hero-mono"
-            x="390"
-            y="17"
-            fill="#f4f1ea"
-            fontSize="11"
-            fontWeight="500"
-            letterSpacing="0.01em"
-          >
-            Captured in &lt;1s
-          </text>
-        </g>
-
-        {/* Subtle Horizontal Divider */}
-        <line x1="24" y1="62" x2="516" y2="62" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
-
-        {/* Product Identity Block: Alpine Anorak */}
-        <g transform="translate(24, 80)">
-          {/* Authentic Product Photo (Alpine Anorak) */}
-          <g clipPath="url(#productThumbClip)">
-            <rect width="84" height="84" rx="4" fill="#131418" />
-            <image
-              href="/assets/alpine-anorak.jpg"
-              x="0"
-              y="0"
-              width="84"
-              height="84"
-              preserveAspectRatio="xMidYMid slice"
-            />
-          </g>
-          <rect
-            width="84"
-            height="84"
-            rx="4"
-            fill="none"
-            stroke="rgba(255,255,255,0.12)"
-            strokeWidth="1"
-          />
-
-          {/* Product Titles & Metadata */}
-          <text
-            className="hero-mono"
-            x="102"
-            y="16"
-            fill="#6b7078"
-            fontSize="10.5"
-            letterSpacing="0.04em"
-          >
-            CATALOG SKU: OW-8842-BLK-M
-          </text>
-          <text
-            className="hero-text"
-            x="102"
-            y="42"
-            fill="#f4f1ea"
-            fontSize="18"
-            fontWeight="600"
-            letterSpacing="-0.01em"
-          >
-            Alpine Anorak
-          </text>
-          <text className="hero-text" x="102" y="64" fill="#b9b3a5" fontSize="13">
-            Variant: Slate Black / Medium · Price: $148.00 USD
-          </text>
-          <text className="hero-mono" x="102" y="82" fill="#45484f" fontSize="11">
-            GMC Offer ID: raw_feed_91024_us
-          </text>
-        </g>
-
-        {/* Ad Traffic Risk Metric Exposure Band */}
-        <g transform="translate(24, 184)">
-          <rect
-            x="0"
-            y="0"
-            width="492"
-            height="58"
-            rx="3"
-            fill="#131418"
-            stroke="rgba(255,255,255,0.08)"
-            strokeWidth="1"
-          />
-          <g transform="translate(18, 14)">
-            <text className="hero-text" x="0" y="12" fill="#6b7078" fontSize="11">
-              Active Traffic Exposure
-            </text>
-            <text className="hero-mono" x="0" y="32" fill="#f4f1ea" fontSize="15" fontWeight="500">
-              1,840 clicks at risk
-            </text>
-          </g>
-          <line x1="230" y1="10" x2="230" y2="48" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
-          <g transform="translate(248, 14)">
-            <text className="hero-text" x="0" y="12" fill="#6b7078" fontSize="11">
-              Google Ads Campaign Status
-            </text>
-            <text className="hero-mono" x="0" y="32" fill="#d64545" fontSize="15" fontWeight="500">
-              Shopping Ads Auction Paused
-            </text>
-          </g>
-        </g>
-
-        {/* Protocol Error Box & Active Laser Scanning Interception */}
-        <g transform="translate(24, 260)">
-          <text className="hero-mono" x="0" y="14" fill="#6b7078" fontSize="11" letterSpacing="0.04em">
-            INTERCEPTED PROTOCOL ERROR
-          </text>
-          <text className="hero-mono" x="492" y="14" fill="#d64545" fontSize="10.5" textAnchor="end">
-            [CRITICAL]
-          </text>
-
-          {/* Dark Error Code Box */}
-          <rect
-            x="0"
-            y="24"
-            width="492"
-            height="52"
-            rx="3"
-            fill="#07080a"
-            stroke="rgba(214,69,69,0.35)"
-            strokeWidth="1"
-          />
-
-          {/* Core Protocol Error String (Strictly Monospace) */}
-          <text
-            className="hero-mono"
-            x="16"
-            y="56"
-            fill="#f4f1ea"
-            fontSize="12.5"
-            fontWeight="500"
-            letterSpacing="-0.01em"
-          >
-            item_disapproved: missing_required_attribute [gtin]
-          </text>
-
-          {/* Clipped Laser Scanner Visualization Passing Over Error */}
-          <g clipPath="url(#errorBoxClip)">
-            {/* Animated Laser Beam */}
-            <g className="laser-scanner">
-              {/* Diffuse glow beam */}
-              <rect
-                x="-14"
-                y="24"
-                width="28"
-                height="52"
-                fill="url(#laserGrad)"
-                opacity="0.3"
-                filter="url(#laserBeamGlow)"
+          {/* Product Identity Block: Alpine Expedition Anorak */}
+          <div className="flex items-center gap-4 mt-5">
+            {/* Authentic Product Photo */}
+            <div className="w-[74px] h-[74px] sm:w-[84px] sm:h-[84px] rounded-[var(--radius-sm)] overflow-hidden border border-[var(--hairline-strong)] shrink-0 bg-[var(--bg-surface-2)]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/assets/alpine-anorak.jpg"
+                alt="Alpine Expedition Anorak"
+                className="w-full h-full object-cover"
               />
-              {/* Sharp radiant laser line */}
-              <line
-                x1="0"
-                y1="26"
-                x2="0"
-                y2="74"
-                stroke="#ffffff"
-                strokeWidth="1.8"
-                filter="url(#laserBeamGlow)"
-              />
-              {/* Laser Core Head Dots */}
-              <circle cx="0" cy="28" r="2.5" fill="#ff4d4d" />
-              <circle cx="0" cy="72" r="2.5" fill="#ff4d4d" />
-            </g>
-          </g>
+            </div>
 
-          {/* Contextual Remediation Helper Note */}
-          <text className="hero-text" x="0" y="96" fill="#b9b3a5" fontSize="12">
-            Google crawler rejected SKU feed. Missing UPC/GTIN barcode attribute.
-          </text>
-        </g>
+            {/* Product Meta & Titles */}
+            <div className="min-w-0 flex-1">
+              <span className="font-mono text-[10.5px] text-[var(--ghost-text)] tracking-wider block truncate">
+                CATALOG SKU: OW-8842-BLK-M
+              </span>
+              <h3 className="font-display font-semibold text-[17px] sm:text-[18px] text-[var(--ink-primary)] leading-snug mt-0.5 truncate">
+                Alpine Expedition Anorak
+              </h3>
+              <p className="text-[13px] text-[var(--ink-secondary)] mt-0.5 truncate">
+                Variant: Slate Black / Medium · Price: $148.00 USD
+              </p>
+              <p className="font-mono text-[11px] text-[var(--ghost-text-dim)] mt-0.5">
+                GMC Offer ID: raw_feed_91024_us
+              </p>
+            </div>
+          </div>
+
+          {/* Ad Traffic Exposure Stats Band */}
+          <div className="bg-[var(--bg-surface-2)] border border-[var(--hairline)] rounded-[var(--radius-sm)] p-3 sm:p-3.5 my-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left">
+            <div>
+              <span className="text-[11px] text-[var(--ghost-text)] block">Active Traffic Exposure</span>
+              <span className="font-mono font-medium text-[14.5px] text-[var(--ink-primary)]">
+                1,840 clicks at risk
+              </span>
+            </div>
+            <div className="hidden sm:block w-[1px] h-8 bg-[var(--hairline)]" />
+            <div>
+              <span className="text-[11px] text-[var(--ghost-text)] block">Google Ads Campaign Status</span>
+              <span className="font-mono font-medium text-[14.5px] text-[var(--danger)]">
+                Shopping Ads Auction Paused
+              </span>
+            </div>
+          </div>
+
+          {/* Protocol Error Box & Active Laser Scanning Interception */}
+          <div className="space-y-1.5 mt-2">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[11px] text-[var(--ghost-text)] tracking-wider">
+                INTERCEPTED PROTOCOL ERROR
+              </span>
+              <span className="font-mono text-[10.5px] text-[var(--danger)] font-semibold">
+                [CRITICAL]
+              </span>
+            </div>
+
+            {/* Dark Error Box with Superimposed Laser Scanner */}
+            <div className="relative bg-[var(--bg-canvas)] border border-[var(--danger)]/50 rounded-[var(--radius-sm)] p-3 overflow-hidden font-mono text-[12px] sm:text-[12.5px] text-[var(--ink-primary)] leading-normal">
+              <span className="relative z-10 text-[var(--danger)] font-medium block break-all">
+                item_disapproved: missing_required_attribute [gtin]
+              </span>
+
+              {/* Animated Laser Scanning Line */}
+              <div className="absolute inset-y-0 left-0 w-16 pointer-events-none laser-scanner-line flex items-center justify-center">
+                <div className="w-full h-full bg-gradient-to-r from-transparent via-[#ff4d4d]/30 to-transparent" />
+                <div className="w-[2px] h-full bg-[#ffffff] shadow-[0_0_8px_#ff4d4d]" />
+              </div>
+            </div>
+
+            <p className="text-[12px] text-[var(--ink-secondary)]">
+              Google crawler rejected feed: Missing UPC/GTIN barcode attribute.
+            </p>
+          </div>
+        </div>
 
         {/* Agnostic Action Buttons: [Edit Product] and [GMC Console] */}
-        <g transform="translate(24, 432)">
-          {/* Primary High-Contrast Action Button: [Edit Product] */}
-          <g>
-            <rect
-              x="0"
-              y="0"
-              width="236"
-              height="48"
-              rx="3"
-              fill="#f2a93b"
-              stroke="#f2a93b"
-              strokeWidth="1"
-            />
-            {/* Button Label & Icon */}
-            <text
-              className="hero-text"
-              x="100"
-              y="29"
-              fill="#1a1305"
-              fontSize="13.5"
-              fontWeight="600"
-              textAnchor="middle"
-            >
-              Edit Product
-            </text>
-            {/* Edit Icon Graphic */}
-            <path
-              d="M 152 20 L 160 28 M 147 25 L 145 32 L 152 30 L 163 19 C 164 18 164 17 163 16 L 161 14 C 160 13 159 13 158 14 Z"
-              fill="none"
-              stroke="#1a1305"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </g>
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 mt-6 pt-4 border-t border-[var(--hairline)]">
+          {/* Primary High-Contrast Button: [Edit Product] */}
+          <a
+            href="#triage"
+            className="btn-primary !rounded-[3px] text-[13px] py-2.5 px-4 font-semibold inline-flex items-center justify-center gap-2 flex-1 text-center"
+          >
+            <span>Edit Product</span>
+            <ExternalLink className="w-3.5 h-3.5" strokeWidth={1.5} />
+          </a>
 
-          {/* High-Contrast Secondary Action Button: [GMC Console] */}
-          <g transform="translate(256, 0)">
-            <rect
-              x="0"
-              y="0"
-              width="236"
-              height="48"
-              rx="3"
-              fill="#131418"
-              stroke="rgba(255,255,255,0.18)"
-              strokeWidth="1"
-            />
-            <text
-              className="hero-text"
-              x="104"
-              y="29"
-              fill="#f4f1ea"
-              fontSize="13.5"
-              fontWeight="600"
-              textAnchor="middle"
-            >
-              GMC Console
-            </text>
-            {/* External Link Icon Graphic */}
-            <path
-              d="M 158 18 L 166 18 L 166 26 M 166 18 L 155 29 M 150 21 L 147 21 C 145.8 21 145 21.8 145 23 L 145 32 C 145 33.2 145.8 34 147 34 L 156 34 C 157.2 34 158 33.2 158 32 L 158 29"
-              fill="none"
-              stroke="#b9b3a5"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </g>
-        </g>
-      </g>
+          {/* Secondary High-Contrast Button: [GMC Console] */}
+          <a
+            href="https://merchants.google.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-secondary !rounded-[3px] text-[13px] py-2.5 px-4 font-semibold inline-flex items-center justify-center gap-2 flex-1 text-center"
+          >
+            <span>GMC Console</span>
+            <ExternalLink className="w-3.5 h-3.5 text-[var(--ghost-text)]" strokeWidth={1.5} />
+          </a>
+        </div>
+      </div>
 
       {/* ============================================================ */}
-      {/* 2. THE CONVERSION DRIVER: FLOATING LIGHT SLACK BLOCK CARD     */}
-      {/* Overlaid slightly above the dark card, high contrast & punch  */}
+      {/* 2. DIRECTIONAL TELEMETRY CONNECTION BRIDGE                    */}
       {/* ============================================================ */}
-      <g id="floating-slack-notification" className="floating-slack-card" transform="translate(680, 105)">
-        {/* Light-Themed Slack Card Surface with Deep Elevation */}
-        <rect
-          x="0"
-          y="0"
-          width="440"
-          height="460"
-          rx="6"
-          fill="#ffffff"
-          filter="url(#slackElevation)"
-        />
-        {/* Subtle 1px Outer Border */}
-        <rect
-          x="0"
-          y="0"
-          width="440"
-          height="460"
-          rx="6"
-          fill="none"
-          stroke="rgba(0,0,0,0.08)"
-          strokeWidth="1"
-        />
+      {/* Desktop Horizontal Bridge (lg+) */}
+      <div className="hidden lg:flex flex-col items-center justify-center relative px-2 self-center shrink-0 w-32 xl:w-36">
+        <svg className="w-full h-10 overflow-visible" viewBox="0 0 140 40" fill="none">
+          <defs>
+            <linearGradient id="bridgeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#d64545" />
+              <stop offset="60%" stopColor="#f2a93b" />
+              <stop offset="100%" stopColor="#ffffff" />
+            </linearGradient>
+            <filter id="bridgeGlow" x="-20%" y="-50%" width="140%" height="200%">
+              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
 
-        {/* Slack Channel Header Ribbon */}
-        <g transform="translate(24, 20)">
-          {/* Slack Hash Icon */}
-          <text className="hero-text" x="0" y="15" fill="#616061" fontSize="14" fontWeight="600">
-            #
-          </text>
-          <text className="hero-text" x="14" y="15" fill="#1d1c1d" fontSize="13" fontWeight="700">
-            merchant-alerts
-          </text>
-          <text className="hero-mono" x="392" y="14" fill="#007a5a" fontSize="10.5" fontWeight="500" textAnchor="end">
-            LIVE DISPATCH · 0.28s
-          </text>
-        </g>
-
-        {/* Header Divider Line */}
-        <line x1="24" y1="46" x2="416" y2="46" stroke="#f0f0f0" strokeWidth="1" />
-
-        {/* Slack App Identity */}
-        <g transform="translate(24, 62)">
-          {/* Kultra Bot Avatar (Dark badge with gold icon) */}
-          <rect x="0" y="0" width="38" height="38" rx="5" fill="#0e0f11" />
-          {/* Stylized Kultra Constellation Icon */}
-          <g transform="translate(4, 4) scale(0.62)">
-            <line x1="20" y1="20" x2="6" y2="10" stroke="#6b7078" strokeWidth="2" />
-            <line x1="20" y1="20" x2="8" y2="32" stroke="#6b7078" strokeWidth="2" />
-            <line x1="20" y1="20" x2="33" y2="33" stroke="#6b7078" strokeWidth="2" />
-            <line x1="20" y1="20" x2="34" y2="9" stroke="#f2a93b" strokeWidth="2.5" />
-            <circle cx="6" cy="10" r="3.2" fill="#6b7078" />
-            <circle cx="8" cy="32" r="3.2" fill="#6b7078" />
-            <circle cx="33" cy="33" r="2.8" fill="#6b7078" />
-            <circle cx="34" cy="9" r="4.2" fill="#f2a93b" />
-            <circle cx="20" cy="20" r="5.5" fill="#f2a93b" />
-          </g>
-
-          {/* App Name */}
-          <text className="hero-text" x="48" y="16" fill="#1d1c1d" fontSize="14.5" fontWeight="700">
-            Kultra Sentinel
-          </text>
-
-          {/* Official Slack APP Pill */}
-          <rect x="160" y="5" width="30" height="15" rx="3" fill="#f2f2f2" />
-          <text className="hero-text" x="165" y="16" fill="#616061" fontSize="9.5" fontWeight="700">
-            APP
-          </text>
-
-          {/* Timestamp */}
-          <text className="hero-text" x="200" y="16" fill="#616061" fontSize="12">
-            12:04 PM
-          </text>
-        </g>
-
-        {/* Verbatim Slack Block Notification Box with Red Left Accent Bar */}
-        <g transform="translate(24, 118)">
-          {/* Slack Official Left Alert Bar (#e01e5a) */}
-          <rect x="0" y="0" width="4" height="230" rx="2" fill="#e01e5a" />
-
-          {/* Inner Light Block Surface */}
-          <rect
-            x="4"
-            y="0"
-            width="388"
-            height="230"
-            rx="0"
-            fill="#fafafa"
-            stroke="#f0f0f0"
-            strokeWidth="1"
+          {/* Glowing background blur line */}
+          <path
+            d="M 0 20 L 132 20"
+            stroke="#d64545"
+            strokeWidth="6"
+            strokeOpacity="0.25"
+            filter="url(#bridgeGlow)"
           />
-
-          {/* Block Content Container */}
-          <g transform="translate(18, 16)">
-            {/* Verbatim Headline */}
-            <text className="hero-text" x="0" y="16" fill="#1d1c1d" fontSize="15" fontWeight="700">
-              🚨 Critical Disapproval Detected
-            </text>
-
-            <line x1="0" y1="32" x2="352" y2="32" stroke="#ebebeb" strokeWidth="1" />
-
-            {/* Verbatim Line 1: Merchant ID */}
-            <g transform="translate(0, 48)">
-              <text className="hero-text" x="0" y="14" fill="#1d1c1d" fontSize="13" fontWeight="700">
-                Merchant ID:
-              </text>
-              <text className="hero-mono" x="98" y="14" fill="#1d1c1d" fontSize="13" fontWeight="500">
-                4918374
-              </text>
-            </g>
-
-            {/* Verbatim Line 2: Item */}
-            <g transform="translate(0, 80)">
-              <text className="hero-text" x="0" y="14" fill="#1d1c1d" fontSize="13" fontWeight="700">
-                Item:
-              </text>
-              <text className="hero-text" x="46" y="14" fill="#1d1c1d" fontSize="13" fontWeight="500">
-                ACR-909 (Apex Carbon Runner)
-              </text>
-            </g>
-
-            {/* Verbatim Line 3: Error */}
-            <g transform="translate(0, 112)">
-              <text className="hero-text" x="0" y="14" fill="#1d1c1d" fontSize="13" fontWeight="700">
-                Error:
-              </text>
-              <text className="hero-text" x="50" y="14" fill="#e01e5a" fontSize="13" fontWeight="600">
-                Missing GTIN. Ad traffic paused.
-              </text>
-            </g>
-
-            {/* Traffic Impact Highlight Pill */}
-            <g transform="translate(0, 150)">
-              <rect x="0" y="0" width="352" height="30" rx="3" fill="#feeef1" stroke="#fad2da" strokeWidth="1" />
-              <text className="hero-mono" x="12" y="19" fill="#e01e5a" fontSize="11" fontWeight="500">
-                Campaign Impact: 24 active ads suspended
-              </text>
-            </g>
-          </g>
-        </g>
-
-        {/* Link Text (Proof of utility) Footer Action */}
-        <g transform="translate(28, 380)">
-          {/* Interactive Button Background */}
-          <rect
-            x="0"
-            y="0"
-            width="384"
-            height="44"
-            rx="4"
-            fill="#111214"
-            stroke="#111214"
-            strokeWidth="1"
+          {/* Base gradient line */}
+          <path
+            d="M 0 20 L 132 20"
+            stroke="url(#bridgeGrad)"
+            strokeWidth="2"
+            strokeOpacity="0.75"
           />
-          {/* Verbatim Footer Link: "Open Triage Log" */}
-          <text
-            className="hero-text"
-            x="192"
-            y="27"
-            fill="#ffffff"
-            fontSize="13.5"
-            fontWeight="600"
-            textAnchor="middle"
+          {/* Animated data pulses */}
+          <path
+            d="M 0 20 L 132 20"
+            stroke="#ffffff"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            className="telemetry-stream-pulse"
+          />
+          {/* Arrowhead */}
+          <path
+            d="M 124 14 L 134 20 L 124 26"
+            fill="none"
+            stroke="#f2a93b"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          {/* Origin pulse node */}
+          <circle cx="2" cy="20" r="3.5" fill="#d64545" />
+        </svg>
+
+        {/* Anchored Latency Badge */}
+        <div className="mt-1 px-2.5 py-1 rounded-full bg-[var(--bg-surface-2)] border border-[var(--signal-dim)] text-[var(--signal)] font-mono text-[11px] font-medium flex items-center gap-1 shadow-[0_0_12px_rgba(242,169,59,0.2)] whitespace-nowrap">
+          <span>⚡ Live Dispatch: 0.28s</span>
+        </div>
+      </div>
+
+      {/* Mobile/Tablet Vertical Bridge (< lg) */}
+      <div className="flex lg:hidden flex-col items-center justify-center py-2 gap-1.5 shrink-0">
+        <div className="w-[2px] h-6 bg-gradient-to-b from-[var(--danger)] via-[var(--signal)] to-white" />
+        <span className="px-3 py-1 rounded-full bg-[var(--bg-surface-2)] border border-[var(--signal-dim)] text-[var(--signal)] font-mono text-[11px] font-medium shadow-sm">
+          ⚡ Live Dispatch: 0.28s
+        </span>
+        <div className="w-[2px] h-6 bg-gradient-to-b from-[var(--signal)] to-white" />
+      </div>
+
+      {/* ============================================================ */}
+      {/* 3. RIGHT ELEMENT: THE CONVERSION DRIVER (SLACK ALERT CARD)    */}
+      {/* High contrast, crisp white surface, verbatim notification     */}
+      {/* ============================================================ */}
+      <div className="w-full lg:w-[460px] xl:w-[480px] bg-[#ffffff] text-[#1d1c1d] rounded-[8px] p-5 sm:p-6 shadow-[0_24px_54px_-12px_rgba(0,0,0,0.7),0_0_0_1px_rgba(255,255,255,0.15)] flex flex-col justify-between border border-white/20 text-left relative shrink-0">
+        <div>
+          {/* Slack Channel Ribbon */}
+          <div className="flex items-center justify-between pb-3 border-b border-[#f0f0f0]">
+            <span className="font-bold flex items-center gap-1 text-[13px] text-[#1d1c1d]">
+              <span className="text-[#616061]">#</span> merchant-alerts
+            </span>
+            <span className="font-mono text-[10.5px] font-medium text-[#007a5a] bg-[#e6f4ea] px-2 py-0.5 rounded">
+              LIVE DISPATCH · 0.28s
+            </span>
+          </div>
+
+          {/* Slack App Identity */}
+          <div className="flex items-center gap-3 pt-3">
+            {/* Kultra Sentinel Avatar */}
+            <div className="w-9 h-9 rounded-[6px] bg-[#0e0f11] flex items-center justify-center shrink-0">
+              <svg className="w-5 h-5" viewBox="0 0 48 48" fill="none">
+                <g transform="translate(24, 24) scale(1.05) translate(-21.55, -19.25)">
+                  <line x1="20" y1="20" x2="6" y2="10" stroke="#6b7078" strokeWidth="2" />
+                  <line x1="20" y1="20" x2="8" y2="32" stroke="#6b7078" strokeWidth="2" />
+                  <line x1="20" y1="20" x2="33" y2="33" stroke="#6b7078" strokeWidth="2" />
+                  <line x1="20" y1="20" x2="34" y2="9" stroke="#f2a93b" strokeWidth="2.5" />
+                  <circle cx="6" cy="10" r="3.2" fill="#6b7078" />
+                  <circle cx="8" cy="32" r="3.2" fill="#6b7078" />
+                  <circle cx="33" cy="33" r="2.8" fill="#6b7078" />
+                  <circle cx="34" cy="9" r="4.2" fill="#f2a93b" />
+                  <circle cx="20" cy="20" r="5.5" fill="#f2a93b" />
+                </g>
+              </svg>
+            </div>
+
+            {/* App Name & Meta */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-bold text-[14.5px] text-[#1d1c1d]">Kultra Sentinel</span>
+              <span className="bg-[#f2f2f2] text-[#616061] text-[10px] font-bold px-1.5 py-0.5 rounded-[3px]">
+                APP
+              </span>
+              <span className="text-[#616061] text-[12px]">12:04 PM</span>
+            </div>
+          </div>
+
+          {/* Verbatim Slack Block Notification Box with Red Left Accent */}
+          <div className="mt-3.5 border-l-4 border-[#e01e5a] bg-[#fafafa] p-4 rounded-r-md space-y-2.5 text-left border border-l-0 border-[#f0f0f0]">
+            {/* Headline */}
+            <div className="font-bold text-[15px] text-[#1d1c1d] flex items-center gap-1.5">
+              <span>🚨</span>
+              <span>Critical Disapproval Detected</span>
+            </div>
+
+            <hr className="border-[#ebebeb]" />
+
+            {/* Verbatim Key-Value Rows */}
+            <div className="space-y-1 text-[13px]">
+              <div>
+                <span className="font-bold text-[#1d1c1d]">Merchant ID:</span>{' '}
+                <span className="font-mono font-medium text-[#1d1c1d]">4918374</span>
+              </div>
+              <div>
+                <span className="font-bold text-[#1d1c1d]">Item:</span>{' '}
+                <span className="font-medium text-[#1d1c1d]">ACR-909 (Apex Carbon Runner)</span>
+              </div>
+              <div>
+                <span className="font-bold text-[#1d1c1d]">Error:</span>{' '}
+                <span className="text-[#e01e5a] font-semibold">Missing GTIN. Ad traffic paused.</span>
+              </div>
+            </div>
+
+            {/* Impact Pill */}
+            <div className="bg-[#feeef1] border border-[#fad2da] text-[#e01e5a] font-mono text-[11px] font-medium px-2.5 py-1.5 rounded-[3px] mt-1">
+              Campaign Impact: 24 active ads suspended
+            </div>
+          </div>
+        </div>
+
+        {/* Footer Action: Open Triage Log */}
+        <div className="mt-5 pt-3 border-t border-[#f0f0f0]">
+          <a
+            href="#triage"
+            className="w-full block bg-[#111214] hover:bg-black text-white font-semibold text-[13.5px] py-2.5 px-4 rounded-[4px] text-center transition-colors shadow-sm"
           >
             Open Triage Log →
-          </text>
-        </g>
-
-        {/* Sub-label micro-copy */}
-        <text
-          className="hero-text"
-          x="220"
-          y="442"
-          fill="#868686"
-          fontSize="11"
-          textAnchor="middle"
-        >
-          Direct deep link to Google Merchant Center & Shopify fix
-        </text>
-      </g>
-    </svg>
+          </a>
+          <p className="text-center text-[11px] text-[#868686] mt-2">
+            Direct deep link to Google Merchant Center &amp; Shopify fix
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }

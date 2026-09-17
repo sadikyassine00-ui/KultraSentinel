@@ -32,6 +32,8 @@ export async function GET(request: Request) {
           formattedTrialEnd: billing.formattedTrialEnd,
           isLocked: billing.isLocked,
           upgradeUrl: billing.upgradeUrl,
+          hasTrialStarted: billing.hasTrialStarted,
+          isSuperAdmin: billing.isSuperAdmin,
         },
         metrics: {
           monitoredProducts: 0,
@@ -140,6 +142,8 @@ export async function GET(request: Request) {
         formattedTrialEnd: billing.formattedTrialEnd,
         isLocked: billing.isLocked,
         upgradeUrl: billing.upgradeUrl,
+        hasTrialStarted: billing.hasTrialStarted,
+        isSuperAdmin: billing.isSuperAdmin,
       },
       metrics: {
         monitoredProducts,

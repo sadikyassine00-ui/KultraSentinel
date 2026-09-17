@@ -27,11 +27,32 @@ export interface SessionPayload {
   name?: string | null;
   id?: string | number | null;
   sid?: string;
+  isSuperAdmin?: boolean;
 }
 
 export interface SessionMetadata {
   ipAddress?: string | null;
   userAgent?: string | null;
+}
+
+export const SUPERADMIN_EMAILS: string[] = [
+  'yassinesadik0@gmail.com',
+];
+
+export function isSuperAdminEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  return SUPERADMIN_EMAILS.includes(email.toLowerCase().trim());
+}
+
+export const ALLOWED_ADMIN_EMAILS: string[] = [
+  'support@usekultra.com',
+  'yassinesadik0@gmail.com',
+];
+
+export function isAllowedAdminEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  const clean = email.toLowerCase().trim();
+  return ALLOWED_ADMIN_EMAILS.includes(clean) || isSuperAdminEmail(clean);
 }
 
 export async function createSessionToken(
@@ -40,7 +61,8 @@ export async function createSessionToken(
 ): Promise<string> {
   const secret = getJwtSecret();
   const email = payload.email.toLowerCase().trim();
-  const role = isAllowedAdminEmail(email) ? 'admin' : (payload.role === 'admin' ? 'admin' : 'user');
+  const isSuper = isSuperAdminEmail(email);
+  const role = (isSuper || isAllowedAdminEmail(email)) ? 'admin' : (payload.role === 'admin' ? 'admin' : 'user');
   const sid = payload.sid || generateSessionId();
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -65,6 +87,7 @@ export async function createSessionToken(
     ...payload,
     email,
     role,
+    isSuperAdmin: isSuper,
     sid,
   })
     .setProtectedHeader({ alg: 'HS256' })
@@ -79,8 +102,9 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
     const { payload } = await jwtVerify(token, secret);
     if (!payload.email) return null;
     const email = (payload.email as string).toLowerCase().trim();
+    const isSuper = isSuperAdminEmail(email);
     const rawRole = (payload.role as string) || '';
-    const role = isAllowedAdminEmail(email) ? 'admin' : (rawRole === 'admin' ? 'admin' : 'user');
+    const role = (isSuper || isAllowedAdminEmail(email)) ? 'admin' : (rawRole === 'admin' ? 'admin' : 'user');
     const sid = (payload.sid as string) || undefined;
 
     // Check server-side revocation if session ID is attached and running in Node runtime
@@ -99,6 +123,7 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
     return {
       email,
       role,
+      isSuperAdmin: isSuper,
       name: (payload.name as string) || null,
       id: (payload.id as string | number) || null,
       sid,
@@ -106,15 +131,6 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
   } catch {
     return null;
   }
-}
-
-export const ALLOWED_ADMIN_EMAILS: string[] = [
-  'support@usekultra.com',
-];
-
-export function isAllowedAdminEmail(email: string | null | undefined): boolean {
-  if (!email) return false;
-  return ALLOWED_ADMIN_EMAILS.includes(email.toLowerCase().trim());
 }
 
 export function parseCookie(cookieHeader: string | null, name: string): string | null {

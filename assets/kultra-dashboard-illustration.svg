@@ -1,27 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 680" width="100%" height="100%" fill="none" role="img" aria-label="High-tech proof of work loop: Detection, Interception, and Notification with incident triage card and floating Slack alert">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 580" width="100%" height="100%" fill="none" role="img" aria-label="Kultra proof of work loop: Detection, Interception, and Notification side-by-side pipeline">
   <defs>
-    <!-- Technical Telemetry Grid -->
-    <pattern id="proofGrid" width="36" height="36" patternUnits="userSpaceOnUse">
-      <path d="M 36 0 L 0 0 0 36" fill="none" stroke="rgba(255,255,255,0.035)" stroke-width="1" />
-    </pattern>
-
-    <!-- Ambient Depth of Field Radial Glow -->
-    <radialGradient id="depthOfFieldGlow" cx="42%" cy="48%" r="65%">
-      <stop offset="0%" stop-color="#181d26" stop-opacity="0.85" />
-      <stop offset="45%" stop-color="#0f1117" stop-opacity="0.6" />
-      <stop offset="100%" stop-color="#0a0b0d" stop-opacity="0" />
-    </radialGradient>
-
     <!-- Incident Card Glowing Red Border Filter -->
     <filter id="incidentGlow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="0" stdDeviation="10" flood-color="#d64545" flood-opacity="0.32" />
+      <feDropShadow dx="0" dy="0" stdDeviation="10" flood-color="#d64545" flood-opacity="0.25" />
       <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#000000" flood-opacity="0.6" />
     </filter>
 
     <!-- Floating Slack Card Deep Elevation Shadow -->
     <filter id="slackElevation" x="-25%" y="-25%" width="150%" height="150%">
-      <feDropShadow dx="0" dy="28" stdDeviation="32" flood-color="#000000" flood-opacity="0.75" />
-      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.35" />
+      <feDropShadow dx="0" dy="24" stdDeviation="28" flood-color="#000000" flood-opacity="0.75" />
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#000000" flood-opacity="0.3" />
     </filter>
 
     <!-- Laser Glow Filter -->
@@ -33,11 +21,11 @@
       </feMerge>
     </filter>
 
-    <!-- Data Stream Gradient -->
-    <linearGradient id="dataStreamGrad" x1="0%" y1="100%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#d64545" stop-opacity="0.9" />
-      <stop offset="50%" stop-color="#f2a93b" stop-opacity="0.95" />
-      <stop offset="100%" stop-color="#ffffff" stop-opacity="1" />
+    <!-- Bridge Gradient -->
+    <linearGradient id="bridgeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#d64545" />
+      <stop offset="50%" stop-color="#f2a93b" />
+      <stop offset="100%" stop-color="#ffffff" />
     </linearGradient>
 
     <!-- Laser Vertical Gradient -->
@@ -54,12 +42,11 @@
       <rect width="84" height="84" rx="4" />
     </clipPath>
 
-    <!-- Card Frame Clip for Laser Sweep -->
+    <!-- Laser Clip -->
     <clipPath id="errorBoxClip">
-      <rect x="0" y="24" width="492" height="52" rx="3" />
+      <rect x="0" y="24" width="472" height="52" rx="3" />
     </clipPath>
 
-    <!-- Embedded Typography & Micro-Animations -->
     <style>
       .hero-text {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -67,114 +54,32 @@
       .hero-mono {
         font-family: 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       }
-
       @keyframes scanLaser {
         0% { transform: translateX(16px); }
-        48% { transform: translateX(476px); }
-        52% { transform: translateX(476px); }
+        48% { transform: translateX(456px); }
+        52% { transform: translateX(456px); }
         98% { transform: translateX(16px); }
         100% { transform: translateX(16px); }
       }
-
-      @keyframes streamFlow {
-        from { stroke-dashoffset: 48; }
-        to { stroke-dashoffset: 0; }
+      @keyframes streamDash {
+        to { stroke-dashoffset: -24; }
       }
-
-      @keyframes pulseLive {
-        0%, 100% { opacity: 0.9; transform: scale(1); }
-        50% { opacity: 0.45; transform: scale(1.15); }
-      }
-
-      @keyframes slackLevitate {
-        0%, 100% { transform: translateY(0px); }
-        50% { transform: translateY(-5px); }
-      }
-
       .laser-scanner {
         animation: scanLaser 3.6s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
       }
-
-      .data-stream-path {
+      .telemetry-stream-pulse {
         stroke-dasharray: 6 6;
-        animation: streamFlow 1.2s linear infinite;
-      }
-
-      .floating-slack-card {
-        animation: slackLevitate 5s ease-in-out infinite;
-        transform-origin: 900px 300px;
-      }
-
-      .live-ping-dot {
-        animation: pulseLive 2s ease-in-out infinite;
-        transform-origin: center;
-      }
-
-      @media (prefers-reduced-motion: reduce) {
-        .laser-scanner, .data-stream-path, .floating-slack-card, .live-ping-dot {
-          animation: none !important;
-        }
+        animation: streamDash 1.2s linear infinite;
       }
     </style>
   </defs>
 
-  <!-- 0. TECHNICAL BACKDROP & SHALLOW DEPTH OF FIELD STAGE -->
-  <rect x="0" y="0" width="1200" height="680" fill="#0a0b0d" />
-  <rect x="0" y="0" width="1200" height="680" fill="url(#depthOfFieldGlow)" />
-  <rect x="0" y="0" width="1200" height="680" fill="url(#proofGrid)" />
-
-  <!-- Constellation Lines -->
-  <g stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="3 3">
-    <line x1="80" y1="50" x2="640" y2="50" />
-    <line x1="640" y1="50" x2="1140" y2="50" />
-    <line x1="80" y1="630" x2="1140" y2="630" />
-    <line x1="640" y1="50" x2="640" y2="630" stroke="rgba(255,255,255,0.03)" />
-  </g>
-  <circle cx="80" cy="50" r="2.5" fill="rgba(255,255,255,0.2)" />
-  <circle cx="640" cy="50" r="2.5" fill="#f2a93b" opacity="0.6" />
-  <circle cx="1140" cy="50" r="2.5" fill="rgba(255,255,255,0.2)" />
-  <circle cx="80" cy="630" r="2.5" fill="rgba(255,255,255,0.2)" />
-  <circle cx="1140" cy="630" r="2.5" fill="rgba(255,255,255,0.2)" />
-
-  <!-- 3. CONNECTING GLOWING DATA STREAM LINE -->
-  <g id="data-stream-connector">
-    <path
-      d="M 590 366 C 650 366, 660 230, 684 220"
-      fill="none"
-      stroke="#d64545"
-      stroke-width="6"
-      stroke-opacity="0.2"
-      filter="url(#laserBeamGlow)"
-    />
-    <path
-      d="M 590 366 C 650 366, 660 230, 684 220"
-      fill="none"
-      stroke="url(#dataStreamGrad)"
-      stroke-width="2.2"
-      stroke-opacity="0.6"
-    />
-    <path
-      class="data-stream-path"
-      d="M 590 366 C 650 366, 660 230, 684 220"
-      fill="none"
-      stroke="#ffffff"
-      stroke-width="2.5"
-      stroke-linecap="round"
-    />
-    <circle cx="590" cy="366" r="5" fill="#d64545" filter="url(#laserBeamGlow)" />
-    <circle cx="590" cy="366" r="2.5" fill="#ffffff" />
-    <circle cx="645" cy="285" r="3" fill="#f2a93b" opacity="0.85" />
-    <circle cx="645" cy="285" r="6" fill="none" stroke="#f2a93b" stroke-width="1" opacity="0.4" />
-    <circle cx="684" cy="220" r="5" fill="#ffffff" filter="url(#laserBeamGlow)" />
-    <circle cx="684" cy="220" r="2.5" fill="#e01e5a" />
-  </g>
-
-  <!-- 1. CENTER-LEFT ELEMENT: THE STREAMLINED INCIDENT CARD -->
-  <g id="incident-card" transform="translate(80, 75)">
+  <!-- 1. LEFT ELEMENT: THE STREAMLINED INCIDENT CARD -->
+  <g id="incident-card" transform="translate(40, 30)">
     <rect
       x="0"
       y="0"
-      width="540"
+      width="520"
       height="520"
       rx="4"
       fill="#0e0f11"
@@ -185,7 +90,7 @@
     <rect
       x="0"
       y="0"
-      width="540"
+      width="520"
       height="520"
       rx="4"
       fill="#0e0f11"
@@ -205,7 +110,7 @@
         stroke="#d64545"
         stroke-width="1"
       />
-      <circle cx="14" cy="13" r="3.5" fill="#d64545" class="live-ping-dot" />
+      <circle cx="14" cy="13" r="3.5" fill="#d64545" />
       <text
         class="hero-mono"
         x="24"
@@ -219,7 +124,7 @@
       </text>
 
       <rect
-        x="368"
+        x="348"
         y="0"
         width="124"
         height="26"
@@ -228,21 +133,20 @@
         stroke="rgba(242,169,59,0.3)"
         stroke-width="1"
       />
-      <circle cx="380" cy="13" r="3" fill="#f2a93b" />
+      <circle cx="360" cy="13" r="3" fill="#f2a93b" />
       <text
         class="hero-mono"
-        x="390"
+        x="370"
         y="17"
         fill="#f4f1ea"
         font-size="11"
         font-weight="500"
-        letter-spacing="0.01em"
       >
         Captured in &lt;1s
       </text>
     </g>
 
-    <line x1="24" y1="62" x2="516" y2="62" stroke="rgba(255,255,255,0.08)" stroke-width="1" />
+    <line x1="24" y1="62" x2="496" y2="62" stroke="rgba(255,255,255,0.08)" stroke-width="1" />
 
     <!-- Product Identity: Alpine Anorak -->
     <g transform="translate(24, 80)">
@@ -282,9 +186,8 @@
         fill="#f4f1ea"
         font-size="18"
         font-weight="600"
-        letter-spacing="-0.01em"
       >
-        Alpine Anorak
+        Alpine Expedition Anorak
       </text>
       <text class="hero-text" x="102" y="64" fill="#b9b3a5" font-size="13">
         Variant: Slate Black / Medium · Price: $148.00 USD
@@ -299,7 +202,7 @@
       <rect
         x="0"
         y="0"
-        width="492"
+        width="472"
         height="58"
         rx="3"
         fill="#131418"
@@ -314,8 +217,8 @@
           1,840 clicks at risk
         </text>
       </g>
-      <line x1="230" y1="10" x2="230" y2="48" stroke="rgba(255,255,255,0.08)" stroke-width="1" />
-      <g transform="translate(248, 14)">
+      <line x1="220" y1="10" x2="220" y2="48" stroke="rgba(255,255,255,0.08)" stroke-width="1" />
+      <g transform="translate(238, 14)">
         <text class="hero-text" x="0" y="12" fill="#6b7078" font-size="11">
           Google Ads Campaign Status
         </text>
@@ -330,14 +233,14 @@
       <text class="hero-mono" x="0" y="14" fill="#6b7078" font-size="11" letter-spacing="0.04em">
         INTERCEPTED PROTOCOL ERROR
       </text>
-      <text class="hero-mono" x="492" y="14" fill="#d64545" font-size="10.5" text-anchor="end">
+      <text class="hero-mono" x="472" y="14" fill="#d64545" font-size="10.5" text-anchor="end">
         [CRITICAL]
       </text>
 
       <rect
         x="0"
         y="24"
-        width="492"
+        width="472"
         height="52"
         rx="3"
         fill="#07080a"
@@ -351,7 +254,6 @@
         fill="#f4f1ea"
         font-size="12.5"
         font-weight="500"
-        letter-spacing="-0.01em"
       >
         item_disapproved: missing_required_attribute [gtin]
       </text>
@@ -382,7 +284,7 @@
       </g>
 
       <text class="hero-text" x="0" y="96" fill="#b9b3a5" font-size="12">
-        Google crawler rejected SKU feed. Missing UPC/GTIN barcode attribute.
+        Google crawler rejected feed: Missing UPC/GTIN barcode attribute.
       </text>
     </g>
 
@@ -392,7 +294,7 @@
         <rect
           x="0"
           y="0"
-          width="236"
+          width="226"
           height="48"
           rx="3"
           fill="#f2a93b"
@@ -401,7 +303,7 @@
         />
         <text
           class="hero-text"
-          x="100"
+          x="113"
           y="29"
           fill="#1a1305"
           font-size="13.5"
@@ -410,21 +312,13 @@
         >
           Edit Product
         </text>
-        <path
-          d="M 152 20 L 160 28 M 147 25 L 145 32 L 152 30 L 163 19 C 164 18 164 17 163 16 L 161 14 C 160 13 159 13 158 14 Z"
-          fill="none"
-          stroke="#1a1305"
-          stroke-width="1.6"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
       </g>
 
-      <g transform="translate(256, 0)">
+      <g transform="translate(246, 0)">
         <rect
           x="0"
           y="0"
-          width="236"
+          width="226"
           height="48"
           rx="3"
           fill="#131418"
@@ -433,7 +327,7 @@
         />
         <text
           class="hero-text"
-          x="104"
+          x="113"
           y="29"
           fill="#f4f1ea"
           font-size="13.5"
@@ -442,25 +336,73 @@
         >
           GMC Console
         </text>
-        <path
-          d="M 158 18 L 166 18 L 166 26 M 166 18 L 155 29 M 150 21 L 147 21 C 145.8 21 145 21.8 145 23 L 145 32 C 145 33.2 145.8 34 147 34 L 156 34 C 157.2 34 158 33.2 158 32 L 158 29"
-          fill="none"
-          stroke="#b9b3a5"
-          stroke-width="1.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
       </g>
     </g>
   </g>
 
-  <!-- 2. THE CONVERSION DRIVER: FLOATING LIGHT SLACK BLOCK CARD -->
-  <g id="floating-slack-notification" class="floating-slack-card" transform="translate(680, 105)">
+  <!-- 2. DELIBERATE TELEMETRY CONNECTION BRIDGE -->
+  <g id="telemetry-bridge" transform="translate(565, 250)">
+    <path
+      d="M 0 20 L 105 20"
+      stroke="#d64545"
+      stroke-width="6"
+      stroke-opacity="0.25"
+      filter="url(#laserBeamGlow)"
+    />
+    <path
+      d="M 0 20 L 105 20"
+      stroke="url(#bridgeGrad)"
+      stroke-width="2"
+      stroke-opacity="0.75"
+    />
+    <path
+      class="telemetry-stream-pulse"
+      d="M 0 20 L 105 20"
+      stroke="#ffffff"
+      stroke-width="2.5"
+      stroke-linecap="round"
+    />
+    <path
+      d="M 98 14 L 108 20 L 98 26"
+      fill="none"
+      stroke="#f2a93b"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <circle cx="2" cy="20" r="3.5" fill="#d64545" />
+
+    <!-- Anchored Latency Badge -->
+    <rect
+      x="-8"
+      y="38"
+      width="128"
+      height="26"
+      rx="100"
+      fill="#131418"
+      stroke="#7a5a26"
+      stroke-width="1"
+    />
+    <text
+      class="hero-mono"
+      x="56"
+      y="55"
+      fill="#f2a93b"
+      font-size="10.5"
+      font-weight="500"
+      text-anchor="middle"
+    >
+      ⚡ Live Dispatch: 0.28s
+    </text>
+  </g>
+
+  <!-- 3. RIGHT ELEMENT: THE SLACK DISPATCH CARD -->
+  <g id="slack-card" transform="translate(680, 50)">
     <rect
       x="0"
       y="0"
-      width="440"
-      height="460"
+      width="480"
+      height="480"
       rx="6"
       fill="#ffffff"
       filter="url(#slackElevation)"
@@ -468,8 +410,8 @@
     <rect
       x="0"
       y="0"
-      width="440"
-      height="460"
+      width="480"
+      height="480"
       rx="6"
       fill="none"
       stroke="rgba(0,0,0,0.08)"
@@ -484,12 +426,12 @@
       <text class="hero-text" x="14" y="15" fill="#1d1c1d" font-size="13" font-weight="700">
         merchant-alerts
       </text>
-      <text class="hero-mono" x="392" y="14" fill="#007a5a" font-size="10.5" font-weight="500" text-anchor="end">
+      <text class="hero-mono" x="432" y="14" fill="#007a5a" font-size="10.5" font-weight="500" text-anchor="end">
         LIVE DISPATCH · 0.28s
       </text>
     </g>
 
-    <line x1="24" y1="46" x2="416" y2="46" stroke="#f0f0f0" stroke-width="1" />
+    <line x1="24" y1="46" x2="456" y2="46" stroke="#f0f0f0" stroke-width="1" />
 
     <!-- Slack App Identity -->
     <g transform="translate(24, 62)">
@@ -523,7 +465,7 @@
       <rect
         x="4"
         y="0"
-        width="388"
+        width="428"
         height="230"
         rx="0"
         fill="#fafafa"
@@ -534,7 +476,7 @@
         <text class="hero-text" x="0" y="16" fill="#1d1c1d" font-size="15" font-weight="700">
           🚨 Critical Disapproval Detected
         </text>
-        <line x1="0" y1="32" x2="352" y2="32" stroke="#ebebeb" stroke-width="1" />
+        <line x1="0" y1="32" x2="392" y2="32" stroke="#ebebeb" stroke-width="1" />
 
         <g transform="translate(0, 48)">
           <text class="hero-text" x="0" y="14" fill="#1d1c1d" font-size="13" font-weight="700">
@@ -564,7 +506,7 @@
         </g>
 
         <g transform="translate(0, 150)">
-          <rect x="0" y="0" width="352" height="30" rx="3" fill="#feeef1" stroke="#fad2da" stroke-width="1" />
+          <rect x="0" y="0" width="392" height="30" rx="3" fill="#feeef1" stroke="#fad2da" stroke-width="1" />
           <text class="hero-mono" x="12" y="19" fill="#e01e5a" font-size="11" font-weight="500">
             Campaign Impact: 24 active ads suspended
           </text>
@@ -577,7 +519,7 @@
       <rect
         x="0"
         y="0"
-        width="384"
+        width="424"
         height="44"
         rx="4"
         fill="#111214"
@@ -586,7 +528,7 @@
       />
       <text
         class="hero-text"
-        x="192"
+        x="212"
         y="27"
         fill="#ffffff"
         font-size="13.5"
@@ -599,7 +541,7 @@
 
     <text
       class="hero-text"
-      x="220"
+      x="240"
       y="442"
       fill="#868686"
       font-size="11"

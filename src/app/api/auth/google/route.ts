@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { findAdminByEmail, createOrUpdateAdmin, findTenantByEmail, createTenant, createLead } from '@/lib/db';
-import { createSessionToken, getSessionCookieHeader, isAllowedAdminEmail, isSecureContext } from '@/lib/auth';
+import { createSessionToken, getSessionCookieHeader, isAllowedAdminEmail, isSuperAdminEmail, isSecureContext } from '@/lib/auth';
 import { createOAuthState, OAUTH_STATE_COOKIE_NAME } from '@/lib/security';
 
 export async function GET(request: Request) {
@@ -137,7 +137,8 @@ export async function POST(request: Request) {
     }
 
     const cleanEmail = email.toLowerCase().trim();
-    const isAdmin = isAllowedAdminEmail(cleanEmail);
+    const isSuper = isSuperAdminEmail(cleanEmail);
+    const isAdmin = isAllowedAdminEmail(cleanEmail) || isSuper;
     const role = isAdmin ? 'admin' : 'user';
 
     // Persist or match user in Neon database
@@ -145,29 +146,27 @@ export async function POST(request: Request) {
       email: cleanEmail,
       name,
       googleId,
-      role,
+      role: isSuper ? 'admin' : role,
     });
 
-    if (role === 'user') {
-      const existingTenant = await findTenantByEmail(cleanEmail);
-      if (!existingTenant) {
-        // Automatic Metadata Provisioning:
-        // Initialize store name as [User Display Name]'s Catalog if no name is provided
-        const displayName = (name && name !== 'User' ? name : '').trim() || cleanEmail.split('@')[0];
-        const storeName = `${displayName}'s Catalog`;
-        // Default account_plan to solo ($19/mo) and set trial_ends_at to exactly 14 days from creation
-        const trialEndsAt = new Date(Date.now() + 14 * 86400000).toISOString();
+    const existingTenant = await findTenantByEmail(cleanEmail);
+    if (!existingTenant) {
+      // Automatic Metadata Provisioning:
+      // Initialize store name as [User Display Name]'s Catalog if no name is provided
+      const displayName = (name && name !== 'User' ? name : '').trim() || cleanEmail.split('@')[0];
+      const storeName = `${displayName}'s Catalog`;
 
-        await createTenant({
-          email: cleanEmail,
-          companyName: storeName,
-          planTier: 'Trial',
-          accountType: 'merchant',
-          accountPlan: 'solo',
-          subscriptionStatus: 'active trial',
-          trialEndsAt,
-        });
+      await createTenant({
+        email: cleanEmail,
+        companyName: storeName,
+        planTier: isSuper ? 'Active Pro' : 'Trial',
+        accountType: 'merchant',
+        accountPlan: 'solo',
+        subscriptionStatus: isSuper ? 'paid active' : 'active trial',
+        trialEndsAt: null, // Trial countdown activates upon GMC connection
+      });
 
+      if (!isSuper) {
         // Record lead for platform CRM telemetry
         await createLead({
           email: cleanEmail,

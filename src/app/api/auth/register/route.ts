@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import {
   hashPassword,
   isAllowedAdminEmail,
+  isSuperAdminEmail,
   createSessionToken,
   getSessionCookieHeader,
   validatePasswordStrength,
@@ -80,7 +81,8 @@ export async function POST(request: Request) {
 
     // 6. Hash password with bcrypt work factor 12
     const passwordHash = await hashPassword(password);
-    const isAdmin = isAllowedAdminEmail(cleanEmail);
+    const isSuper = isSuperAdminEmail(cleanEmail);
+    const isAdmin = isAllowedAdminEmail(cleanEmail) || isSuper;
     const userRole = isAdmin ? 'admin' : 'user';
 
     // 7. Create user record
@@ -92,14 +94,15 @@ export async function POST(request: Request) {
     });
 
     // 8. Create tenant record with consistent defaults
+    // Note: Trial starts only upon Google Merchant Center connection
     const tenant = await createTenant({
       email: cleanEmail,
       companyName: cleanCompany,
-      planTier: 'Trial',
+      planTier: isSuper ? 'Active Pro' : 'Trial',
       accountType: cleanAccountType,
       accountPlan: cleanAccountType === 'agency' ? 'agency' : 'solo',
-      subscriptionStatus: 'active trial',
-      trialEndsAt: new Date(Date.now() + 14 * 86400000).toISOString(),
+      subscriptionStatus: isSuper ? 'paid active' : 'active trial',
+      trialEndsAt: null,
       website: website || cleanCompany.toLowerCase().replace(/[^a-z0-9]/g, '') + '.com',
     });
 
@@ -145,9 +148,11 @@ export async function POST(request: Request) {
         company_name: tenant.company_name,
         plan_tier: tenant.plan_tier,
       },
-      message: isAdmin
+      message: isSuper
+        ? 'Superadmin account provisioned. Permanent unrestricted access active.'
+        : isAdmin
         ? 'Platform owner registered. Redirecting to Mission Control.'
-        : 'Platform account provisioned. 14-day free trial active.',
+        : 'Platform account provisioned. Connect your Google Merchant Center to activate your 14-day trial.',
     });
 
     response.headers.set('Set-Cookie', cookieHeader);

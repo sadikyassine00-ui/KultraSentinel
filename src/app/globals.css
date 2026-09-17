@@ -255,6 +255,30 @@ h1 {
   );
 }
 
+/* Hero Proof-of-Work Telemetry & Laser Animations */
+@keyframes laserSweep {
+  0% { transform: translateX(-15%); }
+  45% { transform: translateX(480%); }
+  55% { transform: translateX(480%); }
+  95% { transform: translateX(-15%); }
+  100% { transform: translateX(-15%); }
+}
+
+.laser-scanner-line {
+  animation: laserSweep 3.6s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+
+@keyframes streamDash {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
+.telemetry-stream-pulse {
+  stroke-dasharray: 6 6;
+  animation: streamDash 1.2s linear infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

@@ -64,13 +64,9 @@ export function Hero() {
         </div>
       </div>
 
-      {/* 2. Proof-of-Work Graphic Stage: Focused value loop illustration */}
-      <div id="demo" className="w-full max-w-[1140px] mx-auto mt-12 md:mt-16 relative">
-        <div className="relative w-full rounded-[var(--radius-md)] border border-[var(--hairline)] bg-[var(--bg-surface)] overflow-hidden shadow-[0_24px_64px_-16px_rgba(0,0,0,0.6)]">
-          <div className="w-full relative z-[1]">
-            <DashboardIllustration />
-          </div>
-        </div>
+      {/* 2. Proof-of-Work Pipeline Stage: Transparent side-by-side composition */}
+      <div id="demo" className="w-full max-w-[1140px] mx-auto mt-12 md:mt-16 relative bg-transparent">
+        <DashboardIllustration />
       </div>
     </section>
   );

@@ -25,7 +25,7 @@ export async function POST(request: Request, context: RouteContext) {
   // 14-Day Free Trial & Subscription Lockout Gate
   const tenant = await findTenantByEmail(session.email);
   const billing = evaluateSubscription(tenant);
-  if (billing.isLocked) {
+  if (billing.isLocked && !billing.isSuperAdmin) {
     return NextResponse.json(
       {
         error: 'Trial expired. Fire drill simulation is disabled while your account is locked. Please upgrade to restore full protection.',
