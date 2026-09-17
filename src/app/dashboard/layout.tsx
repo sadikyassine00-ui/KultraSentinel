@@ -20,6 +20,8 @@ export default function TenantDashboardLayout({
 }) {
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [stores, setStores] = useState<Array<{ id: number | string; name: string; gmcId: string }>>([]);
+  const [activeStoreId, setActiveStoreId] = useState<string | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -39,9 +41,33 @@ export default function TenantDashboardLayout({
     }
   }, []);
 
+  const fetchStores = useCallback(async () => {
+    try {
+      const res = await fetch('/api/dashboard', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.stores && Array.isArray(data.stores) && data.stores.length > 0) {
+          setStores(
+            data.stores.map((s: { id: number | string; store_name?: string; store_url?: string; gmc_id?: string; merchant_id?: string }) => ({
+              id: s.id,
+              name: s.store_name || s.store_url || 'Store',
+              gmcId: s.gmc_id || s.merchant_id || 'UNKNOWN',
+            }))
+          );
+          if (data.activeStore) {
+            setActiveStoreId(String(data.activeStore.id));
+          }
+        }
+      }
+    } catch {
+      // Non-blocking fallback
+    }
+  }, []);
+
   useEffect(() => {
     fetchUser();
-  }, [fetchUser]);
+    fetchStores();
+  }, [fetchUser, fetchStores]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -108,6 +134,47 @@ export default function TenantDashboardLayout({
               <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" aria-hidden="true" />
               <span>Catalog Shield: Active</span>
             </div>
+
+            {/* Active Store Selector (§1 Clean Merchant Header) */}
+            {stores.length > 0 && (
+              <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-[3px] bg-[#131418] border border-[rgba(255,255,255,0.08)]">
+                <span className="font-mono text-[10.5px] text-[#6b7078]">STORE:</span>
+                {stores.length > 1 ? (
+                  <div className="relative flex items-center">
+                    <select
+                      aria-label="Select active store"
+                      value={activeStoreId || ''}
+                      onChange={(e) => {
+                        const newId = e.target.value;
+                        if (newId === '__connect_new__') {
+                          window.location.href = '/api/auth/merchant/connect';
+                        } else if (newId) {
+                          setActiveStoreId(newId);
+                          const url = new URL(window.location.href);
+                          url.searchParams.set('store_id', newId);
+                          window.location.href = url.pathname + url.search;
+                        }
+                      }}
+                      className="bg-transparent text-[#f4f1ea] text-[11.5px] font-mono rounded-[3px] pr-5 appearance-none focus:outline-none cursor-pointer"
+                    >
+                      {stores.map((s) => (
+                        <option key={s.id} value={String(s.id)} className="bg-[#0e0f11] text-[#f4f1ea]">
+                          {s.name} (GMC #{s.gmcId})
+                        </option>
+                      ))}
+                      <option value="__connect_new__" className="bg-[#0e0f11] text-[#f2a93b]">
+                        + Connect another GMC...
+                      </option>
+                    </select>
+                    <ChevronDown className="w-3 h-3 text-[#6b7078] pointer-events-none absolute right-0 top-1/2 -translate-y-1/2" />
+                  </div>
+                ) : (
+                  <span className="font-mono text-[11px] text-[#b9b3a5]">
+                    {stores[0]?.name} <span className="text-[#6b7078]">(GMC #{stores[0]?.gmcId})</span>
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Right Controls: User Profile Menu */}

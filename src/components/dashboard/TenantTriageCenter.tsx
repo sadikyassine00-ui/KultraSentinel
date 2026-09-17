@@ -9,6 +9,7 @@ import {
   SlidersHorizontal,
   Check,
   Flame,
+  ChevronDown,
 } from 'lucide-react';
 import { Store } from '@/lib/db';
 
@@ -84,6 +85,20 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
   const [simulatingFireDrill, setSimulatingFireDrill] = useState(false);
   const [fireDrillBanner, setFireDrillBanner] = useState<string | null>(null);
 
+  const closeModal = useCallback(() => {
+    setModalOpen(false);
+    setConfirmDisconnect(false);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has('just_connected') || url.searchParams.has('success') || url.searchParams.has('error')) {
+        url.searchParams.delete('just_connected');
+        url.searchParams.delete('success');
+        url.searchParams.delete('error');
+        window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
+      }
+    }
+  }, []);
+
   const fetchDashboardData = useCallback(async (storeId?: string | null) => {
     try {
       setError(null);
@@ -144,8 +159,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
         method: 'DELETE',
       });
       if (res.ok) {
-        setModalOpen(false);
-        setConfirmDisconnect(false);
+        closeModal();
         await fetchDashboardData(null);
       } else {
         const resJson = await res.json();
@@ -175,7 +189,49 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
           json.message ||
             'Test disapproval alert sent to your Slack channel. Check your channel to inspect the alert layout.'
         );
-        // Instant re-hydration so demo incident appears in triage table
+
+        // Immediate optimistic table mutation in milliseconds (§3)
+        const cleanDomain = (data.activeStore.store_url || 'admin.shopify.com')
+          .replace(/^https?:\/\//, '')
+          .replace(/\/.*$/, '');
+        const demoIncident: TableIncident = {
+          id: json.incident?.id || `demo-${Date.now()}`,
+          sku: json.incident?.sku || 'DEMO-RUNNER-402',
+          title: json.incident?.title || 'Apex Carbon Runner - Size 10.5 (Demo Item)',
+          issue_code: json.incident?.issue_code || 'item_disapproved: missing_required_attribute [gtin]',
+          severity: 'CRITICAL_DISAPPROVAL',
+          status: 'unresolved',
+          first_detected_at: json.incident?.first_detected_at || new Date().toISOString(),
+          last_detected_at: json.incident?.last_detected_at || new Date().toISOString(),
+          shopifyUrl: `https://${cleanDomain}/admin/products?query=DEMO-RUNNER`,
+          gmcUrl: `https://merchants.google.com/mc/products/diagnostics?account=${data.activeStore.gmc_id || data.activeStore.merchant_id || ''}`,
+        };
+
+        setData((prev) => {
+          if (!prev) return prev;
+          const remaining = prev.incidents.filter((i) => i.sku !== demoIncident.sku);
+          return {
+            ...prev,
+            incidents: [demoIncident, ...remaining],
+            criticalIncident: {
+              id: demoIncident.id,
+              title: demoIncident.title,
+              sku: demoIncident.sku,
+              issue_code: demoIncident.issue_code,
+              severity: 'CRITICAL_DISAPPROVAL',
+              status: 'unresolved',
+              first_detected_at: demoIncident.first_detected_at,
+              shopifyUrl: demoIncident.shopifyUrl,
+              gmcUrl: demoIncident.gmcUrl,
+            },
+            metrics: {
+              ...prev.metrics,
+              activeDisapprovals: prev.metrics.activeDisapprovals + (prev.incidents.some((i) => i.sku === demoIncident.sku) ? 0 : 1),
+            },
+          };
+        });
+
+        // Instant re-hydration so demo incident appears in triage table from server as well
         await fetchDashboardData(String(data.activeStore.id));
       } else {
         setError(json.error || 'Failed to trigger simulated fire drill.');
@@ -222,7 +278,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
         setArmingFeedback('Alert pipeline verified. Your campaigns are now monitored 24/7.');
         fetchDashboardData(String(data.activeStore.id));
         setTimeout(() => {
-          setModalOpen(false);
+          closeModal();
           setArmingStatus('idle');
         }, 1800);
       } else {
@@ -394,7 +450,42 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
             <span className="font-mono text-[11px] text-[var(--ghost-text-dim)]">STORE:</span>
-            <span className="text-[13.5px] font-medium text-[var(--ink-primary)]">{activeStore?.store_name || 'Active Store'}</span>
+            {data.stores.length > 1 ? (
+              <div className="relative flex items-center">
+                <select
+                  aria-label="Select active store"
+                  value={activeStore?.id ? String(activeStore.id) : ''}
+                  onChange={(e) => {
+                    const newStoreId = e.target.value;
+                    if (newStoreId === '__connect_new__') {
+                      handleConnectGmc();
+                    } else if (newStoreId) {
+                      if (typeof window !== 'undefined') {
+                        const url = new URL(window.location.href);
+                        url.searchParams.set('store_id', newStoreId);
+                        window.history.replaceState({}, '', url.pathname + url.search);
+                      }
+                      fetchDashboardData(newStoreId);
+                    }
+                  }}
+                  className="bg-[var(--bg-surface-2)] border border-[var(--hairline-strong)] hover:border-[var(--signal-dim)] text-[var(--ink-primary)] text-[12.5px] font-medium rounded-[var(--radius-sm)] px-2.5 py-1 pr-7 appearance-none focus:outline-none focus:border-[var(--signal)] focus:ring-1 focus:ring-[var(--signal)] cursor-pointer transition-colors"
+                >
+                  {data.stores.map((s) => (
+                    <option key={s.id} value={String(s.id)} className="bg-[var(--bg-surface)] text-[var(--ink-primary)]">
+                      {s.store_name || s.store_url} (GMC #{s.gmc_id || s.merchant_id})
+                    </option>
+                  ))}
+                  <option value="__connect_new__" className="bg-[var(--bg-surface)] text-[var(--signal)]">
+                    + Connect another GMC store...
+                  </option>
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 text-[var(--ghost-text)] pointer-events-none absolute right-2 top-1/2 -translate-y-1/2" />
+              </div>
+            ) : (
+              <span className="text-[13.5px] font-medium text-[var(--ink-primary)]">
+                {activeStore?.store_name || 'Active Store'}
+              </span>
+            )}
           </div>
           <span className="tag-pill tag-ghost text-[10px] py-0.5">
             GMC #{activeStore?.gmc_id || activeStore?.merchant_id}
@@ -752,20 +843,35 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
       {/* STATE B: Alarm Activation Modal (§3 Floating element rules)          */}
       {/* --------------------------------------------------------------------- */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-[2px] p-4">
-          <div className="bg-[var(--bg-surface)] border border-[var(--hairline-strong)] rounded-[var(--radius-md)] max-w-lg w-full p-6 sm:p-7 space-y-5 shadow-[0_16px_40px_rgba(0,0,0,0.5)]">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-[var(--signal-wash)] border border-[var(--signal-dim)] flex items-center justify-center shrink-0">
-                <Check className="w-4 h-4 text-[var(--signal)]" />
-              </div>
-              <div>
-                <h3 className="text-[16px] font-semibold text-[var(--ink-primary)]">
-                  Configure alert destination
-                </h3>
-                <div className="font-mono text-[11px] text-[var(--ghost-text-dim)]">
-                  Store: {activeStore?.store_name || 'Store'} (GMC #{activeStore?.gmc_id || activeStore?.merchant_id})
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-[2px] p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeModal();
+          }}
+        >
+          <div className="bg-[var(--bg-surface)] border border-[var(--hairline-strong)] rounded-[var(--radius-md)] max-w-lg w-full p-6 sm:p-7 space-y-5 shadow-[0_16px_40px_rgba(0,0,0,0.5)] relative">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-[var(--signal-wash)] border border-[var(--signal-dim)] flex items-center justify-center shrink-0">
+                  <Check className="w-4 h-4 text-[var(--signal)]" />
+                </div>
+                <div>
+                  <h3 className="text-[16px] font-semibold text-[var(--ink-primary)]">
+                    Configure alert destination
+                  </h3>
+                  <div className="font-mono text-[11px] text-[var(--ghost-text-dim)]">
+                    Store: {activeStore?.store_name || 'Store'} (GMC #{activeStore?.gmc_id || activeStore?.merchant_id})
+                  </div>
                 </div>
               </div>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="text-[var(--ghost-text)] hover:text-[var(--ink-primary)] p-1 rounded-[var(--radius-sm)] transition-colors"
+                aria-label="Close modal"
+              >
+                ✕
+              </button>
             </div>
 
             <p className="text-[13px] text-[var(--ghost-text)] leading-[1.5]">
@@ -807,10 +913,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
               <div className="flex items-center justify-end gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    setModalOpen(false);
-                    setConfirmDisconnect(false);
-                  }}
+                  onClick={closeModal}
                   className="btn-secondary text-[12.5px] py-2 px-3.5 !rounded-[3px]"
                 >
                   Close

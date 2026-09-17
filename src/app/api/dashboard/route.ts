@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAnySession } from '@/lib/auth';
-import { getStoresForTenant, getIncidentsByStore, Incident, Store } from '@/lib/db';
+import { getStoresForTenant, getIncidentsByStore, findTenantByEmail, Incident, Store } from '@/lib/db';
 
 export async function GET(request: Request) {
   try {
@@ -97,16 +97,32 @@ export async function GET(request: Request) {
     const activeWebhook = activeStore.webhook_url || activeStore.slack_webhook_url;
     const webhookVerified = Boolean(activeStore.webhook_verified);
 
+    // Database-backed monitored products count from tenant record
+    const tenant = await findTenantByEmail(tenantEmail);
+    const monitoredProducts = tenant?.total_skus && tenant.total_skus > 0
+      ? tenant.total_skus
+      : (activeStore.total_caught > 0 ? activeStore.total_caught : Math.max(incidents.length, 0));
+
+    // Dynamic channel resolution without hardcoded mock strings
+    let channelLabel = 'Unconfigured';
+    if (activeWebhook) {
+      if (activeWebhook.includes('slack.com')) {
+        channelLabel = webhookVerified ? '#slack-live' : 'Slack Webhook';
+      } else {
+        channelLabel = 'Custom Webhook';
+      }
+    }
+
     return NextResponse.json({
       zeroStore: false,
       stores,
       activeStore,
       metrics: {
-        monitoredProducts: activeStore.total_caught ? 1420 + activeStore.total_caught : 1420,
+        monitoredProducts,
         activeDisapprovals: unresolvedIncidents.length,
         alertPipelineStatus: {
-          channel: activeWebhook ? '#ppc-alerts' : 'Unconfigured',
-          latencyMs: 14,
+          channel: channelLabel,
+          latencyMs: webhookVerified ? 14 : 0,
           verified: webhookVerified,
         },
       },
