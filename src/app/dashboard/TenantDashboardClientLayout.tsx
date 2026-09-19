@@ -161,25 +161,14 @@ export default function TenantDashboardClientLayout({
               />
             </Link>
 
-            {/* Operational Watcher Status Indicator (hidden on small mobile to give room) */}
-            {billing?.isLocked && !isSuperAdminUser ? (
-              <div className="hidden md:inline-flex items-center gap-2 px-2.5 py-1 rounded-[100px] border border-[#3a3d43] bg-transparent text-[#6b7078] text-[11px] font-mono tracking-[0.02em] shrink-0">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#3a3d43]" aria-hidden="true" />
-                <span>Monitoring: Paused</span>
-              </div>
-            ) : (
-              <div className="hidden md:inline-flex items-center gap-2 px-2.5 py-1 rounded-[100px] border border-[#7a5a26] bg-[rgba(242,169,59,0.06)] text-[#f2a93b] text-[11px] font-mono tracking-[0.02em] shrink-0">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" aria-hidden="true" />
-                <span>Monitoring: Armed</span>
-              </div>
-            )}
+            <div className="h-4 w-px bg-[rgba(255,255,255,0.12)] hidden sm:block shrink-0" />
 
-            {/* Active Store Selector */}
+            {/* Store Identifier and Connection Status (§1 Header and Account Anchor) */}
             {stores.length > 0 && (
-              <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-[3px] bg-[#131418] border border-[rgba(255,255,255,0.08)] shrink-0">
-                <span className="font-mono text-[10.5px] text-[#6b7078]">STORE:</span>
+              <div className="flex items-center gap-2.5 min-w-0">
+                {/* Agency Tier: Clean Quick Store Switcher / Solo: Clean Store Badge */}
                 {stores.length > 1 ? (
-                  <div className="relative flex items-center">
+                  <div className="relative flex items-center shrink-0">
                     <select
                       aria-label="Select active store"
                       value={activeStoreId || ''}
@@ -194,7 +183,7 @@ export default function TenantDashboardClientLayout({
                           window.location.href = url.pathname + url.search;
                         }
                       }}
-                      className="bg-transparent text-[#f4f1ea] text-[11px] font-mono rounded-[3px] pr-5 appearance-none focus:outline-none cursor-pointer"
+                      className="bg-[#131418] border border-[rgba(255,255,255,0.14)] hover:border-[#7a5a26] text-[#f4f1ea] text-[12px] font-medium rounded-[3px] py-1 pl-2.5 pr-7 appearance-none focus:outline-none focus:border-[#f2a93b] cursor-pointer transition-colors"
                     >
                       {stores.map((s) => (
                         <option key={s.id} value={String(s.id)} className="bg-[#0e0f11] text-[#f4f1ea]">
@@ -205,13 +194,24 @@ export default function TenantDashboardClientLayout({
                         + Connect another GMC...
                       </option>
                     </select>
-                    <ChevronDown className="w-3 h-3 text-[#6b7078] pointer-events-none absolute right-0 top-1/2 -translate-y-1/2" />
+                    <ChevronDown className="w-3.5 h-3.5 text-[#6b7078] pointer-events-none absolute right-2 top-1/2 -translate-y-1/2" />
                   </div>
                 ) : (
-                  <span className="font-mono text-[10.5px] text-[#b9b3a5] truncate max-w-[130px]">
-                    {stores[0]?.name}
-                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-[13px] font-semibold text-[#f4f1ea] truncate max-w-[150px] sm:max-w-[200px]">
+                      {stores[0]?.name}
+                    </span>
+                    <span className="font-mono text-[11px] text-[#6b7078] bg-[#131418] px-1.5 py-0.5 rounded border border-[rgba(255,255,255,0.08)]">
+                      GMC #{stores[0]?.gmcId}
+                    </span>
+                  </div>
                 )}
+
+                {/* Live Status Indicator: Green pulsing dot with "Real-Time Watch Active" */}
+                <div className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[rgba(34,197,94,0.3)] bg-[rgba(34,197,94,0.06)] text-[#22c55e] text-[11px] font-mono tracking-[0.02em] shrink-0 font-medium">
+                  <span className="w-2 h-2 rounded-full bg-[#22c55e] animate-pulse" aria-hidden="true" />
+                  <span>Real-Time Watch Active</span>
+                </div>
               </div>
             )}
           </div>

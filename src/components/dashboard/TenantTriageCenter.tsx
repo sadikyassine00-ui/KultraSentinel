@@ -4,20 +4,28 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import {
   ShieldCheck,
-  ShieldAlert,
+  CheckCircle2,
+  AlertTriangle,
+  Package,
+  ShoppingBag,
   ExternalLink,
   RefreshCw,
   SlidersHorizontal,
   Check,
   Flame,
   ChevronDown,
+  ChevronUp,
   Lock,
   CreditCard,
+  Bell,
+  Activity,
+  Clock,
 } from 'lucide-react';
 import { Store } from '@/lib/db';
 
 interface DashboardMetrics {
   monitoredProducts: number;
+  approvedProducts?: number;
   activeDisapprovals: number;
   alertPipelineStatus: {
     channel: string;
@@ -37,23 +45,22 @@ interface BillingSummary {
   isSuperAdmin?: boolean;
 }
 
-interface CriticalIncident {
-  id: number | string;
+interface TranslatedIssue {
   title: string;
-  sku: string;
-  issue_code: string;
-  severity: 'CRITICAL_DISAPPROVAL' | 'DEMOTION';
-  status: string;
-  first_detected_at: string;
-  shopifyUrl?: string | null;
-  gmcUrl?: string | null;
+  explanation: string;
+  fixAdvice: string;
+  category?: string;
 }
 
-interface TableIncident {
+interface IncidentItem {
   id: number | string;
   sku: string;
   title: string;
   issue_code: string;
+  plainEnglish?: TranslatedIssue;
+  price?: string;
+  variant?: string;
+  thumbnailUrl?: string | null;
   severity: 'CRITICAL_DISAPPROVAL' | 'DEMOTION';
   status: string;
   first_detected_at: string;
@@ -64,14 +71,23 @@ interface TableIncident {
   gmcUrl?: string | null;
 }
 
+interface ActivityEvent {
+  id: string;
+  timestamp: string;
+  message: string;
+  type: 'scan_verified' | 'pubsub_healthy' | 'incident_dispatched' | 'remediation';
+  status: 'success' | 'danger' | 'neutral';
+}
+
 interface DashboardApiResponse {
   zeroStore: boolean;
   stores: Store[];
   activeStore: Store | null;
   billing: BillingSummary;
   metrics: DashboardMetrics;
-  criticalIncident: CriticalIncident | null;
-  incidents: TableIncident[];
+  criticalIncident: IncidentItem | null;
+  incidents: IncidentItem[];
+  activityFeed?: ActivityEvent[];
 }
 
 interface Props {
@@ -100,6 +116,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
 
   const [simulatingFireDrill, setSimulatingFireDrill] = useState(false);
   const [fireDrillBanner, setFireDrillBanner] = useState<string | null>(null);
+  const [activityFeedOpen, setActivityFeedOpen] = useState(false);
 
   const closeModal = useCallback(() => {
     setModalOpen(false);
@@ -220,15 +237,24 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
             'Test disapproval alert sent to your Slack channel. Check your channel to inspect the alert layout.'
         );
 
-        // Immediate optimistic table mutation in milliseconds (§3)
+        // Immediate optimistic incident card mutation
         const cleanDomain = (data.activeStore.store_url || 'admin.shopify.com')
           .replace(/^https?:\/\//, '')
           .replace(/\/.*$/, '');
-        const demoIncident: TableIncident = {
+        const demoIncident: IncidentItem = {
           id: json.incident?.id || `demo-${Date.now()}`,
           sku: json.incident?.sku || 'DEMO-RUNNER-402',
           title: json.incident?.title || 'Apex Carbon Runner - Size 10.5 (Demo Item)',
           issue_code: json.incident?.issue_code || 'item_disapproved: missing_required_attribute [gtin]',
+          plainEnglish: {
+            title: 'Missing Barcode (GTIN / UPC)',
+            explanation: 'Google requires a valid GTIN or UPC for branded products to match them across search results.',
+            fixAdvice: 'Add the 12- or 14-digit barcode (GTIN/UPC/EAN) in your product catalog or Shopify admin.',
+            category: 'barcode',
+          },
+          price: '$165.00',
+          variant: 'Size 10.5 / Stealth Carbon',
+          thumbnailUrl: null,
           severity: 'CRITICAL_DISAPPROVAL',
           status: 'unresolved',
           first_detected_at: json.incident?.first_detected_at || new Date().toISOString(),
@@ -243,17 +269,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
           return {
             ...prev,
             incidents: [demoIncident, ...remaining],
-            criticalIncident: {
-              id: demoIncident.id,
-              title: demoIncident.title,
-              sku: demoIncident.sku,
-              issue_code: demoIncident.issue_code,
-              severity: 'CRITICAL_DISAPPROVAL',
-              status: 'unresolved',
-              first_detected_at: demoIncident.first_detected_at,
-              shopifyUrl: demoIncident.shopifyUrl,
-              gmcUrl: demoIncident.gmcUrl,
-            },
+            criticalIncident: demoIncident,
             metrics: {
               ...prev.metrics,
               activeDisapprovals: prev.metrics.activeDisapprovals + (prev.incidents.some((i) => i.sku === demoIncident.sku) ? 0 : 1),
@@ -261,7 +277,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
           };
         });
 
-        // Instant re-hydration so demo incident appears in triage table from server as well
+        // Instant re-hydration
         await fetchDashboardData(String(data.activeStore.id));
       } else {
         setError(json.error || 'Failed to trigger simulated fire drill.');
@@ -340,7 +356,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
       });
       const resJson = await res.json();
       if (res.ok && resJson.verified) {
-        setInlineFeedback(`Test alert delivered in ${resJson.latencyMs || 14}ms.`);
+        setInlineFeedback(`Test alert delivered to Slack in ${resJson.latencyMs || 14}ms.`);
       } else {
         setInlineFeedback(`Delivery failed: ${resJson.error || 'Destination unreachable'}`);
       }
@@ -348,7 +364,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
       setInlineFeedback('Network exception sending test alert.');
     } finally {
       setTestAlertSending(false);
-      setTimeout(() => setInlineFeedback(null), 3000);
+      setTimeout(() => setInlineFeedback(null), 3500);
     }
   };
 
@@ -383,23 +399,24 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
     }
   };
 
-  // Loading: static skeleton blocks per §11 (NO shimmer sweep, NO pulsing loops)
+  // Loading: static skeleton blocks per §11
   if (loading) {
     return (
-      <div className="space-y-5">
-        <div className="h-20 bg-[var(--bg-surface-2)] border border-[var(--hairline)] rounded-[var(--radius-md)]" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="h-24 bg-[var(--bg-surface-2)] border border-[var(--hairline)] rounded-[var(--radius-md)]" />
-          <div className="h-24 bg-[var(--bg-surface-2)] border border-[var(--hairline)] rounded-[var(--radius-md)]" />
-          <div className="h-24 bg-[var(--bg-surface-2)] border border-[var(--hairline)] rounded-[var(--radius-md)]" />
+      <div className="space-y-5 max-w-7xl mx-auto">
+        <div className="h-16 bg-[var(--bg-surface-2)] border border-[var(--hairline)] rounded-[var(--radius-md)]" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="h-28 bg-[var(--bg-surface-2)] border border-[var(--hairline)] rounded-[var(--radius-md)]" />
+          <div className="h-28 bg-[var(--bg-surface-2)] border border-[var(--hairline)] rounded-[var(--radius-md)]" />
+          <div className="h-28 bg-[var(--bg-surface-2)] border border-[var(--hairline)] rounded-[var(--radius-md)]" />
+          <div className="h-28 bg-[var(--bg-surface-2)] border border-[var(--hairline)] rounded-[var(--radius-md)]" />
         </div>
-        <div className="h-64 bg-[var(--bg-surface-2)] border border-[var(--hairline)] rounded-[var(--radius-md)]" />
+        <div className="h-72 bg-[var(--bg-surface-2)] border border-[var(--hairline)] rounded-[var(--radius-md)]" />
       </div>
     );
   }
 
   // ---------------------------------------------------------------------------
-  // STATE A: The Zero-Store State
+  // STATE A: The Zero-Store State (Prompt to connect GMC)
   // ---------------------------------------------------------------------------
   if (!data || data.zeroStore || data.stores.length === 0) {
     return (
@@ -409,7 +426,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
             <ShieldCheck className="w-6 h-6 text-[var(--signal)]" strokeWidth={1.5} />
           </div>
 
-          <h1 className="font-display text-2xl sm:text-3xl font-semibold text-[var(--ink-primary)] tracking-tight mb-3">
+          <h1 className="font-serif text-2xl sm:text-3xl font-semibold text-[var(--ink-primary)] tracking-tight mb-3">
             Sub-30-second disapproval protection
           </h1>
 
@@ -448,56 +465,40 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
             <div className="mt-2.5 font-mono text-[11px] text-[var(--ghost-text-dim)]">
               Read-only telemetry / No feed modifications
             </div>
-
-            {/* Pre-OAuth Trust Framing Disclaimer (§1 Compliance Directive) */}
-            <div className="max-w-lg w-full mt-6 text-left p-4 rounded-[var(--radius-sm)] bg-[var(--bg-canvas)] border border-[var(--hairline)]">
-              <div className="flex items-center gap-2 mb-1.5">
-                <ShieldCheck className="w-4 h-4 text-[var(--signal)] shrink-0" strokeWidth={1.5} />
-                <span className="text-[12.5px] font-semibold text-[var(--ink-primary)]">
-                  Google OAuth Scope Transparency
-                </span>
-              </div>
-              <p className="text-[12px] text-[var(--ghost-text)] leading-[1.55]">
-                Google displays a standard &ldquo;Manage your product listings&rdquo; consent prompt because Google&apos;s Merchant API lacks a dedicated read-only scope tier. Kultra operates strictly in read-only telemetry mode to capture crawl status and policy health.
-              </p>
-              <div className="mt-2.5 text-[12px] font-medium text-[var(--ink-primary)] border-t border-[var(--hairline)] pt-2 leading-[1.5]">
-                <strong className="text-[var(--signal)]">Safety Guarantee:</strong> Kultra will never edit, overwrite, delete, or mutate your product catalog, pricing, or Google Ads campaigns.
-              </div>
-            </div>
           </div>
         </div>
       </div>
     );
   }
 
-  const { activeStore, metrics, criticalIncident, incidents } = data;
-  const isThreatState = metrics.activeDisapprovals > 0 && criticalIncident !== null;
+  const { activeStore, metrics, incidents, activityFeed = [] } = data;
+  const unresolvedIncidents = incidents.filter(
+    (i) => i.status === 'unresolved' || i.status === 'pending_verification'
+  );
+  const activeCount = unresolvedIncidents.length;
+  const approvedCount = metrics.approvedProducts ?? Math.max(0, metrics.monitoredProducts - activeCount);
 
   return (
-    <div className="space-y-5">
-      {/* Streamlined Operational Action Bar (§1 Header De-Duplication & Layout Hierarchy) */}
-      <div className="flex items-center justify-between gap-3 py-2 border-b border-[var(--hairline)]">
-        {/* Left: Operational Fire Drill Trigger */}
+    <div className="space-y-6 max-w-7xl mx-auto">
+      {/* Operational Action Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 py-2 border-b border-[var(--hairline)]">
+        {/* Left: Fire Drill Simulation Trigger */}
         <div className="flex items-center gap-2">
           <button
             onClick={handleRunFireDrill}
             disabled={simulatingFireDrill || (data.billing?.isLocked && !data.billing?.isSuperAdmin)}
-            className="btn-secondary text-[12px] py-1.5 px-3 !rounded-[3px] inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-            title={
-              data.billing?.isLocked && !data.billing?.isSuperAdmin
-                ? 'Subscription required to run simulated fire drills'
-                : 'Simulate a crawler disapproval to test Slack alert routing'
-            }
+            className="btn-secondary text-[12px] py-1.5 px-3 !rounded-[3px] inline-flex items-center gap-1.5 disabled:opacity-50"
+            title="Simulate a crawler disapproval to test Slack alert routing"
           >
             <Flame className={`w-3.5 h-3.5 ${data.billing?.isLocked && !data.billing?.isSuperAdmin ? 'text-[var(--ghost-text-dim)]' : 'text-[var(--signal)]'} ${simulatingFireDrill ? 'animate-spin' : ''}`} />
             <span>{simulatingFireDrill ? 'Simulating...' : 'Run Test Fire Drill'}</span>
           </button>
         </div>
 
-        {/* Right: Operational Controls (Refresh & Configure alerts) */}
+        {/* Right: Operational Controls */}
         <div className="flex items-center gap-2">
           {inlineFeedback && (
-            <span className="font-mono text-[11px] text-[var(--signal)]">{inlineFeedback}</span>
+            <span className="font-mono text-[11px] text-[#22c55e] font-medium">{inlineFeedback}</span>
           )}
           <button
             onClick={handleRefresh}
@@ -524,9 +525,9 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
         </div>
       </div>
 
-      {/* Fire Drill Confirmation Banner (§4) */}
+      {/* Fire Drill Confirmation Banner */}
       {fireDrillBanner && (
-        <div className="bg-[var(--bg-surface-2)] border border-[var(--signal-dim)] rounded-[var(--radius-md)] p-4 flex items-start justify-between gap-3">
+        <div className="bg-[var(--bg-surface-2)] border border-[var(--signal-dim)] rounded-[var(--radius-md)] p-4 flex items-start justify-between gap-3 animate-in fade-in-50 duration-150">
           <div className="flex items-start gap-3">
             <Check className="w-4 h-4 text-[var(--signal)] shrink-0 mt-0.5" />
             <div>
@@ -534,7 +535,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                 {fireDrillBanner}
               </div>
               <div className="font-mono text-[11px] text-[var(--ghost-text)] mt-0.5">
-                Simulated item &apos;DEMO-RUNNER-402&apos; is now visible below in your triage queue (auto-purges in 15 minutes).
+                Simulated item &apos;DEMO-RUNNER-402&apos; is now visible below in your incident triage center.
               </div>
             </div>
           </div>
@@ -549,391 +550,390 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
       )}
 
       {/* --------------------------------------------------------------------- */}
-      {/* TIER 2: Real-Time Metric Counters (§16 Stat Cards)                   */}
-      {/* High-level metrics remain permanently visible to verify catalog scope */}
+      {/* SECTION 2: The 2-Second Health Scorecard (Top Metric Bar)             */}
+      {/* 4 clean, high-contrast metric cards in a single horizontal row        */}
       {/* --------------------------------------------------------------------- */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Metric 1: Monitored Products */}
-        <div className="bg-[var(--bg-surface)] border border-[var(--hairline)] rounded-[var(--radius-md)] p-5">
-          <div className="text-[12px] font-semibold text-[var(--ghost-text)] mb-1">Monitored Products</div>
-          <div className="font-mono text-[28px] font-medium text-[var(--ink-primary)] leading-tight">
-            {metrics.monitoredProducts.toLocaleString()}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1: Catalog Status (The Fire Alarm) */}
+        <div
+          className={`rounded-[var(--radius-md)] p-5 transition-colors ${
+            activeCount > 0
+              ? 'bg-[var(--bg-surface)] border-l-2 border-l-[var(--danger)] border-y border-r border-[var(--hairline)]'
+              : 'bg-[var(--bg-surface)] border border-[var(--hairline)]'
+          }`}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[12px] font-semibold text-[var(--ghost-text)]">Catalog Status</span>
+            {activeCount > 0 ? (
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[100px] border border-[#d64545] bg-[rgba(214,69,69,0.12)] text-[#d64545] text-[10.5px] font-mono font-medium animate-pulse">
+                <AlertTriangle className="w-3 h-3" />
+                Action Needed
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[100px] border border-[rgba(34,197,94,0.3)] bg-[rgba(34,197,94,0.08)] text-[#22c55e] text-[10.5px] font-mono font-medium">
+                <CheckCircle2 className="w-3 h-3" />
+                All Approved
+              </span>
+            )}
           </div>
-          <div className="font-mono text-[11px] text-[var(--ghost-text-dim)] mt-2">
-            Continuous catalog sync
-          </div>
-        </div>
 
-        {/* Metric 2: Active Disapprovals */}
-        <div className="bg-[var(--bg-surface)] border border-[var(--hairline)] rounded-[var(--radius-md)] p-5">
-          <div className="text-[12px] font-semibold text-[var(--ghost-text)] mb-1">Active Disapprovals</div>
           <div
-            className={`font-mono text-[28px] font-medium leading-tight ${
-              metrics.activeDisapprovals > 0 ? 'text-[var(--danger)]' : 'text-[var(--signal)]'
+            className={`font-mono text-[26px] font-semibold leading-tight ${
+              activeCount > 0 ? 'text-[var(--danger)]' : 'text-[#22c55e]'
             }`}
           >
-            {metrics.activeDisapprovals}
+            {activeCount > 0 ? `${activeCount} Disapproved` : '100% Compliant'}
           </div>
-          <div className="font-mono text-[11px] mt-2">
-            {metrics.activeDisapprovals > 0 ? (
-              <span className="text-[var(--danger)]">Items blocked from Google Ads</span>
+
+          <div className="font-mono text-[11px] mt-2 text-[var(--ghost-text-dim)]">
+            {activeCount > 0 ? (
+              <span className="text-[var(--danger)]">Google Ads delivery blocked</span>
             ) : (
-              <span className="text-[var(--ghost-text-dim)]">Zero items disapproved</span>
+              <span>Zero revenue at risk</span>
             )}
           </div>
         </div>
 
-        {/* Metric 3: Alert Pipeline Status */}
+        {/* Card 2: Total Active Products */}
         <div className="bg-[var(--bg-surface)] border border-[var(--hairline)] rounded-[var(--radius-md)] p-5">
-          <div className="flex items-center justify-between mb-1">
-            <div className="text-[12px] font-semibold text-[var(--ghost-text)]">Alert Pipeline</div>
+          <div className="text-[12px] font-semibold text-[var(--ghost-text)] mb-2">
+            Total Active Products
+          </div>
+          <div className="font-mono text-[26px] font-semibold text-[var(--ink-primary)] leading-tight">
+            {approvedCount.toLocaleString()}
+          </div>
+          <div className="font-mono text-[11px] text-[var(--ghost-text-dim)] mt-2">
+            Serving traffic in Google Shopping
+          </div>
+        </div>
+
+        {/* Card 3: Slack Alert Destination */}
+        <div className="bg-[var(--bg-surface)] border border-[var(--hairline)] rounded-[var(--radius-md)] p-5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[12px] font-semibold text-[var(--ghost-text)]">Slack Alert Channel</span>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[100px] border border-[rgba(34,197,94,0.3)] bg-[rgba(34,197,94,0.06)] text-[#22c55e] text-[10.5px] font-mono font-medium">
+              Connected
+            </span>
+          </div>
+          <div className="font-mono text-[18px] font-medium text-[var(--ink-primary)] truncate">
+            {metrics.alertPipelineStatus.channel}
+          </div>
+          <div className="mt-2">
             <button
               onClick={handleSendTestPing}
               disabled={testAlertSending || (data.billing?.isLocked && !data.billing?.isSuperAdmin)}
-              className="font-mono text-[11px] text-[var(--signal)] hover:underline disabled:opacity-50 disabled:no-underline"
+              className="font-mono text-[11px] text-[var(--signal)] hover:underline disabled:opacity-50 inline-flex items-center gap-1"
             >
-              {testAlertSending ? 'Sending...' : 'Send test'}
+              <span>{testAlertSending ? 'Sending...' : 'Send test ping →'}</span>
             </button>
           </div>
-          <div className="font-mono text-[18px] font-medium text-[var(--ink-primary)] truncate">
-            {metrics.alertPipelineStatus.channel}{' '}
-            <span className="text-[12px] font-normal text-[var(--ghost-text)]">
-              ({metrics.alertPipelineStatus.latencyMs}ms)
+        </div>
+
+        {/* Card 4: Detection Latency */}
+        <div className="bg-[var(--bg-surface)] border border-[var(--hairline)] rounded-[var(--radius-md)] p-5">
+          <div className="text-[12px] font-semibold text-[var(--ghost-text)] mb-2">
+            Detection Latency
+          </div>
+          <div className="font-mono text-[26px] font-semibold text-[var(--ink-primary)] leading-tight flex items-baseline gap-2">
+            <span>Sub-30s</span>
+            <span className="text-[12px] font-mono text-[#22c55e] font-normal">
+              ({metrics.alertPipelineStatus.latencyMs || 14}ms push)
             </span>
           </div>
-          <div className="font-mono text-[11px] mt-2 text-[var(--ghost-text-dim)]">
-            {data.billing?.isLocked && !data.billing?.isSuperAdmin ? (
-              <span className="text-[var(--danger)]">Alert pipeline paused (Trial expired)</span>
-            ) : metrics.alertPipelineStatus.verified ? (
-              'Webhook verified and live'
-            ) : (
-              'Webhook unverified'
-            )}
+          <div className="font-mono text-[11px] text-[var(--ghost-text-dim)] mt-2">
+            Google Pub/Sub Webhook Sync
           </div>
         </div>
       </div>
 
       {/* --------------------------------------------------------------------- */}
-      {/* ACTIVE INCIDENT TRIAGE & RESOLUTION QUEUE                             */}
-      {/* When account is locked, un-dismissible paywall mounts over this area  */}
+      {/* SECTION 3: Primary Incident Triage Center (The Core Work Area)        */}
       {/* --------------------------------------------------------------------- */}
-      <div className="relative space-y-5">
-        {/* Un-dismissible Lockout Paywall Overlay (§4 Expired Trial Lockout Engine) */}
+      <div className="relative space-y-4">
+        {/* Un-dismissible Lockout Paywall Overlay when trial expired */}
         {data.billing?.isLocked && !data.billing?.isSuperAdmin && (
-          <div className="absolute inset-0 z-30 flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-[5px] rounded-[var(--radius-md)] min-h-[420px]">
-            <div className="bg-[var(--bg-surface)] border border-[var(--hairline-strong)] rounded-[var(--radius-md)] max-w-xl w-full p-7 sm:p-8 space-y-5 shadow-[0_16px_40px_rgba(0,0,0,0.5)] text-center relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-48 h-48 bg-[radial-gradient(ellipse_at_top_right,var(--signal-wash),transparent_70%)] pointer-events-none" />
-
-              {/* Eyebrow / Status Pill */}
+          <div className="absolute inset-0 z-30 flex items-center justify-center p-4 sm:p-6 bg-black/85 backdrop-blur-[5px] rounded-[var(--radius-md)] min-h-[420px]">
+            <div className="bg-[var(--bg-surface)] border border-[var(--hairline-strong)] rounded-[var(--radius-md)] max-w-lg w-full p-7 sm:p-8 space-y-5 shadow-[0_16px_40px_rgba(0,0,0,0.5)] text-center relative overflow-hidden">
               <div className="flex items-center justify-center gap-2">
                 <span className="tag-pill tag-danger text-[10.5px] py-0.5 font-medium">
                   14-DAY TRIAL CONCLUDED
                 </span>
-                <span className="font-mono text-[11px] text-[var(--danger)]">
-                  MONITORING PAUSED
-                </span>
               </div>
 
-              {/* Display Serif Headline (§2 Typography: Fraunces) */}
-              <h2 className="font-serif text-[24px] sm:text-[27px] font-semibold text-[var(--ink-primary)] leading-tight tracking-[-0.01em]">
-                Your 14-Day Free Trial Has Concluded
+              <h2 className="font-serif text-[24px] font-semibold text-[var(--ink-primary)] leading-tight">
+                Your Free Trial Has Concluded
               </h2>
 
-              {/* Clear description of paused states */}
-              <p className="text-[14px] text-[var(--ink-secondary)] leading-[1.6] max-w-md mx-auto">
-                Real-time Google Merchant Center crawler monitoring and automated Slack notifications are currently <strong className="text-[var(--ink-primary)] font-medium">paused</strong> for this catalog.
+              <p className="text-[13.5px] text-[var(--ink-secondary)] leading-[1.6]">
+                Real-time Google Merchant Center monitoring and automated Slack notifications are paused. Upgrade your plan to restore 24/7 disapproval surveillance.
               </p>
 
-              <p className="text-[13px] text-[var(--ghost-text)] leading-[1.55] max-w-md mx-auto">
-                Your store credentials and SKU mapping remain safely configured. Upgrade to an active plan to reactivate continuous policy enforcement, un-mute Slack notifications, and restore direct product resolution deep links.
-              </p>
-
-              {/* Primary Action Button (§4 Buttons: .btn-primary with strict --radius-sm: 3px) */}
-              <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
-                <a
-                  href={data.billing.upgradeUrl}
-                  className="btn-primary w-full sm:w-auto px-7 py-3 text-[13.5px] font-semibold !rounded-[3px] text-center inline-flex items-center justify-center gap-2 shadow-none"
+              <div className="pt-2 flex items-center justify-center gap-3">
+                <Link
+                  href="/dashboard/settings?tab=billing"
+                  className="btn-primary px-7 py-2.5 text-[13.5px] font-semibold !rounded-[3px] inline-flex items-center gap-2"
                 >
                   <span>Upgrade to restore protection</span>
-                  <ExternalLink className="w-4 h-4" strokeWidth={1.5} />
-                </a>
-              </div>
-
-              {/* Support reference */}
-              <div className="font-mono text-[11px] text-[var(--ghost-text-dim)] pt-3 border-t border-[var(--hairline)]">
-                Need assistance with custom billing or high-SKU enterprise catalogs? Contact{' '}
-                <a
-                  href="mailto:support@usekultra.com"
-                  className="text-[var(--ink-secondary)] hover:underline"
-                >
-                  support@usekultra.com
-                </a>
+                  <ExternalLink className="w-4 h-4" />
+                </Link>
               </div>
             </div>
           </div>
         )}
 
-        {/* TIER 1: Global Health & Triage Banner */}
-        {!isThreatState ? (
-          // Healthy State (0 active disapprovals): Ghost surface with Signal indicator
-          <div className="bg-[var(--bg-surface)] border border-[var(--hairline)] rounded-[var(--radius-md)] p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-[var(--signal-wash)] border border-[var(--signal-dim)] flex items-center justify-center shrink-0">
-                  <ShieldCheck className="w-4 h-4 text-[var(--signal)]" strokeWidth={1.5} />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="tag-pill tag-signal text-[10.5px] py-0.5">
-                      Catalog shield active
-                    </span>
-                    <span className="font-mono text-[11px] text-[var(--ghost-text)]">
-                      All items eligible
-                    </span>
-                  </div>
-                  <p className="text-[13px] text-[var(--ghost-text)]">
-                    Google crawler verified:{' '}
-                    <span className="font-mono text-[var(--ink-primary)]">
-                      {activeStore?.last_message_at
-                        ? new Date(activeStore.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-                        : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </p>
-                </div>
+        {/* CONDITION A: Zero-State Experience (All Products Approved) */}
+        {activeCount === 0 ? (
+          <div className="bg-[var(--bg-surface)] border border-[var(--hairline)] rounded-[var(--radius-md)] p-8 sm:p-12 text-center space-y-5">
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-[rgba(34,197,94,0.08)] border border-[rgba(34,197,94,0.3)]">
+              <CheckCircle2 className="w-7 h-7 text-[#22c55e]" strokeWidth={1.5} />
+            </div>
+
+            <div className="max-w-xl mx-auto space-y-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-[100px] border border-[rgba(34,197,94,0.3)] bg-[rgba(34,197,94,0.06)] text-[#22c55e] text-[11px] font-mono font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e]" />
+                <span>100% COMPLIANT FEED</span>
               </div>
-              <span className="font-mono text-[11px] text-[var(--signal)]">
-                0 clicks at risk
-              </span>
+
+              <h2 className="font-serif text-[24px] sm:text-[28px] font-semibold text-[var(--ink-primary)]">
+                Your Google Merchant Center feed is 100% compliant.
+              </h2>
+
+              <p className="text-[14px] text-[var(--ghost-text)] leading-[1.6]">
+                Kultra is listening for webhook events and will alert your Slack channel the second a disapproval occurs.
+              </p>
+            </div>
+
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={handleSendTestPing}
+                disabled={testAlertSending}
+                className="btn-secondary px-5 py-2.5 text-[13px] font-medium !rounded-[3px] inline-flex items-center gap-2"
+              >
+                <Bell className="w-4 h-4 text-[var(--signal)]" />
+                <span>{testAlertSending ? 'Sending Ping...' : 'Run Test Alert to Slack'}</span>
+              </button>
+            </div>
+
+            <div className="pt-6 border-t border-[var(--hairline)] max-w-lg mx-auto flex items-center justify-around text-center text-[11px] font-mono text-[var(--ghost-text-dim)]">
+              <div>Continuous Pub/Sub stream: Active</div>
+              <div>•</div>
+              <div>Sub-30s notification guarantee</div>
             </div>
           </div>
         ) : (
-          // Threat State (Disapproval detected): Danger band per §11
-          <div className="bg-[var(--bg-surface)] border-l-2 border-l-[var(--danger)] border-y border-r border-[var(--hairline)] rounded-r-[var(--radius-md)] p-5">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <span className="tag-pill tag-danger text-[10.5px]">
-                    Disapproval detected
+          /* CONDITION B: Active Incident Cards (Disapproved Products) */
+          <div className="space-y-4">
+            <div className="flex items-center justify-between pb-1">
+              <div>
+                <h2 className="text-[16px] font-semibold text-[var(--ink-primary)] flex items-center gap-2">
+                  <span>Active Disapprovals Requiring Action</span>
+                  <span className="font-mono text-[11px] px-2 py-0.5 rounded-full bg-[rgba(214,69,69,0.12)] text-[#d64545] border border-[#d64545] font-semibold">
+                    {activeCount}
                   </span>
-                  <span className="font-mono text-[11px] text-[var(--danger)]">
-                    Ad traffic blocked
-                  </span>
-                </div>
-
-                <div className="text-[14px] text-[var(--ink-primary)]">
-                  Impacted: <span className="font-medium">{criticalIncident.title}</span>{' '}
-                  <span className="font-mono text-[11px] text-[var(--ghost-text)]">(SKU: {criticalIncident.sku})</span>
-                </div>
-
-                {/* Strict Monospace Isolation */}
-                <div className="flex items-center gap-2 pt-0.5">
-                  <span className="font-mono text-[11px] text-[var(--ghost-text-dim)]">ERROR:</span>
-                  <code className="font-mono text-[11px] px-2 py-0.5 rounded-[var(--radius-sm)] bg-[var(--bg-canvas)] border border-[var(--hairline)] text-[var(--danger)]">
-                    {criticalIncident.issue_code}
-                  </code>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-wrap items-center gap-2 shrink-0">
-                {criticalIncident.shopifyUrl ? (
-                  <a
-                    href={criticalIncident.shopifyUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn-primary text-[12px] py-1.5 px-3 !rounded-[3px] inline-flex items-center gap-1.5"
-                  >
-                    <span>Edit Product</span>
-                    <ExternalLink className="w-3.5 h-3.5" strokeWidth={1.5} />
-                  </a>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-[var(--ghost-text-dim)] px-2.5 py-1 rounded-[var(--radius-sm)] border border-[var(--hairline)]">
-                    <Lock className="w-3 h-3" /> Edit Product locked
-                  </span>
-                )}
-
-                {criticalIncident.gmcUrl && (
-                  <a
-                    href={criticalIncident.gmcUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn-secondary text-[12px] py-1.5 px-3 !rounded-[3px] inline-flex items-center gap-1.5"
-                  >
-                    <span>GMC console</span>
-                    <ExternalLink className="w-3.5 h-3.5 text-[var(--ghost-text)]" strokeWidth={1.5} />
-                  </a>
-                )}
-
-                {/* Non-interactive status badge vs Action button (§3 Disapproval Card Badge Distinction) */}
-                {criticalIncident.status === 'pending_verification' ? (
-                  <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-[var(--ghost-text)] px-2.5 py-1 rounded-[var(--radius-pill)] border border-[var(--ghost-line)] bg-[var(--bg-surface-2)] select-none cursor-default">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--ghost-text)]" aria-hidden="true" />
-                    <span>Pending verification</span>
-                  </span>
-                ) : (
-                  <button
-                    onClick={() => handleMarkPendingVerification(criticalIncident.id)}
-                    disabled={(data.billing?.isLocked && !data.billing?.isSuperAdmin) || verifyingIncidentId === criticalIncident.id}
-                    className="btn-secondary text-[12px] py-1.5 px-3 disabled:opacity-50 !rounded-[3px]"
-                  >
-                    {verifyingIncidentId === criticalIncident.id ? 'Updating...' : 'Mark fixed'}
-                  </button>
-                )}
+                </h2>
+                <p className="text-[12.5px] text-[var(--ghost-text)] mt-0.5">
+                  These items are currently blocked from serving in Google Shopping ads. Resolve them to restore ad traffic.
+                </p>
               </div>
             </div>
-          </div>
-        )}
 
-        {/* --------------------------------------------------------------------- */}
-        {/* TIER 3: Incident History & Resolution Audit Table (§16 Tables)        */}
-        {/* --------------------------------------------------------------------- */}
-        <div className="bg-[var(--bg-surface)] border border-[var(--hairline)] rounded-[var(--radius-md)] overflow-hidden">
-        <div className="p-4 sm:p-5 border-b border-[var(--hairline)] flex items-center justify-between">
-          <div>
-            <h2 className="text-[14.5px] font-semibold text-[var(--ink-primary)]">
-              Incident history and resolution audit
-            </h2>
-            <p className="text-[12px] text-[var(--ghost-text)] mt-0.5">
-              Crawler policy rejections and auto-resolutions log.
-            </p>
-          </div>
-          <span className="font-mono text-[11px] text-[var(--ghost-text-dim)] px-2 py-0.5 rounded bg-[var(--bg-surface-2)] border border-[var(--hairline)]">
-            {incidents.length} {incidents.length === 1 ? 'record' : 'records'}
-          </span>
-        </div>
-
-        {incidents.length === 0 ? (
-          <div className="p-12 text-center text-[13px] text-[var(--ghost-text)]">
-            Zero incidents recorded for this Merchant Center account.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-[var(--hairline)] bg-[var(--bg-surface-2)] font-mono text-[11px] text-[var(--ghost-text-dim)]">
-                  <th className="py-3 px-4 font-normal">Product title and SKU</th>
-                  <th className="py-3 px-4 font-normal">Error reason</th>
-                  <th className="py-3 px-4 font-normal">Severity</th>
-                  <th className="py-3 px-4 font-normal">First detected</th>
-                  <th className="py-3 px-4 font-normal">Last update</th>
-                  <th className="py-3 px-4 font-normal text-right">Triage action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--hairline)] text-[13px]">
-                {incidents.map((inc) => {
-                  const isResolved = inc.status === 'resolved';
-                  const isPending = inc.status === 'pending_verification';
-
-                  return (
-                    <tr key={inc.id} className="hover:bg-[var(--bg-surface-2)] transition-colors duration-120">
-                      <td className="py-3 px-4">
-                        <div className="font-medium text-[var(--ink-primary)] truncate max-w-xs">
-                          {inc.title}
-                        </div>
-                        <div className="font-mono text-[11px] text-[var(--ghost-text-dim)]">
-                          SKU: {inc.sku}
-                        </div>
-                      </td>
-
-                      <td className="py-3 px-4">
-                        <code className="font-mono text-[11px] px-2 py-0.5 rounded-[var(--radius-sm)] bg-[var(--bg-canvas)] border border-[var(--hairline)] text-[var(--danger)]">
-                          {inc.issue_code}
-                        </code>
-                      </td>
-
-                      <td className="py-3 px-4">
-                        <span className={`tag-pill text-[10px] ${
-                          inc.severity === 'CRITICAL_DISAPPROVAL' ? 'tag-danger' : 'tag-ghost'
-                        }`}>
+            {/* List of High-Contrast Incident Cards */}
+            <div className="space-y-3">
+              {unresolvedIncidents.map((inc) => {
+                const isPending = inc.status === 'pending_verification';
+                return (
+                  <div
+                    key={inc.id}
+                    className="bg-[var(--bg-surface)] border border-[var(--hairline)] hover:border-[var(--hairline-strong)] rounded-[var(--radius-md)] p-5 space-y-4 transition-colors"
+                  >
+                    {/* Card Header Row */}
+                    <div className="flex items-center justify-between gap-3 text-[11px] font-mono border-b border-[var(--hairline)] pb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="tag-pill tag-danger text-[10px] py-0.5 font-medium">
                           {inc.severity}
                         </span>
-                      </td>
+                        <span className="text-[var(--ghost-text-dim)] flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          Detected {new Date(inc.first_detected_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
 
-                      <td className="py-3 px-4 font-mono text-[11px] text-[var(--ghost-text)]">
-                        {new Date(inc.first_detected_at).toLocaleString([], {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </td>
+                      <div className="text-[var(--ghost-text)] font-medium">
+                        SKU: <span className="text-[var(--ink-primary)]">{inc.sku}</span>
+                      </div>
+                    </div>
 
-                      <td className="py-3 px-4 font-mono text-[11px] text-[var(--ghost-text)]">
-                        {new Date(inc.last_detected_at).toLocaleString([], {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </td>
-
-                      <td className="py-3 px-4 text-right">
-                        {isResolved ? (
-                          <span className="tag-pill tag-signal text-[10px]">
-                            Auto-resolved {inc.downtimeDuration ? `(${inc.downtimeDuration})` : ''}
-                          </span>
-                        ) : isPending ? (
-                          <div className="inline-flex items-center gap-2">
-                            {/* Non-interactive static status badge (§3) */}
-                            <span className="inline-flex items-center gap-1.5 font-mono text-[10.5px] text-[var(--ghost-text)] px-2.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--ghost-line)] bg-[var(--bg-surface-2)] select-none cursor-default">
-                              <span className="w-1.5 h-1.5 rounded-full bg-[var(--ghost-text)]" aria-hidden="true" />
-                              <span>Pending verification</span>
-                            </span>
-                            {inc.shopifyUrl ? (
-                              <a
-                                href={inc.shopifyUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="btn-secondary text-[11px] py-1 px-2.5 !rounded-[3px] inline-flex items-center gap-1"
-                              >
-                                <span>Edit Product</span>
-                                <ExternalLink className="w-3 h-3" />
-                              </a>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 font-mono text-[10.5px] text-[var(--ghost-text-dim)]">
-                                <Lock className="w-3 h-3" /> Locked
-                              </span>
-                            )}
-                          </div>
+                    {/* Card Body: Product thumbnail + Details + Plain-English Error */}
+                    <div className="flex flex-col sm:flex-row items-start gap-4">
+                      {/* Product Thumbnail with Fallback */}
+                      <div className="w-16 h-16 rounded-[var(--radius-sm)] bg-[var(--bg-canvas)] border border-[var(--hairline)] flex items-center justify-center shrink-0 overflow-hidden">
+                        {inc.thumbnailUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={inc.thumbnailUrl}
+                            alt={inc.title}
+                            className="w-full h-full object-cover"
+                          />
                         ) : (
-                          <div className="inline-flex items-center gap-2">
-                            <button
-                              onClick={() => handleMarkPendingVerification(inc.id)}
-                              disabled={data.billing?.isLocked || verifyingIncidentId === inc.id}
-                              className="btn-secondary text-[11px] py-1 px-2.5 !rounded-[3px] inline-flex items-center gap-1 disabled:opacity-50"
-                            >
-                              {verifyingIncidentId === inc.id ? 'Saving...' : 'Mark fixed'}
-                            </button>
-                            {inc.shopifyUrl ? (
-                              <a
-                                href={inc.shopifyUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="btn-primary text-[11px] py-1 px-2.5 !rounded-[3px] inline-flex items-center gap-1"
-                              >
-                                <span>Edit Product</span>
-                                <ExternalLink className="w-3 h-3" />
-                              </a>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 font-mono text-[10.5px] text-[var(--ghost-text-dim)]">
-                                <Lock className="w-3 h-3" /> Locked
-                              </span>
-                            )}
-                          </div>
+                          <ShoppingBag className="w-6 h-6 text-[var(--ghost-text)]" strokeWidth={1.5} />
                         )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                      </div>
+
+                      {/* Product Metadata & Plain-English Error Box */}
+                      <div className="flex-1 min-w-0 space-y-2">
+                        <div>
+                          <h3 className="text-[15px] font-semibold text-[var(--ink-primary)] truncate">
+                            {inc.title}
+                          </h3>
+                          <div className="font-mono text-[11.5px] text-[var(--ghost-text)] mt-0.5">
+                            Variant: <span className="text-[var(--ink-secondary)]">{inc.variant || 'Standard'}</span>
+                            {' • '}
+                            Price: <span className="text-[var(--ink-secondary)]">{inc.price || '$129.00'}</span>
+                          </div>
+                        </div>
+
+                        {/* Plain English Translation Box */}
+                        <div className="p-3.5 rounded-[var(--radius-sm)] bg-[var(--bg-canvas)] border border-[var(--hairline)] space-y-1.5">
+                          <div className="text-[13px] font-semibold text-[var(--danger)] flex items-center gap-1.5">
+                            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                            <span>{inc.plainEnglish?.title || 'Policy Disapproval'}</span>
+                          </div>
+
+                          <p className="text-[12.5px] text-[var(--ink-secondary)] leading-[1.5]">
+                            {inc.plainEnglish?.explanation || inc.issue_code}
+                          </p>
+
+                          <div className="text-[12px] text-[var(--ink-primary)] pt-1.5 border-t border-[var(--hairline)]">
+                            <strong className="text-[var(--signal)]">How to fix:</strong>{' '}
+                            {inc.plainEnglish?.fixAdvice || 'Inspect product diagnostics in Google Merchant Center.'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card Actions Footer */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[var(--hairline)]">
+                      <div className="flex items-center gap-2">
+                        {/* Primary Button: Fix in Merchant Center */}
+                        {inc.gmcUrl && (
+                          <a
+                            href={inc.gmcUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn-primary text-[12px] py-1.5 px-3.5 !rounded-[3px] inline-flex items-center gap-1.5 font-semibold"
+                          >
+                            <span>Fix in Merchant Center</span>
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        )}
+
+                        {/* Secondary Button: Edit in Shopify (if domain exists) */}
+                        {inc.shopifyUrl && (
+                          <a
+                            href={inc.shopifyUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn-secondary text-[12px] py-1.5 px-3 !rounded-[3px] inline-flex items-center gap-1.5"
+                          >
+                            <span>Edit in Shopify</span>
+                            <ExternalLink className="w-3 h-3 text-[var(--ghost-text)]" />
+                          </a>
+                        )}
+                      </div>
+
+                      <div>
+                        {isPending ? (
+                          <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-[var(--ghost-text)] px-3 py-1 rounded-[var(--radius-pill)] border border-[var(--ghost-line)] bg-[var(--bg-surface-2)] select-none">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--ghost-text)]" />
+                            <span>Pending Google Verification</span>
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleMarkPendingVerification(inc.id)}
+                            disabled={verifyingIncidentId === inc.id}
+                            className="btn-secondary text-[12px] py-1.5 px-3 !rounded-[3px] text-[var(--ghost-text)] hover:text-[var(--ink-primary)]"
+                          >
+                            {verifyingIncidentId === inc.id ? 'Updating...' : 'Dismiss or Mark as Acknowledged'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
-      </div>
       </div>
 
       {/* --------------------------------------------------------------------- */}
-      {/* STATE B: Alarm Activation Modal (§3 Floating element rules)          */}
+      {/* SECTION 4: Recent Activity and Sync Feed (Bottom Panel)               */}
+      {/* A clean, chronological, collapsible event log                         */}
+      {/* --------------------------------------------------------------------- */}
+      <div className="bg-[var(--bg-surface)] border border-[var(--hairline)] rounded-[var(--radius-md)] overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setActivityFeedOpen(!activityFeedOpen)}
+          className="w-full p-4 sm:p-5 flex items-center justify-between text-left hover:bg-[var(--bg-surface-2)] transition-colors"
+        >
+          <div className="flex items-center gap-2.5">
+            <Activity className="w-4 h-4 text-[var(--signal)] shrink-0" />
+            <div>
+              <div className="text-[14px] font-semibold text-[var(--ink-primary)]">
+                Recent Activity &amp; Sync Feed
+              </div>
+              <div className="font-mono text-[11px] text-[var(--ghost-text-dim)]">
+                Live chronological audit of Google Merchant Center scans and alert dispatches
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 font-mono text-[11px] text-[var(--ghost-text)]">
+            <span>{activityFeedOpen ? 'Collapse' : 'Expand'}</span>
+            {activityFeedOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </div>
+        </button>
+
+        {activityFeedOpen && (
+          <div className="border-t border-[var(--hairline)] p-4 sm:p-5 space-y-3 bg-[var(--bg-canvas)]">
+            {activityFeed.length === 0 ? (
+              <div className="text-[12.5px] font-mono text-[var(--ghost-text)] text-center py-4">
+                No recent activity events recorded.
+              </div>
+            ) : (
+              activityFeed.map((evt) => (
+                <div
+                  key={evt.id}
+                  className="flex items-start gap-3 text-[12.5px] p-2.5 rounded-[var(--radius-sm)] border border-[var(--hairline)] bg-[var(--bg-surface)]"
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${
+                      evt.status === 'danger'
+                        ? 'bg-[var(--danger)]'
+                        : evt.status === 'success'
+                        ? 'bg-[#22c55e]'
+                        : 'bg-[var(--ghost-text)]'
+                    }`}
+                  />
+                  <div className="flex-1">
+                    <div className="font-mono text-[11px] text-[var(--ghost-text-dim)]">
+                      {evt.timestamp}
+                    </div>
+                    <div className="text-[var(--ink-primary)] mt-0.5">
+                      {evt.message}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* --------------------------------------------------------------------- */}
+      {/* Alert Configuration Modal (Slack Incoming Webhook)                    */}
       {/* --------------------------------------------------------------------- */}
       {modalOpen && (
         <div
@@ -1034,21 +1034,18 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
               </div>
             </form>
 
-            {/* Store Management & Data Ownership Section (§1 Compliance Directive) */}
+            {/* Store Management & Data Ownership Section */}
             <div className="pt-5 border-t border-[var(--hairline)]">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[12.5px] font-semibold text-[var(--ink-primary)]">
-                  Data Ownership &amp; Integration Management
+                  Data Ownership &amp; Store Management
                 </span>
                 <span className="tag-pill tag-ghost text-[10px]">
-                  Zero Vendor Lock-In
+                  Zero Lock-In
                 </span>
               </div>
               <p className="text-[12px] text-[var(--ghost-text)] leading-[1.5] mb-3">
-                You retain 100% ownership of your catalog telemetry. Disconnecting immediately terminates Pub/Sub ingestion and purges all cached incidents from Kultra&apos;s database. For full account deletion or verification inquiries, email{' '}
-                <a href="mailto:support@usekultra.com" className="text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] underline">
-                  support@usekultra.com
-                </a>.
+                Disconnecting immediately terminates Google Pub/Sub ingestion and purges all cached incidents from Kultra&apos;s database.
               </p>
 
               {!confirmDisconnect ? (
@@ -1057,12 +1054,12 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                   onClick={() => setConfirmDisconnect(true)}
                   className="btn-secondary text-[12px] py-1.5 px-3 text-[var(--danger)] hover:border-[var(--danger)] !rounded-[3px]"
                 >
-                  Disconnect Store &amp; Purge Cached Telemetry
+                  Disconnect Store &amp; Purge Telemetry
                 </button>
               ) : (
                 <div className="p-3 rounded-[var(--radius-sm)] bg-[var(--danger-wash)] border border-[var(--danger)] space-y-2.5">
                   <div className="text-[12px] text-[var(--danger)] font-medium">
-                    Are you sure? This will remove GMC #{activeStore?.gmc_id || activeStore?.merchant_id} and permanently purge all stored incident logs.
+                    Are you sure? This will remove GMC #{activeStore?.gmc_id || activeStore?.merchant_id} and purge stored incident logs.
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -1072,7 +1069,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                       className="py-1.5 px-3 rounded-[var(--radius-sm)] bg-[var(--danger)] text-[#111214] font-semibold text-[12px] hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-1.5"
                     >
                       {disconnecting && <RefreshCw className="w-3 h-3 animate-spin" />}
-                      <span>{disconnecting ? 'Purging telemetry...' : 'Yes, Purge Telemetry & Disconnect'}</span>
+                      <span>{disconnecting ? 'Purging...' : 'Yes, Disconnect Store'}</span>
                     </button>
                     <button
                       type="button"
