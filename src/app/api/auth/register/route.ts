@@ -130,7 +130,7 @@ export async function POST(request: Request) {
     );
 
     const cookieHeader = getSessionCookieHeader(token, 60 * 60 * 24 * 7, request);
-    const redirectUrl = isAdmin ? '/admin/dashboard' : '/dashboard?just_connected=true';
+    const redirectUrl = isAdmin ? '/admin/dashboard' : '/dashboard';
 
     const response = NextResponse.json({
       success: true,

@@ -658,6 +658,13 @@ export async function ensureSchema(): Promise<boolean> {
     await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS detected_at TIMESTAMPTZ DEFAULT NOW();`;
     await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS is_simulated BOOLEAN DEFAULT FALSE;`;
 
+    // Purge any synthetic demo incidents from past runs (Directive §1)
+    try {
+      await sql`DELETE FROM incidents WHERE sku IN ('APX-TR-402', 'OW-8842-BLK-M') AND is_simulated = FALSE;`;
+    } catch {
+      // Ignore if table doesn't have records
+    }
+
     // 11. User Sessions Table (Stateful Session Invalidation & Revocation)
     await sql`
       CREATE TABLE IF NOT EXISTS user_sessions (

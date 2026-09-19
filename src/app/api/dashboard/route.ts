@@ -98,8 +98,10 @@ export async function GET(request: Request) {
     );
     const critical = unresolvedIncidents[0] || null;
 
-    // 5. Clean store domain for Shopify deep link
-    const cleanDomain = (activeStore.store_url || 'admin.shopify.com')
+    // 5. Dynamic and authentic external deep links (Directive §4)
+    // Shopify Edit Links: Only display if actively configured or on a myshopify.com domain
+    const isShopifyStore = Boolean(activeStore.store_url && (activeStore.store_url.includes('myshopify.com') || activeStore.store_url.includes('.myshopify.')));
+    const cleanDomain = (activeStore.store_url || '')
       .replace(/^https?:\/\//, '')
       .replace(/\/.*$/, '');
 
@@ -120,13 +122,17 @@ export async function GET(request: Request) {
         }
       }
 
-      const shopifyUrl = billing.isLocked
+      const shopifyUrl = (billing.isLocked || !isShopifyStore || !cleanDomain)
         ? null
         : `https://${cleanDomain}/admin/products?query=${encodeURIComponent(inc.sku)}`;
+
       const gmcId = activeStore.gmc_id || activeStore.merchant_id || '';
-      const gmcUrl = billing.isLocked
+      // Deep-link directly to the item details or diagnostics tab inside Google Merchant Center
+      const gmcUrl = billing.isLocked || !gmcId
         ? null
-        : `https://merchants.google.com/mc/products/diagnostics?account=${gmcId}`;
+        : (inc.sku
+            ? `https://merchants.google.com/mc/items/details?account=${gmcId}&item=${encodeURIComponent(inc.sku)}`
+            : `https://merchants.google.com/mc/products/diagnostics?account=${gmcId}`);
 
       const plainEnglish = translateGmcIssue(inc.issue_code);
       const productMeta = extractProductMeta(inc.sku, inc.title, inc.details);
@@ -255,12 +261,14 @@ export async function GET(request: Request) {
             severity: critical.severity === 'critical' ? 'CRITICAL_DISAPPROVAL' : 'DEMOTION',
             status: critical.status,
             first_detected_at: critical.first_detected_at,
-            shopifyUrl: billing.isLocked
+            shopifyUrl: (billing.isLocked || !isShopifyStore || !cleanDomain)
               ? null
               : `https://${cleanDomain}/admin/products?query=${encodeURIComponent(critical.sku)}`,
-            gmcUrl: billing.isLocked
+            gmcUrl: billing.isLocked || !(activeStore.gmc_id || activeStore.merchant_id)
               ? null
-              : `https://merchants.google.com/mc/products/diagnostics?account=${activeStore.gmc_id || activeStore.merchant_id || ''}`,
+              : (critical.sku
+                  ? `https://merchants.google.com/mc/items/details?account=${activeStore.gmc_id || activeStore.merchant_id}&item=${encodeURIComponent(critical.sku)}`
+                  : `https://merchants.google.com/mc/products/diagnostics?account=${activeStore.gmc_id || activeStore.merchant_id}`),
           }
         : null,
       incidents: formattedIncidents,

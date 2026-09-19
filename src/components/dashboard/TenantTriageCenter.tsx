@@ -535,7 +535,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                 {fireDrillBanner}
               </div>
               <div className="font-mono text-[11px] text-[var(--ghost-text)] mt-0.5">
-                Simulated item &apos;DEMO-RUNNER-402&apos; is now visible below in your incident triage center.
+                A simulated disapproval event has been processed and is now visible below in your incident triage center.
               </div>
             </div>
           </div>
@@ -569,6 +569,11 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                 <AlertTriangle className="w-3 h-3" />
                 Action Needed
               </span>
+            ) : metrics.monitoredProducts === 0 ? (
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[100px] border border-[var(--hairline)] bg-[var(--bg-surface-2)] text-[var(--ghost-text)] text-[10.5px] font-mono font-medium">
+                <Package className="w-3 h-3" />
+                Empty Catalog
+              </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[100px] border border-[rgba(34,197,94,0.3)] bg-[rgba(34,197,94,0.08)] text-[#22c55e] text-[10.5px] font-mono font-medium">
                 <CheckCircle2 className="w-3 h-3" />
@@ -579,15 +584,17 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
 
           <div
             className={`font-mono text-[26px] font-semibold leading-tight ${
-              activeCount > 0 ? 'text-[var(--danger)]' : 'text-[#22c55e]'
+              activeCount > 0 ? 'text-[var(--danger)]' : metrics.monitoredProducts === 0 ? 'text-[var(--ghost-heading)]' : 'text-[#22c55e]'
             }`}
           >
-            {activeCount > 0 ? `${activeCount} Disapproved` : '100% Compliant'}
+            {activeCount > 0 ? `${activeCount} Disapproved` : metrics.monitoredProducts === 0 ? '0 Products' : '100% Compliant'}
           </div>
 
           <div className="font-mono text-[11px] mt-2 text-[var(--ghost-text-dim)]">
             {activeCount > 0 ? (
               <span className="text-[var(--danger)]">Google Ads delivery blocked</span>
+            ) : metrics.monitoredProducts === 0 ? (
+              <span>Add items in Google Merchant Center</span>
             ) : (
               <span>Zero revenue at risk</span>
             )}
@@ -603,7 +610,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
             {approvedCount.toLocaleString()}
           </div>
           <div className="font-mono text-[11px] text-[var(--ghost-text-dim)] mt-2">
-            Serving traffic in Google Shopping
+            {approvedCount > 0 ? 'Serving traffic in Google Shopping' : 'No active products detected'}
           </div>
         </div>
 
@@ -681,8 +688,58 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
           </div>
         )}
 
-        {/* CONDITION A: Zero-State Experience (All Products Approved) */}
-        {activeCount === 0 ? (
+        {/* CONDITION A: Empty Catalog State (0 Products in Feed - Directive §3) */}
+        {metrics.monitoredProducts === 0 && activeCount === 0 ? (
+          <div className="bg-[var(--bg-surface)] border border-[var(--hairline)] rounded-[var(--radius-md)] p-8 sm:p-12 text-center space-y-5">
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-[var(--bg-surface-2)] border border-[var(--hairline)]">
+              <Package className="w-7 h-7 text-[var(--ghost-text)]" strokeWidth={1.5} />
+            </div>
+
+            <div className="max-w-xl mx-auto space-y-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-[100px] border border-[var(--hairline)] bg-[var(--bg-surface-2)] text-[var(--ghost-text)] text-[11px] font-mono font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--ghost-text)]" />
+                <span>EMPTY CATALOG</span>
+              </div>
+
+              <h2 className="font-serif text-[24px] sm:text-[28px] font-semibold text-[var(--ink-primary)]">
+                No products found in this Merchant Center catalog
+              </h2>
+
+              <p className="text-[14px] text-[var(--ghost-text)] leading-[1.6]">
+                Add items to your feed in Google Merchant Center to begin monitoring. Kultra is listening for feed updates and will track disapproval changes automatically.
+              </p>
+            </div>
+
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <a
+                href={`https://merchants.google.com/mc/products/sources?account=${activeStore?.gmc_id || activeStore?.merchant_id || ''}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-primary px-5 py-2.5 text-[13px] font-semibold !rounded-[3px] inline-flex items-center gap-2"
+              >
+                <span>Open Google Merchant Center Feeds</span>
+                <ExternalLink className="w-4 h-4" />
+              </a>
+
+              <button
+                type="button"
+                onClick={handleSendTestPing}
+                disabled={testAlertSending}
+                className="btn-secondary px-5 py-2.5 text-[13px] font-medium !rounded-[3px] inline-flex items-center gap-2"
+              >
+                <Bell className="w-4 h-4 text-[var(--signal)]" />
+                <span>{testAlertSending ? 'Sending Ping...' : 'Test Slack Alert'}</span>
+              </button>
+            </div>
+
+            <div className="pt-6 border-t border-[var(--hairline)] max-w-lg mx-auto flex items-center justify-around text-center text-[11px] font-mono text-[var(--ghost-text-dim)]">
+              <div>Continuous Pub/Sub stream: Active</div>
+              <div>•</div>
+              <div>Auto-sync on feed upload</div>
+            </div>
+          </div>
+        ) : activeCount === 0 ? (
+          /* CONDITION B: Zero-State Experience (All Products Approved) */
           <div className="bg-[var(--bg-surface)] border border-[var(--hairline)] rounded-[var(--radius-md)] p-8 sm:p-12 text-center space-y-5">
             <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-[rgba(34,197,94,0.08)] border border-[rgba(34,197,94,0.3)]">
               <CheckCircle2 className="w-7 h-7 text-[#22c55e]" strokeWidth={1.5} />
@@ -722,7 +779,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
             </div>
           </div>
         ) : (
-          /* CONDITION B: Active Incident Cards (Disapproved Products) */
+          /* CONDITION C: Active Incident Cards (Disapproved Products) */
           <div className="space-y-4">
             <div className="flex items-center justify-between pb-1">
               <div>
@@ -787,9 +844,13 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                             {inc.title}
                           </h3>
                           <div className="font-mono text-[11.5px] text-[var(--ghost-text)] mt-0.5">
-                            Variant: <span className="text-[var(--ink-secondary)]">{inc.variant || 'Standard'}</span>
-                            {' • '}
-                            Price: <span className="text-[var(--ink-secondary)]">{inc.price || '$129.00'}</span>
+                            {inc.variant && (
+                              <span>Variant: <span className="text-[var(--ink-secondary)]">{inc.variant}</span></span>
+                            )}
+                            {inc.variant && inc.price && <span> • </span>}
+                            {inc.price && (
+                              <span>Price: <span className="text-[var(--ink-secondary)]">{inc.price}</span></span>
+                            )}
                           </div>
                         </div>
 

@@ -95,11 +95,11 @@ export function translateGmcIssue(issueCode: string): TranslatedIssue {
 }
 
 /**
- * Extracts or derives realistic mock product metadata when live GMC details are sparse
+ * Extracts authentic product metadata from GMC incident details
  */
 export function extractProductMeta(sku: string, title?: string, details?: Record<string, unknown> | null) {
-  const price = (details?.price as string) || '$129.00';
-  const variant = (details?.variant as string) || (details?.color ? `${details.color} / ${details.size || 'Standard'}` : 'Standard / Default');
+  const price = (details?.price as string) || null;
+  const variant = (details?.variant as string) || (details?.color ? `${details.color}${details.size ? ` / ${details.size}` : ''}` : null);
   const thumbnailUrl = (details?.image_url as string) || (details?.thumbnail as string) || null;
 
   return {

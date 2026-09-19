@@ -131,6 +131,127 @@ export async function registerMerchantNotificationSubscription(params: {
   }
 }
 
+export interface DiscoveredGmcAccount {
+  merchantId: string;
+  name: string;
+  websiteUrl?: string | null;
+  isAggregator?: boolean;
+}
+
+/**
+ * Live Google Merchant Center Account Discovery (Directive §2)
+ * Queries Google Content API v2.1 authinfo and accounts endpoints to discover
+ * all authentic Merchant Center accounts and MCAs accessible by the authenticated user.
+ */
+export async function discoverMerchantAccounts(accessToken: string): Promise<DiscoveredGmcAccount[]> {
+  try {
+    const authInfoRes = await fetch(
+      'https://shoppingcontent.googleapis.com/content/v2.1/accounts/authinfo',
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: 'application/json',
+        },
+      }
+    );
+
+    if (!authInfoRes.ok) {
+      const errText = await authInfoRes.text();
+      console.warn(`[Merchant API] accounts/authinfo returned HTTP ${authInfoRes.status}: ${errText}`);
+      return [];
+    }
+
+    const authInfo = await authInfoRes.json();
+    const identifiers = Array.isArray(authInfo.accountIdentifiers) ? authInfo.accountIdentifiers : [];
+    if (identifiers.length === 0) {
+      return [];
+    }
+
+    const discoveredMap = new Map<string, DiscoveredGmcAccount>();
+
+    for (const ident of identifiers) {
+      const merchantId = ident.merchantId ? String(ident.merchantId) : null;
+      const aggregatorId = ident.aggregatorId ? String(ident.aggregatorId) : null;
+
+      if (merchantId && !discoveredMap.has(merchantId)) {
+        try {
+          const acctRes = await fetch(
+            `https://shoppingcontent.googleapis.com/content/v2.1/${encodeURIComponent(merchantId)}/accounts/${encodeURIComponent(merchantId)}`,
+            {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                Accept: 'application/json',
+              },
+            }
+          );
+
+          if (acctRes.ok) {
+            const acctData = await acctRes.json();
+            discoveredMap.set(merchantId, {
+              merchantId,
+              name: acctData.name || `Merchant Center #${merchantId}`,
+              websiteUrl: acctData.websiteUrl || null,
+              isAggregator: Boolean(acctData.users?.some((u: { role?: string }) => u.role === 'admin') && aggregatorId === merchantId),
+            });
+          } else {
+            discoveredMap.set(merchantId, {
+              merchantId,
+              name: `Merchant Center #${merchantId}`,
+              websiteUrl: null,
+              isAggregator: false,
+            });
+          }
+        } catch {
+          discoveredMap.set(merchantId, {
+            merchantId,
+            name: `Merchant Center #${merchantId}`,
+            websiteUrl: null,
+            isAggregator: false,
+          });
+        }
+      }
+
+      // If an MCA aggregator is returned, list sub-accounts
+      if (aggregatorId && (!merchantId || aggregatorId !== merchantId)) {
+        try {
+          const subAcctsRes = await fetch(
+            `https://shoppingcontent.googleapis.com/content/v2.1/${encodeURIComponent(aggregatorId)}/accounts?maxResults=100`,
+            {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                Accept: 'application/json',
+              },
+            }
+          );
+
+          if (subAcctsRes.ok) {
+            const subData = await subAcctsRes.json();
+            const resources = Array.isArray(subData.resources) ? subData.resources : [];
+            for (const sub of resources) {
+              const subId = String(sub.id);
+              if (!discoveredMap.has(subId)) {
+                discoveredMap.set(subId, {
+                  merchantId: subId,
+                  name: sub.name || `Client Store #${subId}`,
+                  websiteUrl: sub.websiteUrl || null,
+                  isAggregator: false,
+                });
+              }
+            }
+          }
+        } catch (subErr) {
+          console.warn(`[Merchant API] Error listing sub-accounts for MCA #${aggregatorId}:`, subErr);
+        }
+      }
+    }
+
+    return Array.from(discoveredMap.values());
+  } catch (err) {
+    console.error('[Merchant API] discoverMerchantAccounts error:', err);
+    return [];
+  }
+}
+
 export interface DisapprovedItem {
   offerId: string;
   title: string;
@@ -146,10 +267,10 @@ export interface AuditResult {
 }
 
 /**
- * Historical Catalog Backfill & Disapproval Scanner (Directive §2)
+ * Historical Catalog Backfill & Disapproval Scanner (Directive §2 & §3)
  * Queries Google Content API v2.1 for productstatuses (up to 250 items),
  * filtering active disapprovals and policy violations.
- * 100% free Google Content API call with no per-request charges.
+ * 100% authentic Google Content API data with ZERO synthetic items.
  */
 export async function auditExistingDisapprovals(
   merchantId: string,
@@ -173,8 +294,8 @@ export async function auditExistingDisapprovals(
       console.warn(
         `[Merchant API] Content API productstatuses request returned HTTP ${res.status}: ${errBody}`
       );
-      // Fallback for test/mock merchant accounts
-      return getFallbackAuditResult(merchantId);
+      // Strictly return 0 items; NEVER inject synthetic demo products
+      return { totalAudited: 0, disapprovals: [] };
     }
 
     const data = await res.json();
@@ -230,41 +351,6 @@ export async function auditExistingDisapprovals(
     };
   } catch (err) {
     console.error('[Merchant API] auditExistingDisapprovals error:', err);
-    return getFallbackAuditResult(merchantId);
+    return { totalAudited: 0, disapprovals: [] };
   }
-}
-
-/**
- * Safe fallback for mock/sandbox credentials so onboarding flows complete seamlessly
- */
-function getFallbackAuditResult(merchantId: string): AuditResult {
-  // Return realistic initial backfill data for simulated/test merchant accounts
-  if (merchantId.startsWith('mock') || merchantId.startsWith('gmc-')) {
-    return {
-      totalAudited: 42,
-      disapprovals: [
-        {
-          offerId: 'APX-TR-402',
-          title: 'Apex Waterproof Trail Runner - Carbon / 10.5',
-          issueCode: 'missing_value [gtin]',
-          issueDetail: 'Missing required attribute: gtin for apparel product variant',
-          severity: 'CRITICAL_DISAPPROVAL',
-          destination: 'Shopping_ads',
-        },
-        {
-          offerId: 'OW-8842-BLK-M',
-          title: 'Alpine Expedition Anorak - Slate Black / Medium',
-          issueCode: 'promotional_overlay_image [image_link]',
-          issueDetail: 'Promotional text overlay on product image violates feed standard',
-          severity: 'CRITICAL_DISAPPROVAL',
-          destination: 'Shopping_ads',
-        },
-      ],
-    };
-  }
-
-  return {
-    totalAudited: 0,
-    disapprovals: [],
-  };
 }

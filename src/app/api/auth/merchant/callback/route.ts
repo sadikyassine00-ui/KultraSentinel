@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { COOKIE_NAME, verifySessionToken } from '@/lib/token';
 import { claimStoreForTenant, findTenantByEmail, upsertIncident } from '@/lib/db';
 import { encryptToken, verifyOAuthState, OAUTH_STATE_COOKIE_NAME } from '@/lib/security';
-import { registerMerchantNotificationSubscription, auditExistingDisapprovals } from '@/lib/merchant_api';
+import { registerMerchantNotificationSubscription, auditExistingDisapprovals, discoverMerchantAccounts } from '@/lib/merchant_api';
 import { dispatchInitialAuditSlackNotification } from '@/lib/slack';
 
 export async function GET(request: Request) {
@@ -99,43 +99,57 @@ export async function GET(request: Request) {
 
     const tokenData = await tokenRes.json();
     const accessToken = tokenData.access_token;
-    const refreshToken = tokenData.refresh_token || 'mock_refresh_token_offline';
+    const refreshToken = tokenData.refresh_token;
 
-    // 4. Encrypt refresh token at rest using master secret (AES-256-GCM)
-    const encryptedRefreshToken = await encryptToken(refreshToken);
+    // Encrypt refresh token at rest using AES-256-GCM if provided
+    const encryptedRefreshToken = refreshToken ? await encryptToken(refreshToken) : undefined;
 
-    // 5. Query Google Merchant API for Merchant Center Account ID & store title
-    let gmcId = '';
-    let storeName = 'Connected Store';
-    let storeUrl = 'https://merchantcenter.google.com';
+    // 4. Live GMC Account Discovery (Directive §2)
+    const discoveredAccounts = await discoverMerchantAccounts(accessToken);
 
-    try {
-      const authInfoRes = await fetch(
-        'https://shoppingcontent.googleapis.com/content/v2.1/accounts/authinfo',
-        {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }
-      );
-
-      if (authInfoRes.ok) {
-        const authInfo = await authInfoRes.json();
-        if (authInfo.accountIdentifiers && authInfo.accountIdentifiers.length > 0) {
-          const firstAcct = authInfo.accountIdentifiers[0];
-          gmcId = String(firstAcct.merchantId || firstAcct.aggregatorId);
-        }
-      }
-    } catch (apiErr) {
-      console.warn('[Merchant OAuth Callback] Could not fetch Google Content API authinfo:', apiErr);
+    // Case A: Zero GMC accounts found
+    // If the Google account has 0 associated accounts, DO NOT create a fake catalog or allow onboarding.
+    if (discoveredAccounts.length === 0) {
+      const noAccountUrl = new URL('/dashboard/connect/no-account', origin);
+      noAccountUrl.searchParams.set('email', session.email);
+      const res = NextResponse.redirect(noAccountUrl);
+      res.cookies.delete(OAUTH_STATE_COOKIE_NAME);
+      return res;
     }
 
-    // Fallback if GMC ID not resolved from Content API
-    if (!gmcId) {
-      gmcId = 'gmc-' + Math.floor(100000000 + Math.random() * 900000000);
-      storeName = `${session.name || 'Merchant'}'s Catalog`;
-      storeUrl = `https://${session.email.split('@')[1] || 'store.com'}`;
+    // Case B: Multiple GMC accounts found -> Redirect to multi-account selector
+    if (discoveredAccounts.length > 1) {
+      const selectCookiePayload = JSON.stringify({
+        email: session.email,
+        encryptedRefreshToken,
+        accessToken,
+        accounts: discoveredAccounts,
+        createdAt: Date.now(),
+      });
+
+      const selectUrl = new URL('/dashboard/connect/select-account', origin);
+      const res = NextResponse.redirect(selectUrl);
+      res.cookies.delete(OAUTH_STATE_COOKIE_NAME);
+      res.cookies.set({
+        name: 'kultra_gmc_select',
+        value: Buffer.from(selectCookiePayload).toString('base64'),
+        path: '/',
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 600, // 10 minutes
+      });
+      return res;
     }
 
-    // 6. Tenant Isolation & Collision Protection
+    // Case C: Exactly one account found -> Connect directly
+    const selectedAcct = discoveredAccounts[0];
+    const gmcId = selectedAcct.merchantId;
+    const storeName = selectedAcct.name;
+    const storeUrl = selectedAcct.websiteUrl || `https://merchants.google.com/mc/overview?account=${gmcId}`;
+    const accountType = selectedAcct.isAggregator ? 'MCA Child' : 'Standalone Merchant';
+
+    // 5. Tenant Isolation & Collision Protection
     const tenant = await findTenantByEmail(session.email);
     const tenantId = tenant ? tenant.id : 1;
 
@@ -146,7 +160,7 @@ export async function GET(request: Request) {
       storeName,
       storeUrl,
       encryptedRefreshToken,
-      accountType: 'Standalone Merchant',
+      accountType,
     });
 
     if (!claimResult.success) {
