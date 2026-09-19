@@ -117,6 +117,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
   const [simulatingFireDrill, setSimulatingFireDrill] = useState(false);
   const [fireDrillBanner, setFireDrillBanner] = useState<string | null>(null);
   const [activityFeedOpen, setActivityFeedOpen] = useState(false);
+  const [acknowledgedOpen, setAcknowledgedOpen] = useState(false);
 
   const closeModal = useCallback(() => {
     setModalOpen(false);
@@ -168,6 +169,9 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
   }, [justConnected, impersonateEmail]);
 
   useEffect(() => {
+    // Flush previous store incidents and show loading skeleton immediately on store switch
+    setData(null);
+    setLoading(true);
     fetchDashboardData(initialStoreId);
   }, [fetchDashboardData, initialStoreId]);
 
@@ -368,32 +372,67 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
     }
   };
 
-  const handleMarkPendingVerification = async (incidentId: string | number) => {
+  const handleDismissIncident = async (inc: IncidentItem) => {
+    const incidentId = inc.id;
+    const isSimulated = Boolean(
+      inc.sku === 'DEMO-RUNNER-402' ||
+      inc.title?.includes('(Demo Item)') ||
+      (inc as unknown as { is_simulated?: boolean }).is_simulated
+    );
+
     setVerifyingIncidentId(incidentId);
+
+    // Immediate optimistic mutation (§3: instantaneous card removal for test incidents, acknowledged state for real)
+    setData((prev) => {
+      if (!prev) return prev;
+      let nextIncidents: IncidentItem[];
+      if (isSimulated) {
+        nextIncidents = prev.incidents.filter((i) => String(i.id) !== String(incidentId));
+      } else {
+        nextIncidents = prev.incidents.map((i) =>
+          String(i.id) === String(incidentId)
+            ? { ...i, status: 'acknowledged', resolved_at: new Date().toISOString() }
+            : i
+        );
+      }
+      const nextUnresolved = nextIncidents.filter((i) => i.status === 'unresolved');
+      return {
+        ...prev,
+        incidents: nextIncidents,
+        criticalIncident:
+          prev.criticalIncident && String(prev.criticalIncident.id) === String(incidentId)
+            ? (nextUnresolved[0] || null)
+            : prev.criticalIncident,
+        metrics: {
+          ...prev.metrics,
+          activeDisapprovals: nextUnresolved.length,
+        },
+      };
+    });
+
+    // Confirmation toast
+    setInlineFeedback(isSimulated ? 'Test incident cleared.' : 'Incident acknowledged.');
+    setTimeout(() => setInlineFeedback(null), 3500);
+
     try {
       const res = await fetch(`/api/incidents/${incidentId}/verify`, {
         method: 'POST',
       });
-      if (res.ok) {
-        setData((prev) => {
-          if (!prev) return prev;
-          const updatedIncidents = prev.incidents.map((inc) =>
-            String(inc.id) === String(incidentId)
-              ? { ...inc, status: 'pending_verification' }
-              : inc
-          );
-          return {
-            ...prev,
-            incidents: updatedIncidents,
-            criticalIncident:
-              prev.criticalIncident && String(prev.criticalIncident.id) === String(incidentId)
-                ? { ...prev.criticalIncident, status: 'pending_verification' }
-                : prev.criticalIncident,
-          };
-        });
+      const resJson = await res.json();
+      if (!res.ok || !resJson.success) {
+        throw new Error(resJson.error || 'Failed to dismiss incident');
       }
-    } catch (err) {
-      console.error('Failed to mark incident pending verification:', err);
+      if (resJson.isSimulated || resJson.dismissed) {
+        setInlineFeedback('Test incident cleared.');
+      } else {
+        setInlineFeedback('Incident acknowledged.');
+      }
+    } catch (err: unknown) {
+      const e = err as Error;
+      console.error('Failed to dismiss incident:', e);
+      setInlineFeedback(`Error: ${e.message || 'Failed to dismiss'}. Reverting...`);
+      // Revert optimistic state by re-fetching
+      fetchDashboardData(data?.activeStore?.id ? String(data.activeStore.id) : null);
     } finally {
       setVerifyingIncidentId(null);
     }
@@ -472,8 +511,9 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
   }
 
   const { activeStore, metrics, incidents, activityFeed = [] } = data;
-  const unresolvedIncidents = incidents.filter(
-    (i) => i.status === 'unresolved' || i.status === 'pending_verification'
+  const unresolvedIncidents = incidents.filter((i) => i.status === 'unresolved');
+  const acknowledgedIncidents = incidents.filter(
+    (i) => i.status === 'acknowledged' || i.status === 'pending_verification'
   );
   const activeCount = unresolvedIncidents.length;
   const approvedCount = metrics.approvedProducts ?? Math.max(0, metrics.monitoredProducts - activeCount);
@@ -904,27 +944,92 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                       </div>
 
                       <div>
-                        {isPending ? (
-                          <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-[var(--ghost-text)] px-3 py-1 rounded-[var(--radius-pill)] border border-[var(--ghost-line)] bg-[var(--bg-surface-2)] select-none">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--ghost-text)]" />
-                            <span>Pending Google Verification</span>
-                          </span>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => handleMarkPendingVerification(inc.id)}
-                            disabled={verifyingIncidentId === inc.id}
-                            className="btn-secondary text-[12px] py-1.5 px-3 !rounded-[3px] text-[var(--ghost-text)] hover:text-[var(--ink-primary)]"
-                          >
-                            {verifyingIncidentId === inc.id ? 'Updating...' : 'Dismiss or Mark as Acknowledged'}
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleDismissIncident(inc)}
+                          disabled={verifyingIncidentId === inc.id}
+                          className="btn-secondary text-[12px] py-1.5 px-3 !rounded-[3px] text-[var(--ghost-text)] hover:text-[var(--ink-primary)] hover:border-[var(--signal-dim)] transition-colors disabled:opacity-50"
+                        >
+                          {verifyingIncidentId === inc.id ? 'Updating...' : 'Dismiss or Mark as Acknowledged'}
+                        </button>
                       </div>
                     </div>
                   </div>
                 );
               })}
             </div>
+
+            {/* Acknowledged Disapprovals Section (§3) */}
+            {acknowledgedIncidents.length > 0 && (
+              <div className="pt-4 border-t border-[var(--hairline)]">
+                <button
+                  type="button"
+                  onClick={() => setAcknowledgedOpen((prev) => !prev)}
+                  className="flex items-center justify-between w-full py-2.5 px-3 rounded-[var(--radius-sm)] bg-[var(--bg-surface-2)] border border-[var(--hairline)] hover:border-[var(--hairline-strong)] text-left transition-colors group"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-[13.5px] font-semibold text-[var(--ghost-heading)] group-hover:text-[var(--ink-primary)] transition-colors">
+                      Acknowledged Disapprovals
+                    </span>
+                    <span className="font-mono text-[11px] px-2 py-0.5 rounded-full bg-[var(--bg-canvas)] text-[var(--ghost-text)] border border-[var(--hairline)] font-medium">
+                      {acknowledgedIncidents.length}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[12px] text-[var(--ghost-text)] group-hover:text-[var(--ink-primary)] font-mono">
+                    <span>{acknowledgedOpen ? 'Hide' : 'Show'}</span>
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-150 ${acknowledgedOpen ? 'rotate-180' : ''}`} />
+                  </div>
+                </button>
+
+                {acknowledgedOpen && (
+                  <div className="space-y-3 mt-3">
+                    {acknowledgedIncidents.map((inc) => (
+                      <div
+                        key={inc.id}
+                        className="bg-[var(--bg-surface)] border border-[var(--hairline)] rounded-[var(--radius-md)] p-4 space-y-3 opacity-80"
+                      >
+                        <div className="flex items-center justify-between text-[11px] font-mono border-b border-[var(--hairline)] pb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[100px] border border-[var(--ghost-line)] bg-[var(--bg-surface-2)] text-[var(--ghost-text)] text-[10.5px] font-medium">
+                              Acknowledged
+                            </span>
+                            <span className="text-[var(--ghost-text-dim)]">
+                              SKU: {inc.sku}
+                            </span>
+                          </div>
+                          {inc.resolved_at && (
+                            <span className="text-[var(--ghost-text-dim)]">
+                              Acknowledged {new Date(inc.resolved_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                          <div>
+                            <h4 className="text-[13.5px] font-semibold text-[var(--ink-primary)] truncate">
+                              {inc.title}
+                            </h4>
+                            <p className="text-[12px] text-[var(--ghost-text)] mt-0.5">
+                              {inc.plainEnglish?.explanation || inc.issue_code}
+                            </p>
+                          </div>
+                          {inc.gmcUrl && (
+                            <a
+                              href={inc.gmcUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn-secondary text-[11.5px] py-1 px-2.5 !rounded-[3px] shrink-0 inline-flex items-center gap-1"
+                            >
+                              <span>View in GMC</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

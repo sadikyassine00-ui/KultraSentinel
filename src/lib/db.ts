@@ -90,7 +90,7 @@ export interface Incident {
   product_title?: string;
   issue_code: string;
   severity: 'critical' | 'warning';
-  status: 'unresolved' | 'resolved' | 'pending_verification';
+  status: 'unresolved' | 'resolved' | 'pending_verification' | 'acknowledged';
   first_detected_at: string;
   last_detected_at: string;
   detected_at?: string;
@@ -275,6 +275,7 @@ const inMemoryStores: Store[] = [
     tenant_id: 1,
     tenant_email: 'marcus.vance@apexmedia.io',
     account_type: 'MCA Child',
+    store_name: 'Outdoor Gear Direct',
     store_url: 'outdoorgear-direct.com',
     pubsub_topic: 'projects/kultra-sentinel/topics/gmc-events-apex-01',
     last_message_at: new Date(Date.now() - 1000 * 24).toISOString(),
@@ -289,6 +290,7 @@ const inMemoryStores: Store[] = [
     tenant_id: 1,
     tenant_email: 'marcus.vance@apexmedia.io',
     account_type: 'MCA Child',
+    store_name: 'Peak Performance US',
     store_url: 'peakperformance-us.com',
     pubsub_topic: 'projects/kultra-sentinel/topics/gmc-events-apex-02',
     last_message_at: new Date(Date.now() - 1000 * 180).toISOString(),
@@ -303,6 +305,7 @@ const inMemoryStores: Store[] = [
     tenant_id: 2,
     tenant_email: 'elena.rostova@solarestudio.com',
     account_type: 'Standalone Merchant',
+    store_name: 'Solare Studio',
     store_url: 'solarestudio.com',
     pubsub_topic: 'projects/kultra-sentinel/topics/gmc-events-solare',
     last_message_at: new Date(Date.now() - 1000 * 45).toISOString(),
@@ -317,6 +320,7 @@ const inMemoryStores: Store[] = [
     tenant_id: 3,
     tenant_email: 'david.lindqvist@norseoutdoors.se',
     account_type: 'Standalone Merchant',
+    store_name: 'Norse Outdoors',
     store_url: 'norseoutdoors.se',
     pubsub_topic: 'projects/kultra-sentinel/topics/gmc-events-norse',
     last_message_at: new Date(Date.now() - 1000 * 900).toISOString(),
@@ -331,6 +335,7 @@ const inMemoryStores: Store[] = [
     tenant_id: 4,
     tenant_email: 'kenji.t@kuroluxury.jp',
     account_type: 'MCA Child',
+    store_name: 'Legacy Chrono Vault',
     store_url: 'legacy-chrono-vault.com',
     pubsub_topic: 'projects/kultra-sentinel/topics/gmc-events-kuro-03',
     last_message_at: new Date(Date.now() - 86400000 * 2).toISOString(),
@@ -1389,8 +1394,8 @@ export async function findStoreByGmcId(gmcId: string): Promise<Store | null> {
           tenant_id: (row.tenant_id || 1) as number,
           tenant_email: (row.tenant_email || '') as string,
           account_type: (row.account_type || 'Standalone Merchant') as 'Standalone Merchant' | 'MCA Child',
-          store_url: (row.store_url || 'apexfootwear.com') as string,
-          store_name: (row.store_name || 'Apex Footwear') as string,
+          store_url: (row.store_url || '') as string,
+          store_name: (row.store_name || `Store #${row.gmc_id || gmcId}`) as string,
           encrypted_refresh_token: (row.encrypted_refresh_token || null) as string | null,
           alert_status: (row.alert_status || 'active') as 'active' | 'degraded',
           webhook_url: (row.webhook_url || row.slack_webhook_url || null) as string | null,
@@ -2380,46 +2385,135 @@ export async function createOrUpdateAdmin(admin: {
   return newAdmin;
 }
 
-export async function markIncidentPendingVerification(
+export async function dismissOrAcknowledgeIncident(
   incidentId: number | string,
   tenantEmail: string
-): Promise<{ success: boolean; incident?: Incident; error?: string }> {
+): Promise<{
+  success: boolean;
+  isSimulated?: boolean;
+  dismissed?: boolean;
+  status?: string;
+  incident?: Incident;
+  message?: string;
+  error?: string;
+}> {
   const cleanEmail = tenantEmail.toLowerCase().trim();
   const sql = getDb();
   if (sql) {
     try {
       await ensureSchema();
       // Composite authorization: verify the incident belongs to a store owned by tenantEmail
-      const rows = await sql`
-        UPDATE incidents
-        SET status = 'pending_verification', last_detected_at = NOW()
-        WHERE id = ${String(incidentId)}
-          AND store_id IN (SELECT id FROM stores WHERE LOWER(tenant_email) = ${cleanEmail})
-        RETURNING *;
+      const existing = await sql`
+        SELECT i.* FROM incidents i
+        JOIN stores s ON s.id::text = i.store_id::text
+        WHERE i.id::text = ${String(incidentId)}
+          AND LOWER(s.tenant_email) = ${cleanEmail}
+        LIMIT 1;
       `;
-      if (rows.length > 0) {
-        return { success: true, incident: rows[0] as unknown as Incident };
+      if (existing.length === 0) {
+        return { success: false, error: 'Incident not found or unauthorized' };
       }
-      return { success: false, error: 'Incident not found or unauthorized' };
+      const inc = existing[0] as unknown as Incident;
+      const isSimulated = Boolean(inc.is_simulated || inc.sku === 'DEMO-RUNNER-402');
+
+      if (isSimulated) {
+        // Test drill incident: delete permanently from DB (§3)
+        await sql`
+          DELETE FROM incidents
+          WHERE id::text = ${String(incidentId)};
+        `;
+        // Decrement open_disapprovals on store
+        await sql`
+          UPDATE stores
+          SET open_disapprovals = GREATEST(0, open_disapprovals - 1)
+          WHERE id::text = ${String(inc.store_id)};
+        `;
+        // Clean in-memory mirror if present
+        const memIdx = inMemoryIncidents.findIndex((i) => String(i.id) === String(incidentId));
+        if (memIdx !== -1) inMemoryIncidents.splice(memIdx, 1);
+        const memStore = inMemoryStores.find((s) => String(s.id) === String(inc.store_id));
+        if (memStore) memStore.open_disapprovals = Math.max(0, memStore.open_disapprovals - 1);
+
+        return {
+          success: true,
+          isSimulated: true,
+          dismissed: true,
+          message: 'Test incident cleared.',
+        };
+      } else {
+        // Real Google disapproval: mark as acknowledged (§3)
+        const updated = await sql`
+          UPDATE incidents
+          SET status = 'acknowledged', resolved_at = NOW(), last_detected_at = NOW()
+          WHERE id::text = ${String(incidentId)}
+          RETURNING *;
+        `;
+        // Decrement open_disapprovals on store
+        await sql`
+          UPDATE stores
+          SET open_disapprovals = GREATEST(0, open_disapprovals - 1)
+          WHERE id::text = ${String(inc.store_id)};
+        `;
+        // Clean in-memory mirror if present
+        const memInc = inMemoryIncidents.find((i) => String(i.id) === String(incidentId));
+        if (memInc) {
+          memInc.status = 'acknowledged';
+          memInc.resolved_at = new Date().toISOString();
+        }
+        const memStore = inMemoryStores.find((s) => String(s.id) === String(inc.store_id));
+        if (memStore) memStore.open_disapprovals = Math.max(0, memStore.open_disapprovals - 1);
+
+        return {
+          success: true,
+          isSimulated: false,
+          status: 'acknowledged',
+          incident: (updated[0] || inc) as unknown as Incident,
+          message: 'Incident acknowledged.',
+        };
+      }
     } catch (err) {
-      console.warn('[Neon DB] Error updating incident verification status:', err);
+      console.warn('[Neon DB] Error dismissing or acknowledging incident:', err);
     }
   }
 
   // In-memory fallback
-  const incident = inMemoryIncidents.find((i) => String(i.id) === String(incidentId));
-  if (incident) {
+  const incidentIdx = inMemoryIncidents.findIndex((i) => String(i.id) === String(incidentId));
+  if (incidentIdx !== -1) {
+    const inc = inMemoryIncidents[incidentIdx];
     const store = inMemoryStores.find(
-      (s) => String(s.id) === String(incident.store_id) && s.tenant_email.toLowerCase().trim() === cleanEmail
+      (s) => String(s.id) === String(inc.store_id) && s.tenant_email.toLowerCase().trim() === cleanEmail
     );
     if (!store) {
       return { success: false, error: 'Unauthorized to modify incident' };
     }
-    (incident as any).status = 'pending_verification';
-    return { success: true, incident };
+    const isSimulated = Boolean(inc.is_simulated || inc.sku === 'DEMO-RUNNER-402');
+    if (isSimulated) {
+      inMemoryIncidents.splice(incidentIdx, 1);
+      store.open_disapprovals = Math.max(0, store.open_disapprovals - 1);
+      return {
+        success: true,
+        isSimulated: true,
+        dismissed: true,
+        message: 'Test incident cleared.',
+      };
+    } else {
+      inc.status = 'acknowledged';
+      inc.resolved_at = new Date().toISOString();
+      store.open_disapprovals = Math.max(0, store.open_disapprovals - 1);
+      return {
+        success: true,
+        isSimulated: false,
+        status: 'acknowledged',
+        incident: inc,
+        message: 'Incident acknowledged.',
+      };
+    }
   }
+
   return { success: false, error: 'Incident not found' };
 }
+
+export const markIncidentPendingVerification = dismissOrAcknowledgeIncident;
 
 // -----------------------------------------------------------------------------
 // Server-Side Session Tracking & Revocation

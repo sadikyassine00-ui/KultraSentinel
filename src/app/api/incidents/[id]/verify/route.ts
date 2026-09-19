@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAnySession } from '@/lib/auth';
-import { markIncidentPendingVerification, findTenantByEmail } from '@/lib/db';
+import { dismissOrAcknowledgeIncident, findTenantByEmail } from '@/lib/db';
 import { evaluateSubscription } from '@/lib/subscription';
 
 export async function POST(
@@ -33,7 +33,7 @@ export async function POST(
       return NextResponse.json({ error: 'Incident identifier is required' }, { status: 400 });
     }
 
-    const result = await markIncidentPendingVerification(id, session.email);
+    const result = await dismissOrAcknowledgeIncident(id, session.email);
     if (!result.success) {
       return NextResponse.json(
         { error: result.error || 'Incident not found or unauthorized' },
@@ -43,7 +43,10 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: 'Incident marked as pending verification.',
+      isSimulated: result.isSimulated,
+      dismissed: result.dismissed,
+      status: result.status,
+      message: result.message || (result.isSimulated ? 'Test incident cleared.' : 'Incident acknowledged.'),
       incident: result.incident,
     });
   } catch (error) {

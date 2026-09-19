@@ -37,6 +37,13 @@ interface BillingState {
   };
 }
 
+interface StoreItem {
+  id: number | string;
+  name: string;
+  domain: string;
+  gmcId: string;
+}
+
 export default function TenantDashboardClientLayout({
   children,
 }: {
@@ -44,11 +51,13 @@ export default function TenantDashboardClientLayout({
 }) {
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [stores, setStores] = useState<Array<{ id: number | string; name: string; gmcId: string }>>([]);
+  const [stores, setStores] = useState<StoreItem[]>([]);
   const [activeStoreId, setActiveStoreId] = useState<string | null>(null);
   const [billing, setBilling] = useState<BillingState | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [storeDropdownOpen, setStoreDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const storeDropdownRef = useRef<HTMLDivElement>(null);
 
   const fetchUser = useCallback(async () => {
     try {
@@ -76,11 +85,16 @@ export default function TenantDashboardClientLayout({
         }
         if (data.stores && Array.isArray(data.stores) && data.stores.length > 0) {
           setStores(
-            data.stores.map((s: { id: number | string; store_name?: string; store_url?: string; gmc_id?: string; merchant_id?: string }) => ({
-              id: s.id,
-              name: s.store_name || s.store_url || 'Store',
-              gmcId: s.gmc_id || s.merchant_id || 'UNKNOWN',
-            }))
+            data.stores.map((s: { id: number | string; store_name?: string; store_url?: string; gmc_id?: string; merchant_id?: string }) => {
+              const rawDomain = s.store_url || '';
+              const cleanDomain = rawDomain.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+              return {
+                id: s.id,
+                name: s.store_name || cleanDomain || `Merchant #${s.gmc_id || s.merchant_id}`,
+                domain: cleanDomain,
+                gmcId: s.gmc_id || s.merchant_id || 'UNKNOWN',
+              };
+            })
           );
           if (data.activeStore) {
             setActiveStoreId(String(data.activeStore.id));
@@ -102,10 +116,14 @@ export default function TenantDashboardClientLayout({
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setDropdownOpen(false);
       }
+      if (storeDropdownRef.current && !storeDropdownRef.current.contains(event.target as Node)) {
+        setStoreDropdownOpen(false);
+      }
     }
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         setDropdownOpen(false);
+        setStoreDropdownOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -163,57 +181,124 @@ export default function TenantDashboardClientLayout({
 
             <div className="h-4 w-px bg-[rgba(255,255,255,0.12)] hidden sm:block shrink-0" />
 
-            {/* Store Identifier and Connection Status (§1 Header and Account Anchor) */}
-            {stores.length > 0 && (
-              <div className="flex items-center gap-2.5 min-w-0">
-                {/* Agency Tier: Clean Quick Store Switcher / Solo: Clean Store Badge */}
-                {stores.length > 1 ? (
-                  <div className="relative flex items-center shrink-0">
-                    <select
-                      aria-label="Select active store"
-                      value={activeStoreId || ''}
-                      onChange={(e) => {
-                        const newId = e.target.value;
-                        if (newId === '__connect_new__') {
-                          window.location.href = '/api/auth/merchant/connect';
-                        } else if (newId) {
-                          setActiveStoreId(newId);
-                          const url = new URL(window.location.href);
-                          url.searchParams.set('store_id', newId);
-                          window.location.href = url.pathname + url.search;
-                        }
-                      }}
-                      className="bg-[#131418] border border-[rgba(255,255,255,0.14)] hover:border-[#7a5a26] text-[#f4f1ea] text-[12px] font-medium rounded-[3px] py-1 pl-2.5 pr-7 appearance-none focus:outline-none focus:border-[#f2a93b] cursor-pointer transition-colors"
-                    >
-                      {stores.map((s) => (
-                        <option key={s.id} value={String(s.id)} className="bg-[#0e0f11] text-[#f4f1ea]">
-                          {s.name} (GMC #{s.gmcId})
-                        </option>
-                      ))}
-                      <option value="__connect_new__" className="bg-[#0e0f11] text-[#f2a93b]">
-                        + Connect another GMC...
-                      </option>
-                    </select>
-                    <ChevronDown className="w-3.5 h-3.5 text-[#6b7078] pointer-events-none absolute right-2 top-1/2 -translate-y-1/2" />
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="text-[13px] font-semibold text-[#f4f1ea] truncate max-w-[150px] sm:max-w-[200px]">
-                      {stores[0]?.name}
-                    </span>
-                    <span className="font-mono text-[11px] text-[#6b7078] bg-[#131418] px-1.5 py-0.5 rounded border border-[rgba(255,255,255,0.08)]">
-                      GMC #{stores[0]?.gmcId}
-                    </span>
-                  </div>
-                )}
+            {/* Store Identifier and Connection Status (§1 Header and Account Anchor & §2 Authentic Store Navigation) */}
+            {stores.length > 0 && (() => {
+              const activeStore = stores.find((s) => String(s.id) === String(activeStoreId)) || stores[0];
+              return (
+                <div className="flex items-center gap-2.5 min-w-0">
+                  {stores.length > 1 ? (
+                    <div className="relative flex items-center shrink-0" ref={storeDropdownRef}>
+                      <button
+                        type="button"
+                        onClick={() => setStoreDropdownOpen((prev) => !prev)}
+                        className="bg-[#131418] border border-[rgba(255,255,255,0.14)] hover:border-[#7a5a26] text-[#f4f1ea] rounded-[3px] py-1 px-2.5 flex items-center gap-2 text-left focus:outline-none focus:border-[#f2a93b] transition-colors"
+                        aria-haspopup="listbox"
+                        aria-expanded={storeDropdownOpen}
+                        aria-label="Switch active store"
+                      >
+                        <div className="flex flex-col min-w-0 max-w-[130px] sm:max-w-[190px]">
+                          <span className="text-[12.5px] font-semibold text-[#f4f1ea] truncate leading-tight">
+                            {activeStore?.name}
+                          </span>
+                          {activeStore?.domain && (
+                            <span className="text-[10.5px] text-[#b9b3a5] truncate leading-tight">
+                              {activeStore.domain}
+                            </span>
+                          )}
+                        </div>
+                        <ChevronDown className={`w-3.5 h-3.5 text-[#6b7078] shrink-0 transition-transform duration-150 ${storeDropdownOpen ? 'rotate-180 text-[#f2a93b]' : ''}`} />
+                      </button>
 
-                {/* Live Status Indicator: Green pulsing dot with "Real-Time Watch Active" */}
-                <div className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[rgba(34,197,94,0.3)] bg-[rgba(34,197,94,0.06)] text-[#22c55e] text-[11px] font-mono tracking-[0.02em] shrink-0 font-medium">
-                  <span className="w-2 h-2 rounded-full bg-[#22c55e] animate-pulse" aria-hidden="true" />
-                  <span>Real-Time Watch Active</span>
+                      {storeDropdownOpen && (
+                        <div className="absolute top-full left-0 mt-1.5 w-72 sm:w-80 bg-[#0e0f11] border border-[rgba(255,255,255,0.14)] rounded-[4px] shadow-[0_16px_40px_rgba(0,0,0,0.5)] z-50 py-1.5">
+                          <div className="px-3 py-1.5 text-[10px] font-mono text-[#6b7078] tracking-wider uppercase border-b border-[rgba(255,255,255,0.06)] flex items-center justify-between">
+                            <span>Connected Stores ({stores.length})</span>
+                            <span className="text-[10px] text-[#45484f]">Switch active view</span>
+                          </div>
+
+                          <div className="max-h-64 overflow-y-auto py-1">
+                            {stores.map((s) => {
+                              const isCurrent = String(s.id) === String(activeStoreId);
+                              return (
+                                <button
+                                  key={s.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setStoreDropdownOpen(false);
+                                    if (String(s.id) !== String(activeStoreId)) {
+                                      setActiveStoreId(String(s.id));
+                                      const url = new URL(window.location.href);
+                                      url.searchParams.set('store_id', String(s.id));
+                                      window.location.href = url.pathname + url.search;
+                                    }
+                                  }}
+                                  className={`w-full text-left px-3 py-2 flex items-start justify-between gap-2 transition-colors ${
+                                    isCurrent
+                                      ? 'bg-[rgba(242,169,59,0.08)] border-l-2 border-[#f2a93b]'
+                                      : 'hover:bg-[#131418]'
+                                  }`}
+                                >
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-[13px] font-semibold text-[#f4f1ea] truncate">
+                                      {s.name}
+                                    </div>
+                                    {s.domain && (
+                                      <div className="text-[11.5px] text-[#b9b3a5] truncate">
+                                        {s.domain}
+                                      </div>
+                                    )}
+                                    <div className="font-mono text-[10px] text-[#6b7078] mt-0.5">
+                                      GMC #{s.gmcId}
+                                    </div>
+                                  </div>
+                                  {isCurrent && (
+                                    <span className="shrink-0 mt-0.5 text-[#f2a93b] font-mono text-[11px] font-medium">
+                                      Active
+                                    </span>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          <div className="border-t border-[rgba(255,255,255,0.08)] pt-1 mt-1 px-1">
+                            <Link
+                              href="/api/auth/merchant/connect"
+                              onClick={() => setStoreDropdownOpen(false)}
+                              className="w-full text-left px-2.5 py-1.5 rounded-[3px] text-[12px] text-[#f2a93b] hover:bg-[#131418] flex items-center gap-1.5 transition-colors font-medium"
+                            >
+                              <span>+ Connect another GMC...</span>
+                            </Link>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex flex-col min-w-0 max-w-[150px] sm:max-w-[200px]">
+                        <span className="text-[13px] font-semibold text-[#f4f1ea] truncate leading-tight">
+                          {stores[0]?.name}
+                        </span>
+                        {stores[0]?.domain && (
+                          <span className="text-[10.5px] text-[#b9b3a5] truncate leading-tight">
+                            {stores[0].domain}
+                          </span>
+                        )}
+                      </div>
+                      <span className="font-mono text-[10.5px] text-[#6b7078] bg-[#131418] px-1.5 py-0.5 rounded border border-[rgba(255,255,255,0.08)] shrink-0">
+                        GMC #{stores[0]?.gmcId}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Live Status Indicator: Green pulsing dot with "Real-Time Watch Active" */}
+                  <div className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[rgba(34,197,94,0.3)] bg-[rgba(34,197,94,0.06)] text-[#22c55e] text-[11px] font-mono tracking-[0.02em] shrink-0 font-medium">
+                    <span className="w-2 h-2 rounded-full bg-[#22c55e] animate-pulse" aria-hidden="true" />
+                    <span>Real-Time Watch Active</span>
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
 
           {/* Right Controls: Plan Status Badge & User Profile Menu */}

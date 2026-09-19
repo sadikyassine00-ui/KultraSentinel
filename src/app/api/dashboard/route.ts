@@ -92,9 +92,9 @@ export async function GET(request: Request) {
     // 3. Fetch incidents for active store strictly scoped to tenant
     const incidents = await getIncidentsByStore(activeStore.id, tenantEmail);
 
-    // 4. Categorize active vs resolved incidents
+    // 4. Categorize active vs resolved/acknowledged incidents
     const unresolvedIncidents = incidents.filter(
-      (i) => i.status === 'unresolved' || i.status === 'pending_verification'
+      (i) => i.status === 'unresolved'
     );
     const critical = unresolvedIncidents[0] || null;
 
