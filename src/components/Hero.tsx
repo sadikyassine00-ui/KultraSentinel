@@ -25,9 +25,9 @@ export function Hero() {
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link
             href="/register"
-            className="btn-primary !rounded-[3px] text-[13.5px] px-6 py-3"
+            className="btn-primary !rounded-[3px] text-[13.5px] px-6 py-3 font-semibold"
           >
-            Start your free 14-day trial
+            Protect Your Google Shopping Ads
           </Link>
 
           <a
@@ -38,15 +38,20 @@ export function Hero() {
           </a>
         </div>
 
-        {/* Urgency and Free Trial Mono Line (§B5, no em-dashes per §A8) */}
+        {/* Risk-Reversal Subtext Directly Below Primary Action */}
         <div className="mt-3.5 text-center">
-          <span className="font-mono text-[11px] text-[var(--ghost-text)] tracking-[0.02em]">
-            Free 14-day trial, no credit card required. Limited pilot cohort this month (10 agency / 25 merchant seats).
+          <span className="font-mono text-[11.5px] text-[var(--ghost-text)] tracking-[0.02em]">
+            Instant Slack alerts. 14-day trial starts upon connecting your store. No credit card required.
           </span>
         </div>
 
-        {/* Three Friction Reducer Pills Directly Below Primary Action (§2 Landing Page Directive) */}
+        {/* Setup Speed Reassurance & Friction Reducer Pills */}
         <div className="mt-5 flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+          <span className="tag-pill tag-ghost text-[11px] py-1 px-3 inline-flex items-center gap-1.5">
+            <Clock className="w-3.5 h-3.5 text-[var(--signal)]" strokeWidth={1.5} />
+            <span>Connects via Google in 60 seconds.</span>
+          </span>
+
           <span className="tag-pill tag-ghost text-[11px] py-1 px-3 inline-flex items-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5 text-[var(--signal)]" strokeWidth={1.5} />
             <span>No Credit Card Required</span>
@@ -55,11 +60,6 @@ export function Hero() {
           <span className="tag-pill tag-ghost text-[11px] py-1 px-3 inline-flex items-center gap-1.5">
             <Zap className="w-3.5 h-3.5 text-[var(--signal)]" strokeWidth={1.5} />
             <span>Read-Only Catalog Access</span>
-          </span>
-
-          <span className="tag-pill tag-ghost text-[11px] py-1 px-3 inline-flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5 text-[var(--signal)]" strokeWidth={1.5} />
-            <span>Set Up in Under 2 Minutes</span>
           </span>
         </div>
       </div>
