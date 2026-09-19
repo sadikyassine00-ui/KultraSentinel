@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getAnySession } from '@/lib/auth';
 import { getStoresForTenant, getIncidentsByStore, findTenantByEmail, Incident, Store } from '@/lib/db';
 import { evaluateSubscription } from '@/lib/subscription';
-import { translateGmcIssue, extractProductMeta } from '@/lib/gmcErrors';
+import { translateGmcIssue, extractProductMeta, isAccountSuspensionCode } from '@/lib/gmcErrors';
 
 export async function GET(request: Request) {
   try {
@@ -122,19 +122,24 @@ export async function GET(request: Request) {
         }
       }
 
-      const shopifyUrl = (billing.isLocked || !isShopifyStore || !cleanDomain)
+      const plainEnglish = translateGmcIssue(inc.issue_code);
+      const isAccountLevel = Boolean(plainEnglish.isAccountLevel || isAccountSuspensionCode(inc.issue_code));
+      const gmcId = activeStore.gmc_id || activeStore.merchant_id || '';
+
+      // For account-level suspensions, do NOT direct merchants to edit single product listings in Shopify
+      const shopifyUrl = (billing.isLocked || !isShopifyStore || !cleanDomain || isAccountLevel)
         ? null
         : `https://${cleanDomain}/admin/products?query=${encodeURIComponent(inc.sku)}`;
 
-      const gmcId = activeStore.gmc_id || activeStore.merchant_id || '';
-      // Deep-link directly to the item details or diagnostics tab inside Google Merchant Center
+      // Deep-link directly to GMC Account Settings for store-level issues, or item diagnostics for SKU issues
       const gmcUrl = billing.isLocked || !gmcId
         ? null
-        : (inc.sku
-            ? `https://merchants.google.com/mc/items/details?account=${gmcId}&item=${encodeURIComponent(inc.sku)}`
-            : `https://merchants.google.com/mc/products/diagnostics?account=${gmcId}`);
+        : (isAccountLevel
+            ? `https://merchants.google.com/mc/merchantinfo/businessinfo?account=${gmcId}`
+            : (inc.sku
+                ? `https://merchants.google.com/mc/items/details?account=${gmcId}&item=${encodeURIComponent(inc.sku)}`
+                : `https://merchants.google.com/mc/products/diagnostics?account=${gmcId}`));
 
-      const plainEnglish = translateGmcIssue(inc.issue_code);
       const productMeta = extractProductMeta(inc.sku, inc.title, inc.details);
 
       return {
@@ -143,6 +148,7 @@ export async function GET(request: Request) {
         title: inc.title,
         issue_code: inc.issue_code,
         plainEnglish,
+        isAccountLevel,
         price: productMeta.price,
         variant: productMeta.variant,
         thumbnailUrl: productMeta.thumbnailUrl,
@@ -157,8 +163,9 @@ export async function GET(request: Request) {
       };
     });
 
-    const activeWebhook = activeStore.webhook_url || activeStore.slack_webhook_url;
+    const activeWebhook = (activeStore.webhook_url || activeStore.slack_webhook_url || '').trim();
     const webhookVerified = Boolean(activeStore.webhook_verified);
+    const hasWebhook = activeWebhook.length > 0;
 
     // Database-backed monitored products count from tenant record
     const monitoredProducts = tenant?.total_skus && tenant.total_skus > 0
@@ -167,15 +174,38 @@ export async function GET(request: Request) {
 
     const approvedProducts = Math.max(0, monitoredProducts - unresolvedIncidents.length);
 
-    // Dynamic channel resolution without hardcoded mock strings
+    // Dynamic channel resolution without hardcoded mock strings (Directive §4)
+    // Never display 'Unconfigured' when an active webhook exists.
     let channelLabel = 'Unconfigured';
-    if (activeWebhook) {
-      if (activeWebhook.includes('slack.com')) {
-        channelLabel = webhookVerified ? '#merchant-alerts' : 'Slack Webhook';
+    if (hasWebhook) {
+      if (activeStore.slack_channel && activeStore.slack_channel.trim().length > 0) {
+        channelLabel = activeStore.slack_channel.trim();
+      } else if (webhookVerified) {
+        channelLabel = '#merchant-alerts';
       } else {
-        channelLabel = 'Custom Webhook';
+        channelLabel = 'Active Webhook';
       }
     }
+
+    // Detect store-wide account suspension among unresolved incidents (Directive §1)
+    const hasAccountSuspension = unresolvedIncidents.some(
+      (inc) => isAccountSuspensionCode(inc.issue_code) || translateGmcIssue(inc.issue_code).isAccountLevel
+    );
+
+    const accountSuspension = hasAccountSuspension
+      ? {
+          isSuspended: true,
+          title: 'Google Merchant Center Account Suspension',
+          reason: 'Store-Level Policy Enforcement (Misrepresentation / Store Trust)',
+          affectedCountries: 'All Target Countries',
+          checklist: [
+            'Business Transparency: Add a valid physical address, direct support email, and operational phone number to your website footer and GMC business settings.',
+            'Legal Pages: Provide clearly visible Refund and Return Policy, Shipping Policy, Privacy Policy, and Terms of Service links in your website navigation.',
+            'Payment and Domain Integrity: Ensure checkout is secured with an active SSL certificate and all prices and currencies on the site match your GMC feed settings exactly.',
+            'GMC Verification: Ensure domain is verified and claimed in Google Merchant Center Business Information settings.',
+          ],
+        }
+      : null;
 
     // Chronological Activity Feed
     const now = new Date();
@@ -207,10 +237,13 @@ export async function GET(request: Request) {
     if (critical) {
       const critTime = new Date(critical.first_detected_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const critPlain = translateGmcIssue(critical.issue_code);
+      const isCritAcctLevel = Boolean(critPlain.isAccountLevel || isAccountSuspensionCode(critical.issue_code));
       activityFeed.unshift({
         id: `evt-inc-${critical.id}`,
         timestamp: `Today at ${critTime}`,
-        message: `Product ${critical.sku} flagged for ${critPlain.title}. Slack alert dispatched in 0.4s.`,
+        message: isCritAcctLevel
+          ? `Store-wide account suspension detected (${critical.issue_code}). Ad delivery paused across all items.`
+          : `Product ${critical.sku} flagged for ${critPlain.title}. Slack alert dispatched in 0.4s.`,
         type: 'incident_dispatched',
         status: 'danger',
       });
@@ -220,6 +253,7 @@ export async function GET(request: Request) {
       zeroStore: false,
       stores,
       activeStore,
+      accountSuspension,
       billing: {
         status: billing.effectiveStatus,
         daysRemaining: billing.daysRemaining,
@@ -244,6 +278,7 @@ export async function GET(request: Request) {
         activeDisapprovals: unresolvedIncidents.length,
         alertPipelineStatus: {
           channel: channelLabel,
+          hasWebhook,
           latencyMs: webhookVerified ? 14 : 0,
           verified: webhookVerified,
         },
@@ -255,20 +290,23 @@ export async function GET(request: Request) {
             sku: critical.sku,
             issue_code: critical.issue_code,
             plainEnglish: translateGmcIssue(critical.issue_code),
+            isAccountLevel: Boolean(translateGmcIssue(critical.issue_code).isAccountLevel || isAccountSuspensionCode(critical.issue_code)),
             price: extractProductMeta(critical.sku, critical.title, critical.details).price,
             variant: extractProductMeta(critical.sku, critical.title, critical.details).variant,
             thumbnailUrl: extractProductMeta(critical.sku, critical.title, critical.details).thumbnailUrl,
             severity: critical.severity === 'critical' ? 'CRITICAL_DISAPPROVAL' : 'DEMOTION',
             status: critical.status,
             first_detected_at: critical.first_detected_at,
-            shopifyUrl: (billing.isLocked || !isShopifyStore || !cleanDomain)
+            shopifyUrl: (billing.isLocked || !isShopifyStore || !cleanDomain || isAccountSuspensionCode(critical.issue_code))
               ? null
               : `https://${cleanDomain}/admin/products?query=${encodeURIComponent(critical.sku)}`,
             gmcUrl: billing.isLocked || !(activeStore.gmc_id || activeStore.merchant_id)
               ? null
-              : (critical.sku
-                  ? `https://merchants.google.com/mc/items/details?account=${activeStore.gmc_id || activeStore.merchant_id}&item=${encodeURIComponent(critical.sku)}`
-                  : `https://merchants.google.com/mc/products/diagnostics?account=${activeStore.gmc_id || activeStore.merchant_id}`),
+              : (isAccountSuspensionCode(critical.issue_code)
+                  ? `https://merchants.google.com/mc/merchantinfo/businessinfo?account=${activeStore.gmc_id || activeStore.merchant_id}`
+                  : (critical.sku
+                      ? `https://merchants.google.com/mc/items/details?account=${activeStore.gmc_id || activeStore.merchant_id}&item=${encodeURIComponent(critical.sku)}`
+                      : `https://merchants.google.com/mc/products/diagnostics?account=${activeStore.gmc_id || activeStore.merchant_id}`)),
           }
         : null,
       incidents: formattedIncidents,

@@ -25,7 +25,7 @@ export function FaqSection() {
     {
       question: 'What happens after my free trial ends?',
       answer:
-        'Free for 14 days, no credit card required. After your trial ends, continue for $19/mo (Solo Merchant) or $99/mo (PPC Agency); cancel anytime before then and you will not be charged.',
+        'Free for 14 days, no credit card required. After your trial ends, continue for $19/mo (Solo Merchant) or $49/mo (PPC Agency); cancel anytime before then and you will not be charged.',
     },
     {
       question: 'How does Kultra link directly to my specific Shopify product admin?',

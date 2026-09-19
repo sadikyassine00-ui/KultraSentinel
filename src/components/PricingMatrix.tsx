@@ -35,7 +35,7 @@ export function PricingMatrix({ onSelectPlan }: PricingMatrixProps) {
           </p>
           <div className="rounded-[var(--radius-sm)] bg-[var(--bg-surface)] border border-[var(--hairline)] p-3 text-center">
             <span className="text-[12.5px] text-[var(--ghost-text)]">
-              Free for 14 days, no credit card required. After your trial ends, continue for $19/mo (Solo Merchant) or $99/mo (PPC Agency); cancel anytime before then and you will not be charged.
+              Free for 14 days, no credit card required. After your trial ends, continue for $19/mo (Solo Merchant) or $49/mo (PPC Agency); cancel anytime before then and you will not be charged.
             </span>
           </div>
         </div>
@@ -141,12 +141,12 @@ export function PricingMatrix({ onSelectPlan }: PricingMatrixProps) {
               <div className="mt-6 mb-6 pb-6 border-b border-[var(--hairline)]">
                 <div className="flex items-baseline gap-2">
                   <span className="font-mono text-[2.5rem] font-medium text-[var(--signal)] leading-none">
-                    $99
+                    $49
                   </span>
                   <span className="font-mono text-[12px] text-[var(--ghost-text)]">/ month ($5/mo per extra account)</span>
                 </div>
                 <div className="font-mono text-[12px] text-[var(--signal)] mt-1.5">
-                  Free for 14 days, then $99/mo
+                  Free for 14 days, then $49/mo
                 </div>
               </div>
 

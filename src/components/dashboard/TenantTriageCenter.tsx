@@ -21,8 +21,10 @@ import {
   Activity,
   Clock,
   X,
+  AlertCircle,
 } from 'lucide-react';
 import { Store } from '@/lib/db';
+import { isAccountSuspensionCode } from '@/lib/gmcErrors';
 
 interface DashboardMetrics {
   monitoredProducts: number;
@@ -30,6 +32,7 @@ interface DashboardMetrics {
   activeDisapprovals: number;
   alertPipelineStatus: {
     channel: string;
+    hasWebhook?: boolean;
     latencyMs: number;
     verified: boolean;
   };
@@ -51,6 +54,15 @@ interface TranslatedIssue {
   explanation: string;
   fixAdvice: string;
   category?: string;
+  isAccountLevel?: boolean;
+  isUndocumented?: boolean;
+  documentationUrl?: string;
+  storeTrustChecklist?: {
+    businessTransparency: string;
+    legalPages: string;
+    paymentAndDomainIntegrity: string;
+    gmcVerification: string;
+  };
 }
 
 interface IncidentItem {
@@ -59,6 +71,7 @@ interface IncidentItem {
   title: string;
   issue_code: string;
   plainEnglish?: TranslatedIssue;
+  isAccountLevel?: boolean;
   price?: string;
   variant?: string;
   thumbnailUrl?: string | null;
@@ -80,10 +93,19 @@ interface ActivityEvent {
   status: 'success' | 'danger' | 'neutral';
 }
 
+interface AccountSuspensionSummary {
+  isSuspended: boolean;
+  title: string;
+  reason?: string;
+  affectedCountries?: string;
+  checklist?: string[];
+}
+
 interface DashboardApiResponse {
   zeroStore: boolean;
   stores: Store[];
   activeStore: Store | null;
+  accountSuspension?: AccountSuspensionSummary | null;
   billing: BillingSummary;
   metrics: DashboardMetrics;
   criticalIncident: IncidentItem | null;
@@ -657,6 +679,24 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
   const activeCount = unresolvedIncidents.length;
   const approvedCount = metrics.approvedProducts ?? Math.max(0, metrics.monitoredProducts - activeCount);
 
+  const hasActiveWebhook = Boolean(
+    activeStore?.webhook_url ||
+    activeStore?.slack_webhook_url ||
+    metrics.alertPipelineStatus?.hasWebhook ||
+    (metrics.alertPipelineStatus?.channel && metrics.alertPipelineStatus.channel !== 'Unconfigured')
+  );
+
+  const slackDisplayChannel = (metrics.alertPipelineStatus?.channel && metrics.alertPipelineStatus.channel !== 'Unconfigured')
+    ? metrics.alertPipelineStatus.channel
+    : 'Active Webhook';
+
+  const isAccountSuspensionActive = Boolean(
+    data.accountSuspension?.isSuspended ||
+    unresolvedIncidents.some(
+      (inc) => inc.isAccountLevel || inc.plainEnglish?.isAccountLevel || isAccountSuspensionCode(inc.issue_code)
+    )
+  );
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {renderErrorBanner()}
@@ -795,25 +835,42 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
           </div>
         </div>
 
-        {/* Card 3: Slack Alert Destination */}
+        {/* Card 3: Slack Alert Destination (§4 UI Synchronization) */}
         <div className="bg-[var(--bg-surface)] border border-[var(--hairline)] rounded-[var(--radius-md)] p-5">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[12px] font-semibold text-[var(--ghost-text)]">Slack Alert Channel</span>
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[100px] border border-[rgba(34,197,94,0.3)] bg-[rgba(34,197,94,0.06)] text-[#22c55e] text-[10.5px] font-mono font-medium">
-              Connected
-            </span>
+            {hasActiveWebhook ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[100px] border border-[rgba(34,197,94,0.3)] bg-[rgba(34,197,94,0.06)] text-[#22c55e] text-[10.5px] font-mono font-medium">
+                Connected
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[100px] border border-[var(--ghost-line)] bg-transparent text-[var(--ghost-text)] text-[10.5px] font-mono font-medium">
+                Not Connected
+              </span>
+            )}
           </div>
           <div className="font-mono text-[18px] font-medium text-[var(--ink-primary)] truncate">
-            {metrics.alertPipelineStatus.channel}
+            {hasActiveWebhook ? slackDisplayChannel : 'Unconfigured'}
           </div>
           <div className="mt-2">
-            <button
-              onClick={handleSendTestPing}
-              disabled={testAlertSending || (data.billing?.isLocked && !data.billing?.isSuperAdmin)}
-              className="font-mono text-[11px] text-[var(--signal)] hover:underline disabled:opacity-50 inline-flex items-center gap-1"
-            >
-              <span>{testAlertSending ? 'Sending...' : 'Send test ping →'}</span>
-            </button>
+            {hasActiveWebhook ? (
+              <button
+                type="button"
+                onClick={handleSendTestPing}
+                disabled={testAlertSending || (data.billing?.isLocked && !data.billing?.isSuperAdmin)}
+                className="font-mono text-[11px] text-[var(--signal)] hover:underline disabled:opacity-50 inline-flex items-center gap-1"
+              >
+                <span>{testAlertSending ? 'Sending...' : 'Send test ping →'}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setModalOpen(true)}
+                className="btn-primary text-[11px] py-1 px-2.5 inline-flex items-center gap-1.5 font-semibold"
+              >
+                <span>Connect Slack</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -962,6 +1019,94 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
         ) : (
           /* CONDITION C: Active Incident Cards (Disapproved Products) */
           <div className="space-y-4">
+            {/* Emergency Account Suspension Alert Banner (§1) */}
+            {isAccountSuspensionActive && (
+              <div className="bg-[rgba(214,69,69,0.08)] border border-[rgba(214,69,69,0.35)] rounded-[var(--radius-md)] p-5 sm:p-6 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[rgba(214,69,69,0.2)] pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[rgba(214,69,69,0.15)] border border-[rgba(214,69,69,0.4)] flex items-center justify-center shrink-0">
+                      <AlertTriangle className="w-5 h-5 text-[var(--danger)]" />
+                    </div>
+                    <div>
+                      <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[100px] border border-[rgba(214,69,69,0.4)] bg-[rgba(214,69,69,0.1)] text-[var(--danger)] text-[10.5px] font-mono font-semibold tracking-wide">
+                        <span>STORE-WIDE EMERGENCY</span>
+                      </div>
+                      <h3 className="text-[17px] font-semibold text-[var(--ink-primary)] mt-1">
+                        Google Merchant Center Account Suspension Detected
+                      </h3>
+                    </div>
+                  </div>
+                  <div className="font-mono text-[11px] text-[var(--ghost-text-dim)] shrink-0">
+                    Scope: Total Store Suspension
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-[13.5px] text-[var(--ink-primary)] leading-[1.6]">
+                    Google has <strong>paused ad delivery across all products in your catalog</strong> due to store-level policy enforcement (such as <em>Misrepresentation</em> or <em>Untrusted Store</em>). Google blocks the entire catalog at once until store trust requirements are met.
+                  </p>
+
+                  <div className="p-4 rounded-[var(--radius-sm)] bg-[var(--bg-surface)] border border-[var(--hairline-strong)] space-y-2.5">
+                    <div className="text-[12.5px] font-semibold text-[var(--signal)] flex items-center gap-2">
+                      <span>Store-Level Compliance Resolution Checklist:</span>
+                    </div>
+                    <ul className="space-y-2 text-[12.5px] text-[var(--ink-secondary)] leading-[1.5]">
+                      <li className="flex items-start gap-2">
+                        <span className="font-mono text-[var(--signal)] shrink-0 font-medium">1.</span>
+                        <span><strong>Business Transparency:</strong> Add a valid physical address, direct support email, and operational phone number to your website footer and GMC business settings.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="font-mono text-[var(--signal)] shrink-0 font-medium">2.</span>
+                        <span><strong>Legal Pages:</strong> Provide clearly visible Refund and Return Policy, Shipping Policy, Privacy Policy, and Terms of Service links in your website navigation.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="font-mono text-[var(--signal)] shrink-0 font-medium">3.</span>
+                        <span><strong>Payment and Domain Integrity:</strong> Ensure checkout is secured with an active SSL certificate and all prices and currencies on the site match your GMC feed settings exactly.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="font-mono text-[var(--signal)] shrink-0 font-medium">4.</span>
+                        <span><strong>GMC Verification:</strong> Ensure your domain is verified and claimed in Google Merchant Center Business Information settings.</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-[12px] text-[var(--ghost-text)]">
+                    <AlertCircle className="w-3.5 h-3.5 text-[var(--signal)] shrink-0" />
+                    <span><strong>Do NOT edit individual product copy or images.</strong> Individual product attributes are not the root cause of this account suspension.</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-[rgba(214,69,69,0.2)]">
+                  <a
+                    href={`https://merchants.google.com/mc/merchantinfo/businessinfo?account=${activeStore?.gmc_id || activeStore?.merchant_id || ''}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-primary text-[12px] py-1.5 px-3.5 !rounded-[3px] inline-flex items-center gap-1.5 font-semibold"
+                  >
+                    <span>Open GMC Business Settings</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                  <a
+                    href={`https://merchants.google.com/mc/products/diagnostics?account=${activeStore?.gmc_id || activeStore?.merchant_id || ''}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-secondary text-[12px] py-1.5 px-3 !rounded-[3px] inline-flex items-center gap-1.5"
+                  >
+                    <span>View Account Diagnostics</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                  <a
+                    href="https://support.google.com/merchants/answer/2947246"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[var(--ghost-text)] hover:text-[var(--ink-primary)] text-[12px] underline underline-offset-4 ml-auto"
+                  >
+                    Google Policy Documentation →
+                  </a>
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center justify-between pb-1">
               <div>
                 <h2 className="text-[16px] font-semibold text-[var(--ink-primary)] flex items-center gap-2">
@@ -980,16 +1125,26 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
             <div className="space-y-3">
               {unresolvedIncidents.map((inc) => {
                 const isPending = inc.status === 'pending_verification';
+                const isItemAccountLevel = Boolean(
+                  inc.isAccountLevel ||
+                  inc.plainEnglish?.isAccountLevel ||
+                  isAccountSuspensionCode(inc.issue_code)
+                );
+
                 return (
                   <div
                     key={inc.id}
-                    className="bg-[var(--bg-surface)] border border-[var(--hairline)] hover:border-[var(--hairline-strong)] rounded-[var(--radius-md)] p-5 space-y-4 transition-colors"
+                    className={`bg-[var(--bg-surface)] border ${
+                      isItemAccountLevel
+                        ? 'border-[rgba(214,69,69,0.3)] bg-[rgba(214,69,69,0.02)]'
+                        : 'border-[var(--hairline)] hover:border-[var(--hairline-strong)]'
+                    } rounded-[var(--radius-md)] p-5 space-y-4 transition-colors`}
                   >
                     {/* Card Header Row */}
                     <div className="flex items-center justify-between gap-3 text-[11px] font-mono border-b border-[var(--hairline)] pb-3">
                       <div className="flex items-center gap-2">
                         <span className="tag-pill tag-danger text-[10px] py-0.5 font-medium">
-                          {inc.severity}
+                          {isItemAccountLevel ? 'STORE-WIDE SUSPENSION' : inc.severity}
                         </span>
                         <span className="text-[var(--ghost-text-dim)] flex items-center gap-1">
                           <Clock className="w-3 h-3" />
@@ -1039,16 +1194,20 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                         <div className="p-3.5 rounded-[var(--radius-sm)] bg-[var(--bg-canvas)] border border-[var(--hairline)] space-y-1.5">
                           <div className="text-[13px] font-semibold text-[var(--danger)] flex items-center gap-1.5">
                             <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                            <span>{inc.plainEnglish?.title || 'Policy Disapproval'}</span>
+                            <span>{isItemAccountLevel ? 'Store-Wide Account Disapproval' : (inc.plainEnglish?.title || 'Policy Disapproval')}</span>
                           </div>
 
                           <p className="text-[12.5px] text-[var(--ink-secondary)] leading-[1.5]">
-                            {inc.plainEnglish?.explanation || inc.issue_code}
+                            {isItemAccountLevel
+                              ? 'Google crawler flagged this listing because your entire Google Merchant Center account is suspended under store policy. Ad serving is paused across all products in your catalog.'
+                              : (inc.plainEnglish?.explanation || inc.issue_code)}
                           </p>
 
                           <div className="text-[12px] text-[var(--ink-primary)] pt-1.5 border-t border-[var(--hairline)]">
                             <strong className="text-[var(--signal)]">How to fix:</strong>{' '}
-                            {inc.plainEnglish?.fixAdvice || 'Inspect product diagnostics in Google Merchant Center.'}
+                            {isItemAccountLevel
+                              ? 'Follow the store-level compliance checklist in the emergency banner above. Do NOT edit product titles, descriptions, or images.'
+                              : (inc.plainEnglish?.fixAdvice || 'Inspect product diagnostics in Google Merchant Center.')}
                           </div>
                         </div>
                       </div>
@@ -1057,8 +1216,18 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                     {/* Card Actions Footer */}
                     <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[var(--hairline)]">
                       <div className="flex items-center gap-2">
-                        {/* Primary Button: Fix in Merchant Center */}
-                        {inc.gmcUrl && (
+                        {/* Primary Button: Fix in Merchant Center / GMC Business Settings */}
+                        {isItemAccountLevel ? (
+                          <a
+                            href={`https://merchants.google.com/mc/merchantinfo/businessinfo?account=${activeStore?.gmc_id || activeStore?.merchant_id || ''}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn-primary text-[12px] py-1.5 px-3.5 !rounded-[3px] inline-flex items-center gap-1.5 font-semibold"
+                          >
+                            <span>Open GMC Business Info</span>
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        ) : inc.gmcUrl ? (
                           <a
                             href={inc.gmcUrl}
                             target="_blank"
@@ -1068,10 +1237,10 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                             <span>Fix in Merchant Center</span>
                             <ExternalLink className="w-3.5 h-3.5" />
                           </a>
-                        )}
+                        ) : null}
 
-                        {/* Secondary Button: Edit in Shopify (if domain exists) */}
-                        {inc.shopifyUrl && (
+                        {/* Secondary Button: Edit in Shopify (only for SKU attribute issues, NOT account suspensions) */}
+                        {!isItemAccountLevel && inc.shopifyUrl && (
                           <a
                             href={inc.shopifyUrl}
                             target="_blank"
@@ -1080,6 +1249,18 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                           >
                             <span>Edit in Shopify</span>
                             <ExternalLink className="w-3 h-3 text-[var(--ghost-text)]" />
+                          </a>
+                        )}
+
+                        {isItemAccountLevel && (
+                          <a
+                            href={`https://merchants.google.com/mc/products/diagnostics?account=${activeStore?.gmc_id || activeStore?.merchant_id || ''}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn-secondary text-[12px] py-1.5 px-3 !rounded-[3px] inline-flex items-center gap-1.5"
+                          >
+                            <span>View Diagnostics</span>
+                            <ExternalLink className="w-3.5 h-3.5" />
                           </a>
                         )}
                       </div>

@@ -5,6 +5,7 @@
 
 import { Store } from './db';
 import { decryptToken } from './security';
+import { isAccountSuspensionCode } from './gmcErrors';
 
 interface TokenResponse {
   access_token: string;
@@ -460,18 +461,67 @@ export interface DisapprovedItem {
 export interface AuditResult {
   totalAudited: number;
   disapprovals: DisapprovedItem[];
+  accountSuspension?: {
+    isSuspended: boolean;
+    issueCode: string;
+    title?: string;
+    detail?: string;
+    countries?: string[];
+  } | null;
 }
 
 /**
- * Historical Catalog Backfill & Disapproval Scanner (Directive §2 & §3)
- * Queries Google Content API v2.1 for productstatuses (up to 250 items),
- * filtering active disapprovals and policy violations.
+ * Historical Catalog Backfill & Disapproval Scanner (Directive §1, §2 & §3)
+ * Queries Google Content API v2.1 for productstatuses (up to 250 items) AND accountstatuses,
+ * accurately detecting account-level policy suspensions (e.g. policy_enforcement_account_disapproval)
+ * vs SKU-level attribute defects.
  * 100% authentic Google Content API data with ZERO synthetic items.
  */
 export async function auditExistingDisapprovals(
   merchantId: string,
   accessToken: string
 ): Promise<AuditResult> {
+  let accountSuspension: AuditResult['accountSuspension'] = null;
+
+  // 1. Ingest account status data from Google Content API (Directive §1)
+  try {
+    const accountStatusUrl = `https://shoppingcontent.googleapis.com/content/v2.1/${encodeURIComponent(
+      merchantId
+    )}/accountstatuses/${encodeURIComponent(merchantId)}`;
+
+    const acctStatusRes = await fetch(accountStatusUrl, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/json',
+      },
+    });
+
+    if (acctStatusRes.ok) {
+      const acctData = await acctStatusRes.json();
+      const acctIssues = Array.isArray(acctData.accountLevelIssues) ? acctData.accountLevelIssues : [];
+      const criticalAcctIssue = acctIssues.find(
+        (issue: { severity?: string; id?: string; title?: string }) =>
+          issue.severity?.toLowerCase() === 'critical' ||
+          isAccountSuspensionCode(issue.id || '') ||
+          isAccountSuspensionCode(issue.title || '')
+      );
+
+      if (criticalAcctIssue) {
+        accountSuspension = {
+          isSuspended: true,
+          issueCode: criticalAcctIssue.id || 'policy_enforcement_account_disapproval',
+          title: criticalAcctIssue.title || 'Google Merchant Center Account Suspension',
+          detail: criticalAcctIssue.detail || 'Google has paused ad delivery across all products due to store-level policy enforcement.',
+          countries: criticalAcctIssue.country ? [criticalAcctIssue.country] : ['All Target Countries'],
+        };
+      }
+    }
+  } catch (acctErr) {
+    console.warn('[Merchant API] Account status query failed (non-fatal):', acctErr);
+  }
+
+  // 2. Query productstatuses for item-level issues
   try {
     const url = `https://shoppingcontent.googleapis.com/content/v2.1/${encodeURIComponent(
       merchantId
@@ -490,8 +540,7 @@ export async function auditExistingDisapprovals(
       console.warn(
         `[Merchant API] Content API productstatuses request returned HTTP ${res.status}: ${errBody}`
       );
-      // Strictly return 0 items; NEVER inject synthetic demo products
-      return { totalAudited: 0, disapprovals: [] };
+      return { totalAudited: 0, disapprovals: [], accountSuspension };
     }
 
     const data = await res.json();
@@ -515,11 +564,27 @@ export async function auditExistingDisapprovals(
 
       if (isDestinationDisapproved || activeIssues.length > 0) {
         const rawId = String(item.productId || item.offerId || item.id || 'SKU-UNKNOWN');
-        // Extract clean SKU/offer identifier
         const offerId = rawId.includes(':') ? rawId.split(':').pop() || rawId : rawId;
         const title = item.title ? String(item.title) : offerId;
 
-        const primaryIssue = activeIssues[0];
+        // Check if item contains policy_enforcement_account_disapproval or account suspension code
+        const accountDisapprovalIssue = activeIssues.find(
+          (issue: { code?: string; detail?: string }) =>
+            (issue.code && isAccountSuspensionCode(issue.code)) ||
+            (issue.detail && isAccountSuspensionCode(issue.detail))
+        );
+
+        if (accountDisapprovalIssue && !accountSuspension) {
+          accountSuspension = {
+            isSuspended: true,
+            issueCode: accountDisapprovalIssue.code || 'policy_enforcement_account_disapproval',
+            title: 'Store-Wide Account Disapproval',
+            detail: accountDisapprovalIssue.detail || 'Google crawler flagged account-level policy suspension on items.',
+            countries: ['All Target Countries'],
+          };
+        }
+
+        const primaryIssue = accountDisapprovalIssue || activeIssues[0];
         let issueCode = 'item_disapproved: policy_violation';
         let issueDetail = 'Google crawler blocked product from shopping ads.';
 
@@ -544,9 +609,10 @@ export async function auditExistingDisapprovals(
     return {
       totalAudited: resources.length,
       disapprovals,
+      accountSuspension,
     };
   } catch (err) {
     console.error('[Merchant API] auditExistingDisapprovals error:', err);
-    return { totalAudited: 0, disapprovals: [] };
+    return { totalAudited: 0, disapprovals: [], accountSuspension };
   }
 }

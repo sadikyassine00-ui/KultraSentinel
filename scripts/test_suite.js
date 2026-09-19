@@ -105,7 +105,7 @@ async function runTests() {
     { name: 'Section 6: Dual Pricing Title', text: 'Predictable Flat Pricing' },
     { name: 'Section 6: Honest Founder Trust Line', text: 'We are personally onboarding every pilot account this month: no automated queue.' },
     { name: 'Section 6: Plan 1 Solo Merchant ($19)', text: 'Solo Merchant' },
-    { name: 'Section 6: Plan 2 PPC Agency ($99)', text: 'PPC Agency' },
+    { name: 'Section 6: Plan 2 PPC Agency ($49)', text: 'PPC Agency' },
     { name: 'Section 6: Merchant CTA Label', text: 'Apply for Merchant Pilot' },
     { name: 'Section 6: Agency CTA Label', text: 'Apply for Agency Pilot' },
 

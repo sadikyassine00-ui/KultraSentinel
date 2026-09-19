@@ -69,6 +69,7 @@ export interface Store {
   alert_status?: 'active' | 'degraded';
   webhook_url?: string | null;
   slack_webhook_url?: string | null;
+  slack_channel?: string | null;
   webhook_verified?: boolean;
   is_active?: boolean;
   pubsub_topic: string;
