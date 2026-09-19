@@ -407,6 +407,10 @@ export default function PrivacyPolicyPage() {
             <Link href="/terms" className="hover:text-[#f4f1ea] transition-colors">
               Terms of Service
             </Link>
+            <span>/</span>
+            <Link href="/refund" className="hover:text-[#f4f1ea] transition-colors">
+              Refund Policy
+            </Link>
           </div>
         </div>
       </footer>

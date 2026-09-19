@@ -93,6 +93,11 @@ export function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/refund" className="hover:text-[var(--ink-primary)] hover:underline underline-offset-4 transition-colors duration-120">
+                  Refund &amp; Cancellation Policy
+                </Link>
+              </li>
+              <li>
                 <a href="#security" className="hover:text-[var(--ink-primary)] hover:underline underline-offset-4 transition-colors duration-120">
                   OAuth Scope Transparency
                 </a>
@@ -139,6 +144,10 @@ export function Footer() {
             <span>/</span>
             <Link href="/terms" className="hover:text-[var(--ink-primary)] transition-colors">
               Terms of Service
+            </Link>
+            <span>/</span>
+            <Link href="/refund" className="hover:text-[var(--ink-primary)] transition-colors">
+              Refund Policy
             </Link>
             <span>/</span>
             <span>Ouarzazate, Morocco</span>
