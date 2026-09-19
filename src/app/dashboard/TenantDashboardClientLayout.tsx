@@ -262,13 +262,13 @@ export default function TenantDashboardClientLayout({
                           </div>
 
                           <div className="border-t border-[rgba(255,255,255,0.08)] pt-1 mt-1 px-1">
-                            <Link
+                            <a
                               href="/api/auth/merchant/connect"
                               onClick={() => setStoreDropdownOpen(false)}
                               className="w-full text-left px-2.5 py-1.5 rounded-[3px] text-[12px] text-[#f2a93b] hover:bg-[#131418] flex items-center gap-1.5 transition-colors font-medium"
                             >
                               <span>+ Connect another GMC...</span>
-                            </Link>
+                            </a>
                           </div>
                         </div>
                       )}
@@ -316,14 +316,14 @@ export default function TenantDashboardClientLayout({
               <>
                 {/* 2. Unstarted Trial: Prompt to connect Google Merchant Center */}
                 {!billing.hasTrialStarted ? (
-                  <Link
+                  <a
                     href="/api/auth/merchant/connect"
                     className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[#7a5a26] bg-[rgba(242,169,59,0.06)] text-[#f2a93b] hover:border-[#f2a93b] text-[11px] font-mono tracking-[0.02em] transition-colors shrink-0"
                     title="Connect your Google Merchant Center account to start your 14-day free trial."
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" aria-hidden="true" />
                     <span>Connect GMC to Start Trial</span>
-                  </Link>
+                  </a>
                 ) : billing.status === 'active trial' ? (
                   /* 3. Active Trial: Display "Free Trial: X Days Left" paired with "Upgrade" button */
                   <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">

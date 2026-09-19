@@ -94,13 +94,14 @@ interface Props {
   initialStoreId?: string | null;
   justConnected?: boolean;
   impersonateEmail?: string | null;
+  initialError?: string | null;
 }
 
-export default function TenantTriageCenter({ initialStoreId, justConnected = false, impersonateEmail }: Props) {
+export default function TenantTriageCenter({ initialStoreId, justConnected = false, impersonateEmail, initialError }: Props) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState<DashboardApiResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(initialError || null);
 
   const [modalOpen, setModalOpen] = useState(justConnected);
   const [slackWebhookInput, setSlackWebhookInput] = useState('');
@@ -180,20 +181,8 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
     await fetchDashboardData(data?.activeStore?.id ? String(data.activeStore.id) : null);
   };
 
-  const handleConnectGmc = async () => {
-    try {
-      const res = await fetch('/api/auth/merchant/connect');
-      if (res.ok) {
-        const json = await res.json();
-        if (json.url) {
-          window.location.href = json.url;
-        }
-      } else {
-        window.location.href = '/api/auth/merchant/connect';
-      }
-    } catch {
-      window.location.href = '/api/auth/merchant/connect';
-    }
+  const handleConnectGmc = () => {
+    window.location.href = '/api/auth/merchant/connect';
   };
 
   const handleDisconnectStore = async () => {
@@ -503,13 +492,27 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
             </div>
           </div>
 
+          {error && (
+            <div className="mb-6 p-4 rounded-[var(--radius-sm)] bg-[var(--danger-wash)] border border-[var(--danger)] text-[var(--danger)] text-[13px] flex items-center justify-between text-left">
+              <span>{error}</span>
+              <button
+                type="button"
+                onClick={() => setError(null)}
+                className="text-[var(--ghost-text)] hover:text-[var(--ink-primary)] ml-2 text-sm leading-none"
+                aria-label="Dismiss error"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
           <div className="flex flex-col items-center">
-            <button
-              onClick={handleConnectGmc}
-              className="btn-primary px-7 py-3 text-[13.5px] font-semibold !rounded-[3px]"
+            <a
+              href="/api/auth/merchant/connect"
+              className="btn-primary px-7 py-3 text-[13.5px] font-semibold !rounded-[3px] inline-flex items-center justify-center text-center"
             >
               Connect Google Merchant Center
-            </button>
+            </a>
 
             <div className="mt-2.5 font-mono text-[11px] text-[var(--ghost-text-dim)]">
               Read-only telemetry / No feed modifications
@@ -530,6 +533,20 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
+      {error && (
+        <div className="p-4 rounded-[var(--radius-sm)] bg-[var(--danger-wash)] border border-[var(--danger)] text-[var(--danger)] text-[13px] flex items-center justify-between">
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={() => setError(null)}
+            className="text-[var(--ghost-text)] hover:text-[var(--ink-primary)] ml-2 text-sm leading-none"
+            aria-label="Dismiss error"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Operational Action Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 py-2 border-b border-[var(--hairline)]">
         {/* Left: Fire Drill Simulation Trigger */}

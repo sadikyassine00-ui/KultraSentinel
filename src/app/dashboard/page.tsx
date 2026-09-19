@@ -10,6 +10,7 @@ interface PageProps {
   searchParams: Promise<{
     just_connected?: string;
     store_id?: string;
+    error?: string;
   }>;
 }
 
@@ -34,12 +35,14 @@ export default async function CustomerDashboardPage({ searchParams }: PageProps)
   const resolvedParams = await searchParams;
   const justConnected = resolvedParams.just_connected === 'true';
   const initialStoreId = resolvedParams.store_id || null;
+  const initialError = resolvedParams.error || null;
 
   return (
     <Suspense fallback={<DashboardPageSkeleton />}>
       <TenantTriageCenter
         initialStoreId={initialStoreId}
         justConnected={justConnected}
+        initialError={initialError}
       />
     </Suspense>
   );

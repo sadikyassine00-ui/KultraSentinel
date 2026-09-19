@@ -632,12 +632,12 @@ export default function SettingsClientView({
             ))}
 
             <div className="pt-3">
-              <Link
+              <a
                 href="/api/auth/merchant/connect"
                 className="btn-secondary text-[12.5px] py-2 px-4 !rounded-[3px] inline-flex items-center gap-2"
               >
                 <span>+ Connect another Google Merchant Center</span>
-              </Link>
+              </a>
             </div>
           </div>
         </div>

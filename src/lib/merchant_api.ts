@@ -143,6 +143,7 @@ export interface DiscoveryError {
   message: string;
   apiDisabled?: boolean;
   scopeMissing?: boolean;
+  notFound?: boolean;
 }
 
 export type DiscoveryResponse = DiscoveredGmcAccount[] & {
@@ -357,12 +358,15 @@ export async function discoverMerchantAccounts(
 
       const isApiDisabled = errText.includes('has not been used in project') || errText.includes('it is disabled') || errText.includes('SERVICE_DISABLED');
       const isScopeMissing = status === 403 && (errText.includes('insufficient') || errText.includes('PERMISSION_DENIED') || errText.includes('scope'));
+      const isNotFound = status === 404 || errText.toLowerCase().includes('not found') || errText.toLowerCase().includes('no merchant');
 
       let userFriendlyMessage = errText;
       if (isApiDisabled) {
         userFriendlyMessage = 'Google Content API for Shopping has not been enabled in the Google Cloud Project. Please enable it in the Google Cloud Console.';
       } else if (isScopeMissing) {
         userFriendlyMessage = 'Google Merchant Center permissions were not granted. Please check the permission checkbox during Google sign-in.';
+      } else if (isNotFound) {
+        userFriendlyMessage = 'No Google Merchant Center account found for this Google email.';
       }
 
       discoveryError = {
@@ -370,6 +374,7 @@ export async function discoverMerchantAccounts(
         message: userFriendlyMessage,
         apiDisabled: isApiDisabled,
         scopeMissing: isScopeMissing,
+        notFound: isNotFound,
       };
     }
   } catch (authErr: unknown) {

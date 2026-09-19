@@ -5,13 +5,27 @@ import { createOAuthState, OAUTH_STATE_COOKIE_NAME } from '@/lib/security';
 
 export async function GET(request: Request) {
   try {
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get(COOKIE_NAME);
-    if (!sessionCookie?.value) {
+    let sessionToken: string | undefined;
+    try {
+      const cookieStore = await cookies();
+      sessionToken = cookieStore.get(COOKIE_NAME)?.value;
+    } catch {
+      // Fallback for direct unit tests or environments outside Next.js request async storage
+    }
+
+    if (!sessionToken) {
+      const cookieHeader = request.headers.get('cookie') || '';
+      const match = cookieHeader.match(new RegExp(`(?:^|; )${COOKIE_NAME}=([^;]*)`));
+      if (match) {
+        sessionToken = decodeURIComponent(match[1]);
+      }
+    }
+
+    if (!sessionToken) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    const session = await verifySessionToken(sessionCookie.value);
+    const session = await verifySessionToken(sessionToken);
     if (!session) {
       return NextResponse.json({ error: 'Invalid or expired session' }, { status: 401 });
     }
@@ -44,9 +58,16 @@ export async function GET(request: Request) {
 
     const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 
-    // Return JSON with auth URL or redirect directly for browser navigation
-    const isJsonFormat = url.searchParams.get('format') === 'json';
-    const response = isJsonFormat
+    // Return JSON with auth URL for AJAX/fetch/RSC requests to prevent cross-origin CORS redirect blocks,
+    // or perform direct 307 redirect for native browser document navigation.
+    const isJsonOrFetch =
+      url.searchParams.get('format') === 'json' ||
+      request.headers.get('sec-fetch-mode') === 'cors' ||
+      request.headers.get('accept')?.includes('application/json') ||
+      url.searchParams.has('_rsc') ||
+      request.headers.has('rsc');
+
+    const response = isJsonOrFetch
       ? NextResponse.json({ url: googleAuthUrl })
       : NextResponse.redirect(googleAuthUrl);
 

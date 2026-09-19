@@ -126,6 +126,13 @@ export async function GET(request: Request) {
 
     // Case A: Google API Error reported during discovery
     if (discoveryResult.error && discoveredAccounts.length === 0) {
+      if (discoveryResult.error.notFound || discoveryResult.error.status === 404) {
+        const noAccountUrl = new URL('/dashboard/connect/no-account', origin);
+        noAccountUrl.searchParams.set('email', session.email);
+        const res = NextResponse.redirect(noAccountUrl);
+        res.cookies.delete(OAUTH_STATE_COOKIE_NAME);
+        return res;
+      }
       if (discoveryResult.error.apiDisabled) {
         fallbackDashboardUrl.searchParams.set(
           'error',
