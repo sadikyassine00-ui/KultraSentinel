@@ -11,21 +11,32 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 
-interface AuthUser {
+export interface AuthUser {
   email: string;
   name?: string | null;
   role: string;
   isAdmin?: boolean;
+  planName?: string;
+  planTier?: string;
 }
 
-export function Header() {
+export interface HeaderProps {
+  initialUser?: AuthUser | null;
+}
+
+export function Header({ initialUser = null }: HeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(initialUser ?? null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Sync state if server component re-renders and supplies a fresh initialUser
+  useEffect(() => {
+    setUser(initialUser ?? null);
+  }, [initialUser]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -39,23 +50,25 @@ export function Header() {
   const checkAuth = useCallback(async () => {
     try {
       const res = await fetch('/api/auth/me', { cache: 'no-store' });
+      if (res.status === 401) {
+        setUser(null);
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
         if (data.authenticated && data.user) {
           setUser(data.user);
           return;
+        } else {
+          setUser(null);
         }
       }
-      setUser(null);
     } catch {
-      setUser(null);
+      // Do not wipe user state on transient client-side network interruptions
     }
   }, []);
 
-  useEffect(() => {
-    checkAuth();
-  }, [checkAuth, pathname]);
-
+  // Listen for explicit client-side auth state changes (login, logout, account switch)
   useEffect(() => {
     const handleAuthChange = () => {
       checkAuth();
@@ -179,18 +192,29 @@ export function Header() {
                 <span className="hidden sm:inline max-w-[120px] truncate text-[13px] text-[var(--ink-primary)]">
                   {user.name || user.email}
                 </span>
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)] shrink-0" title="Active Session" />
+                {/* Active Plan Indicator Badge (§7 Design System) */}
+                <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-pill)] border border-[var(--signal-dim)] text-[10px] font-mono text-[var(--signal)] bg-[var(--signal-wash)] shrink-0 font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)] shrink-0" aria-hidden="true" />
+                  <span>{user.planName || (user.isAdmin ? 'Admin' : 'Active Plan')}</span>
+                </span>
+                <span className="md:hidden w-1.5 h-1.5 rounded-full bg-[var(--signal)] shrink-0" title="Active Session" />
                 <ChevronDown className={`w-3.5 h-3.5 text-[var(--ghost-text)] transition-transform duration-120 ${dropdownOpen ? 'rotate-180 text-[var(--signal)]' : ''}`} />
               </button>
 
               {/* Profile Dropdown Menu */}
               {dropdownOpen && (
-                <div className="absolute right-0 mt-2 w-60 rounded-[var(--radius-md)] bg-[var(--bg-surface)] border border-[var(--hairline-strong)] p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.5)] z-[100]">
+                <div className="absolute right-0 mt-2 w-64 rounded-[var(--radius-md)] bg-[var(--bg-surface)] border border-[var(--hairline-strong)] p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.5)] z-[100]">
                   <div className="p-2 border-b border-[var(--hairline)]">
-                    <div className="text-[13px] font-medium text-[var(--ink-primary)] truncate">
-                      {user.name || user.email}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-[13px] font-medium text-[var(--ink-primary)] truncate">
+                        {user.name || user.email}
+                      </div>
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--signal-dim)] text-[10px] font-mono text-[var(--signal)] bg-[var(--signal-wash)] shrink-0 font-medium">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)] shrink-0" aria-hidden="true" />
+                        <span>{user.planName || (user.isAdmin ? 'Admin' : 'Active Plan')}</span>
+                      </span>
                     </div>
-                    <div className="text-[11px] font-mono text-[var(--ghost-text-dim)] truncate">{user.email}</div>
+                    <div className="text-[11px] font-mono text-[var(--ghost-text-dim)] truncate mt-0.5">{user.email}</div>
                   </div>
 
                   <div className="py-1 space-y-0.5">

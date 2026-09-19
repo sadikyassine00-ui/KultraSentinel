@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
 import './globals.css';
 import { Providers } from './providers';
-import { Header } from '@/components/Header';
+import { Header, type AuthUser } from '@/components/Header';
+import { COOKIE_NAME, verifySessionToken } from '@/lib/token';
+import { isAllowedAdminEmail } from '@/lib/auth';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.usekultra.com'),
@@ -50,11 +53,63 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+async function resolveInitialUser(): Promise<AuthUser | null> {
+  try {
+    const cookieStore = await cookies();
+    const rawToken = cookieStore.get(COOKIE_NAME)?.value;
+    if (!rawToken) {
+      return null;
+    }
+
+    const session = await verifySessionToken(rawToken);
+    if (!session || !session.email) {
+      return null;
+    }
+
+    const isAdmin = Boolean(
+      session.role === 'admin' ||
+      session.isSuperAdmin ||
+      isAllowedAdminEmail(session.email)
+    );
+
+    let planName = isAdmin ? 'Admin' : 'Active Plan';
+    let planTier = isAdmin ? 'Superadmin' : 'Solo';
+
+    if (process.env.NEXT_RUNTIME !== 'edge') {
+      try {
+        const { findTenantByEmail } = await import('@/lib/db');
+        const tenant = await findTenantByEmail(session.email);
+        if (tenant) {
+          const { evaluateSubscription } = await import('@/lib/subscription');
+          const sub = evaluateSubscription(tenant);
+          planName = sub.planName;
+          planTier = sub.planTier;
+        }
+      } catch {
+        // Non-blocking fallback
+      }
+    }
+
+    return {
+      email: session.email,
+      name: session.name || null,
+      role: session.role || (isAdmin ? 'admin' : 'user'),
+      isAdmin,
+      planName,
+      planTier,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const initialUser = await resolveInitialUser();
+
   return (
     <html lang="en" className="dark">
       <head>
@@ -77,7 +132,7 @@ export default function RootLayout({
       </head>
       <body className="bg-[#0a0b0d] text-[#f4f1ea] font-sans antialiased overflow-x-hidden selection:bg-[#f2a93b]/20 selection:text-[#f4f1ea] min-h-screen flex flex-col">
         <Providers>
-          <Header />
+          <Header initialUser={initialUser} />
           <div className="flex-1 flex flex-col min-h-0 w-full">
             {children}
           </div>

@@ -2,7 +2,8 @@ import React from 'react';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { COOKIE_NAME, verifySessionToken } from '@/lib/token';
-import { isTenantSuspended } from '@/lib/db';
+import { isTenantSuspended, findTenantByEmail } from '@/lib/db';
+import { isAllowedAdminEmail } from '@/lib/auth';
 import TenantDashboardClientLayout from './TenantDashboardClientLayout';
 
 export default async function TenantDashboardLayout({
@@ -28,5 +29,35 @@ export default async function TenantDashboardLayout({
     redirect('/suspended');
   }
 
-  return <TenantDashboardClientLayout>{children}</TenantDashboardClientLayout>;
+  const isAdmin = Boolean(
+    session.role === 'admin' ||
+    session.isSuperAdmin ||
+    isAllowedAdminEmail(session.email)
+  );
+
+  let planName = isAdmin ? 'Lifetime Admin' : 'Merchant';
+  let planTier = isAdmin ? 'Superadmin' : 'Solo';
+
+  try {
+    const tenant = await findTenantByEmail(session.email);
+    if (tenant) {
+      const { evaluateSubscription } = await import('@/lib/subscription');
+      const sub = evaluateSubscription(tenant);
+      planName = sub.planName;
+      planTier = sub.planTier;
+    }
+  } catch {
+    // Non-blocking fallback
+  }
+
+  const initialUser = {
+    email: session.email,
+    name: session.name || null,
+    role: session.role || (isAdmin ? 'admin' : 'user'),
+    isAdmin,
+    planName,
+    planTier,
+  };
+
+  return <TenantDashboardClientLayout initialUser={initialUser}>{children}</TenantDashboardClientLayout>;
 }

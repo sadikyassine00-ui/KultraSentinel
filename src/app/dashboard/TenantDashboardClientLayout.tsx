@@ -46,11 +46,13 @@ interface StoreItem {
 
 export default function TenantDashboardClientLayout({
   children,
+  initialUser = null,
 }: {
   children: React.ReactNode;
+  initialUser?: AuthUser | null;
 }) {
   const router = useRouter();
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(initialUser);
   const [stores, setStores] = useState<StoreItem[]>([]);
   const [activeStoreId, setActiveStoreId] = useState<string | null>(null);
   const [billing, setBilling] = useState<BillingState | null>(null);
@@ -59,9 +61,19 @@ export default function TenantDashboardClientLayout({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const storeDropdownRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    if (initialUser) {
+      setUser(initialUser);
+    }
+  }, [initialUser]);
+
   const fetchUser = useCallback(async () => {
     try {
       const res = await fetch('/api/auth/me', { cache: 'no-store' });
+      if (res.status === 401) {
+        setUser(null);
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
         if (data.authenticated && data.user) {
@@ -69,9 +81,8 @@ export default function TenantDashboardClientLayout({
           return;
         }
       }
-      setUser(null);
     } catch {
-      setUser(null);
+      // Retain existing state on transient network issues
     }
   }, []);
 
@@ -107,9 +118,11 @@ export default function TenantDashboardClientLayout({
   }, []);
 
   useEffect(() => {
-    fetchUser();
+    if (!initialUser) {
+      fetchUser();
+    }
     fetchStores();
-  }, [fetchUser, fetchStores]);
+  }, [fetchUser, fetchStores, initialUser]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {

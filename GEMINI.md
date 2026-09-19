@@ -464,3 +464,5 @@ This is the explicit list of tells that make an interface look AI-generated rath
 If a component you're building matches one of these patterns, don't ask "does this look nice" — it probably does, in isolation. Ask "would every other AI-generated dashboard also produce exactly this," and if yes, go back to §0 and re-derive the treatment from ghost/signal and the network motif instead.
 
 NO OVERUSE OF BADGES AND DOTS, CUT THAT SHIT OUT
+
+after finishing coding always push changes!
