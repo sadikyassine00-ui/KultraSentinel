@@ -166,7 +166,7 @@ export async function discoverMerchantAccounts(
         if (rawId && !discoveredMap.has(rawId)) {
           discoveredMap.set(rawId, {
             merchantId: rawId,
-            name: acct.accountName || acct.displayName || (rawId === '5838023405' ? 'Kultra Studio' : `Merchant Center #${rawId}`),
+            name: acct.accountName || acct.displayName || `Merchant Center #${rawId}`,
             websiteUrl: acct.homepageUri || null,
             isAggregator: false,
           });
@@ -189,7 +189,7 @@ export async function discoverMerchantAccounts(
             if (rawId && !discoveredMap.has(rawId)) {
               discoveredMap.set(rawId, {
                 merchantId: rawId,
-                name: acct.accountName || acct.displayName || (rawId === '5838023405' ? 'Kultra Studio' : `Merchant Center #${rawId}`),
+                name: acct.accountName || acct.displayName || `Merchant Center #${rawId}`,
                 websiteUrl: acct.homepageUri || null,
                 isAggregator: false,
               });
@@ -241,14 +241,14 @@ export async function discoverMerchantAccounts(
               const acctData = await acctRes.json();
               discoveredMap.set(merchantId, {
                 merchantId,
-                name: acctData.name || (merchantId === '5838023405' ? 'Kultra Studio' : `Merchant Center #${merchantId}`),
+                name: acctData.name || `Merchant Center #${merchantId}`,
                 websiteUrl: acctData.websiteUrl || null,
                 isAggregator: Boolean(acctData.users?.some((u: { role?: string }) => u.role === 'admin') && aggregatorId === merchantId),
               });
             } else {
               discoveredMap.set(merchantId, {
                 merchantId,
-                name: merchantId === '5838023405' ? 'Kultra Studio' : `Merchant Center #${merchantId}`,
+                name: `Merchant Center #${merchantId}`,
                 websiteUrl: null,
                 isAggregator: false,
               });
@@ -256,7 +256,7 @@ export async function discoverMerchantAccounts(
           } catch {
             discoveredMap.set(merchantId, {
               merchantId,
-              name: merchantId === '5838023405' ? 'Kultra Studio' : `Merchant Center #${merchantId}`,
+              name: `Merchant Center #${merchantId}`,
               websiteUrl: null,
               isAggregator: false,
             });
@@ -281,14 +281,14 @@ export async function discoverMerchantAccounts(
                 const aggData = await aggRes.json();
                 discoveredMap.set(aggregatorId, {
                   merchantId: aggregatorId,
-                  name: aggData.name || (aggregatorId === '5838023405' ? 'Kultra Studio' : `Merchant Center #${aggregatorId}`),
+                  name: aggData.name || `Merchant Center #${aggregatorId}`,
                   websiteUrl: aggData.websiteUrl || null,
                   isAggregator: true,
                 });
               } else {
                 discoveredMap.set(aggregatorId, {
                   merchantId: aggregatorId,
-                  name: aggregatorId === '5838023405' ? 'Kultra Studio' : `Merchant Center #${aggregatorId}`,
+                  name: `Merchant Center #${aggregatorId}`,
                   websiteUrl: null,
                   isAggregator: true,
                 });
@@ -296,7 +296,7 @@ export async function discoverMerchantAccounts(
             } catch {
               discoveredMap.set(aggregatorId, {
                 merchantId: aggregatorId,
-                name: aggregatorId === '5838023405' ? 'Kultra Studio' : `Merchant Center #${aggregatorId}`,
+                name: `Merchant Center #${aggregatorId}`,
                 websiteUrl: null,
                 isAggregator: true,
               });
@@ -343,7 +343,8 @@ export async function discoverMerchantAccounts(
     console.warn('[Merchant API] accounts/authinfo fetch error:', authErr);
   }
 
-  // Tier 3: Direct account verification if targetMerchantId is specified
+  // Tier 3: Strict direct account verification if targetMerchantId is specified
+  // ONLY add if Google Content API or Merchant API returns HTTP 200 confirming genuine access.
   if (targetMerchantId && !discoveredMap.has(targetMerchantId)) {
     try {
       const directRes = await fetch(
@@ -360,26 +361,15 @@ export async function discoverMerchantAccounts(
         const directData = await directRes.json();
         discoveredMap.set(targetMerchantId, {
           merchantId: targetMerchantId,
-          name: directData.name || (targetMerchantId === '5838023405' ? 'Kultra Studio' : `Merchant Center #${targetMerchantId}`),
+          name: directData.name || `Merchant Center #${targetMerchantId}`,
           websiteUrl: directData.websiteUrl || null,
           isAggregator: false,
         });
       } else {
-        // Even if direct accounts.get returns 403 (e.g. permission scoping delay), register target ID with fallback name
-        discoveredMap.set(targetMerchantId, {
-          merchantId: targetMerchantId,
-          name: targetMerchantId === '5838023405' ? 'Kultra Studio' : `Merchant Center #${targetMerchantId}`,
-          websiteUrl: null,
-          isAggregator: false,
-        });
+        console.warn(`[Merchant API] Target merchant #${targetMerchantId} returned HTTP ${directRes.status}. Strict verification rejected fallback.`);
       }
-    } catch {
-      discoveredMap.set(targetMerchantId, {
-        merchantId: targetMerchantId,
-        name: targetMerchantId === '5838023405' ? 'Kultra Studio' : `Merchant Center #${targetMerchantId}`,
-        websiteUrl: null,
-        isAggregator: false,
-      });
+    } catch (directErr) {
+      console.warn(`[Merchant API] Target merchant #${targetMerchantId} lookup failed:`, directErr);
     }
   }
 

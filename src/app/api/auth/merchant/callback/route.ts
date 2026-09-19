@@ -108,16 +108,10 @@ export async function GET(request: Request) {
     const targetGmcId = stateResult.returnTo || undefined;
 
     // 4. Live GMC Account Discovery (Google Merchant API & Content API v2.1)
-    let discoveredAccounts = await discoverMerchantAccounts(accessToken, targetGmcId);
+    const discoveredAccounts = await discoverMerchantAccounts(accessToken, targetGmcId);
 
-    // If user is superadmin or known owner, and 0 accounts returned, attempt fallback for known store 5838023405
-    if (discoveredAccounts.length === 0 && session.email.toLowerCase() === 'yassinesadik0@gmail.com') {
-      console.info('[Merchant OAuth Callback] Attempting direct fallback discovery for store 5838023405...');
-      discoveredAccounts = await discoverMerchantAccounts(accessToken, '5838023405');
-    }
-
-    // Case A: Zero GMC accounts found
-    // Preserve token in short-lived HTTP-only cookie so user can enter GMC ID manually on /dashboard/connect/no-account
+    // Case A: Zero GMC accounts found (Strict Verification Gate)
+    // Halt onboarding immediately: zero stores created, zero trials started, redirect to no-account screen.
     if (discoveredAccounts.length === 0) {
       const pendingCookiePayload = JSON.stringify({
         email: session.email,

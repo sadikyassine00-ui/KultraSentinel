@@ -62,7 +62,7 @@ export default async function NoGmcAccountPage({ searchParams }: Props) {
           </a>
 
           <a
-            href="https://merchants.google.com"
+            href="https://accounts.google.com/AccountChooser?continue=https://merchants.google.com/mc/overview"
             target="_blank"
             rel="noopener noreferrer"
             className="btn-secondary py-2.5 px-4 text-[13px] font-semibold !rounded-[3px] inline-flex items-center justify-center gap-1.5 text-[var(--ghost-text)] hover:text-[var(--ink-primary)]"

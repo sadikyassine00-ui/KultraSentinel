@@ -52,36 +52,38 @@ export async function POST(request: Request) {
     const encryptedRefreshToken = pendingData?.encryptedRefreshToken || undefined;
     const accessToken = pendingData?.accessToken || undefined;
 
-    // Determine authentic business name
+    // Enforce strict Google Content API verification
     let storeName = body.storeName?.trim();
-    if (!storeName) {
-      if (gmcId === '5838023405') {
-        storeName = 'Kultra Studio';
-      } else {
-        // Try fetching account details if accessToken exists
-        if (accessToken) {
-          try {
-            const acctRes = await fetch(
-              `https://shoppingcontent.googleapis.com/content/v2.1/${encodeURIComponent(gmcId)}/accounts/${encodeURIComponent(gmcId)}`,
-              {
-                headers: {
-                  Authorization: `Bearer ${accessToken}`,
-                  Accept: 'application/json',
-                },
-              }
-            );
-            if (acctRes.ok) {
-              const acctData = await acctRes.json();
-              storeName = acctData.name || `Merchant Center #${gmcId}`;
-            }
-          } catch {
-            // Ignored fallback
+    if (accessToken) {
+      try {
+        const acctRes = await fetch(
+          `https://shoppingcontent.googleapis.com/content/v2.1/${encodeURIComponent(gmcId)}/accounts/${encodeURIComponent(gmcId)}`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              Accept: 'application/json',
+            },
           }
+        );
+
+        if (acctRes.ok) {
+          const acctData = await acctRes.json();
+          storeName = acctData.name || storeName || `Merchant Center #${gmcId}`;
+        } else if (acctRes.status === 404 || acctRes.status === 403) {
+          const errText = await acctRes.text();
+          console.warn(`[Direct GMC Link] Google rejected merchant #${gmcId} (HTTP ${acctRes.status}): ${errText}`);
+          return NextResponse.json(
+            { error: `Google Merchant Center account #${gmcId} not found or access denied for this Google identity.` },
+            { status: 404 }
+          );
         }
-        if (!storeName) {
-          storeName = `Store #${gmcId}`;
-        }
+      } catch (verifyErr) {
+        console.warn(`[Direct GMC Link] Verification error for merchant #${gmcId}:`, verifyErr);
       }
+    }
+
+    if (!storeName) {
+      storeName = `Merchant Center #${gmcId}`;
     }
 
     const tenant = await findTenantByEmail(session.email);
