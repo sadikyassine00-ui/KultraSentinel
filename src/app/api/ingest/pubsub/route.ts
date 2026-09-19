@@ -13,6 +13,7 @@ import {
   findTenantByEmail,
 } from '@/lib/db';
 import { evaluateSubscription } from '@/lib/subscription';
+import { dispatchDisapprovalSlackNotification } from '@/lib/slack';
 
 export async function POST(request: Request) {
   const startTime = performance.now();
@@ -247,11 +248,11 @@ export async function POST(request: Request) {
     let dispatchOutcome = 'skipped_no_destination';
     let alertCard: Record<string, unknown> | null = null;
 
+    let volumeInWindow = 0;
     if (destination) {
-      const volumeInWindow = await getStoreIncidentCountInWindow(store.id, 60);
+      volumeInWindow = await getStoreIncidentCountInWindow(store.id, 60);
 
-      const gmcDiagnosticsUrl = `https://merchants.google.com/mc/items/diagnostics?accountId=${encodeURIComponent(merchantId)}&offerId=${encodeURIComponent(sku)}`;
-      const storeAdminEditUrl = `https://${store.store_url}/admin/products?sku=${encodeURIComponent(sku)}`;
+      const gmcDiagnosticsUrl = `https://merchants.google.com/mc/items/details?account=${encodeURIComponent(merchantId)}&item=${encodeURIComponent(sku)}`;
 
       if (volumeInWindow >= 10) {
         // Bulk Spike Guard activated: dispatch aggregated summary
@@ -286,92 +287,84 @@ export async function POST(request: Request) {
         };
         dispatchOutcome = 'bulk_spike_guard_dispatched';
       } else {
-        // Standard Actionable Alert Card
-        const severityLabel = severity === 'critical' ? 'Item Disapproved (Blocked)' : 'Item Demoted';
-        alertCard = {
-          blocks: [
-            {
-              type: 'header',
-              text: {
-                type: 'plain_text',
-                text: 'Kultra Instant Remediation Alert',
-              },
-            },
-            {
-              type: 'section',
-              text: {
-                type: 'mrkdwn',
-                text: `*Store:* \`${store.store_name || store.store_url}\` (GMC #${merchantId})\n*Environment:* \`[Production]\`\n*SKU:* \`${sku}\` - *${title}*\n*Status:* \`${severityLabel}\`\n*Policy Failure:* \`${issueCode}\``,
-              },
-            },
-            {
-              type: 'actions',
-              elements: [
-                {
-                  type: 'button',
-                  text: { type: 'plain_text', text: 'Fix in Store Backend' },
-                  url: storeAdminEditUrl,
-                  style: 'primary',
-                },
-                {
-                  type: 'button',
-                  text: { type: 'plain_text', text: 'GMC Item Diagnostics' },
-                  url: gmcDiagnosticsUrl,
-                },
-              ],
-            },
-          ],
-        };
-        dispatchOutcome = 'individual_alert_dispatched';
+        dispatchOutcome = 'individual_alert_scheduled';
       }
     }
 
     // Helper for non-blocking outbound webhook execution inside after()
     const dispatchAlert = async () => {
-      if (!destination || !alertCard) return;
-      try {
-        const dispatchRes = await fetch(destination, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(alertCard),
-          signal: AbortSignal.timeout(3000), // Strict 3s timeout guard
-        });
-
-        if (!dispatchRes.ok) {
-          if (dispatchRes.status === 404 || dispatchRes.status === 410) {
-            await markStoreAlertStatus(store.id, 'degraded');
-          }
-
-          await recordDispatchLog({
-            dispatch_id: `dsp-${Date.now()}`,
-            tenant_email: store.tenant_email,
-            store_url: store.store_url,
-            destination,
-            delivery_status: dispatchRes.status,
-            status_label: dispatchRes.status === 404 ? 'Invalid Webhook' : 'Rate Limited',
-            payload: alertCard,
+      if (!destination) return;
+      if (volumeInWindow >= 10 && alertCard) {
+        const startTime = performance.now();
+        try {
+          const dispatchRes = await fetch(destination, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(alertCard),
+            signal: AbortSignal.timeout(3000), // Strict 3s timeout guard
           });
-        } else {
+          const latency_ms = Math.round(performance.now() - startTime);
+
+          if (!dispatchRes.ok) {
+            if (dispatchRes.status === 404 || dispatchRes.status === 410) {
+              await markStoreAlertStatus(store.id, 'degraded');
+            }
+
+            await recordDispatchLog({
+              dispatch_id: `dsp-${Date.now()}`,
+              tenant_email: store.tenant_email,
+              store_url: store.store_url,
+              store_name: store.store_name || store.store_url,
+              gmc_id: store.gmc_id,
+              destination,
+              delivery_status: dispatchRes.status,
+              status_label: dispatchRes.status === 404 ? 'Invalid Webhook' : 'Rate Limited',
+              latency_ms,
+              payload: alertCard,
+            });
+          } else {
+            await recordDispatchLog({
+              dispatch_id: `dsp-${Date.now()}`,
+              tenant_email: store.tenant_email,
+              store_url: store.store_url,
+              store_name: store.store_name || store.store_url,
+              gmc_id: store.gmc_id,
+              destination,
+              delivery_status: 200,
+              status_label: 'Delivered',
+              latency_ms,
+              payload: alertCard,
+            });
+          }
+        } catch (dispatchErr: unknown) {
+          const latency_ms = Math.round(performance.now() - startTime);
+          console.warn('[PubSub Ingestion] Outbound dispatch error:', dispatchErr);
           await recordDispatchLog({
             dispatch_id: `dsp-${Date.now()}`,
             tenant_email: store.tenant_email,
             store_url: store.store_url,
+            store_name: store.store_name || store.store_url,
+            gmc_id: store.gmc_id,
             destination,
-            delivery_status: 200,
-            status_label: 'Delivered',
-            payload: alertCard,
+            delivery_status: 502,
+            status_label: 'Invalid Webhook',
+            latency_ms,
+            payload: { error: 'Network failure during delivery', alertCard },
           });
         }
-      } catch (dispatchErr: unknown) {
-        console.warn('[PubSub Ingestion] Outbound dispatch error:', dispatchErr);
-        await recordDispatchLog({
-          dispatch_id: `dsp-${Date.now()}`,
-          tenant_email: store.tenant_email,
-          store_url: store.store_url,
-          destination,
-          delivery_status: 502,
-          status_label: 'Invalid Webhook',
-          payload: { error: 'Network failure during delivery', alertCard },
+      } else {
+        // Standard Actionable Alert Card with Dynamic Store Attribution and Plain-English Error Translation (§3)
+        await dispatchDisapprovalSlackNotification({
+          store,
+          incident: {
+            sku,
+            title,
+            price: eventData.price || eventData.sale_price || null,
+            issueCode,
+            severity,
+          },
+          triggerType: 'Live Google Alert',
+          appUrl: process.env.NEXT_PUBLIC_APP_URL || 'https://usekultra.com',
         });
       }
     };

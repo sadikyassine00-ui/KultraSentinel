@@ -233,6 +233,8 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
     try {
       const res = await fetch(`/api/stores/${data.activeStore.id}/simulate`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storeId: data.activeStore.id }),
       });
       const json = await res.json();
       if (res.ok) {
@@ -317,7 +319,10 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
       const res = await fetch(`/api/stores/${data.activeStore.id}/verify-webhook`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ webhookUrl: slackWebhookInput.trim() }),
+        body: JSON.stringify({
+          storeId: data.activeStore.id,
+          webhookUrl: slackWebhookInput.trim(),
+        }),
       });
 
       const resJson = await res.json();
@@ -356,11 +361,16 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
       const res = await fetch(`/api/stores/${data.activeStore.id}/verify-webhook`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ webhookUrl: webhook }),
+        body: JSON.stringify({
+          storeId: data.activeStore.id,
+          webhookUrl: webhook,
+          sendTestAlert: true,
+        }),
       });
       const resJson = await res.json();
       if (res.ok && resJson.verified) {
         setInlineFeedback(`Test alert delivered to Slack in ${resJson.latencyMs || 14}ms.`);
+        await fetchDashboardData(String(data.activeStore.id));
       } else {
         setInlineFeedback(`Delivery failed: ${resJson.error || 'Destination unreachable'}`);
       }

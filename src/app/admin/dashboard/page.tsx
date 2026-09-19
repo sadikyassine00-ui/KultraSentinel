@@ -103,15 +103,18 @@ export default function AdminDashboardPage() {
 
   // Telemetry KPIs
   const [telemetry, setTelemetry] = useState<SuperTelemetry>({
-    mrr: 14850,
-    activeSubscriptions: 48,
-    activeTrials: 112,
-    totalMonitoredStores: 26,
-    totalSkusTracked: 1420850,
-    globalIngestionRate: 420,
-    averageLatencyMs: 184,
-    dlqCount: 3,
-    webhookFailureRate: 0.02,
+    mrr: 0,
+    activeSubscriptions: 0,
+    activeTrials: 0,
+    totalMonitoredStores: 0,
+    totalSkusTracked: 0,
+    globalIngestionRate: 0,
+    averageLatencyMs: 0,
+    dlqCount: 0,
+    webhookFailureRate: 0,
+    pipelineStatus: 'Awaiting Events',
+    hasDispatches: false,
+    deliverabilityLabel: 'No Events Yet',
   });
 
   // Tab 1: Tenants
@@ -818,9 +821,13 @@ export default function AdminDashboardPage() {
                   </div>
 
                   <div className="flex items-center gap-2.5 shrink-0">
-                    <div className="hidden sm:inline-flex items-center gap-1.5 text-xs font-mono text-[#f2a93b] bg-[rgba(242,169,59,0.06)] px-3 py-1.5 rounded-[100px] border border-[#7a5a26]">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" />
-                      <span>Pub/Sub active ({telemetry.globalIngestionRate} msg/min)</span>
+                    <div className="hidden sm:inline-flex items-center gap-1.5 text-xs font-mono px-3 py-1.5 rounded-[100px] border border-[rgba(255,255,255,0.08)] bg-[#0e0f11]">
+                      <span className={`w-1.5 h-1.5 rounded-full ${telemetry.globalIngestionRate > 0 ? 'bg-[#f2a93b]' : 'bg-[#6b7078]'}`} />
+                      <span className={telemetry.globalIngestionRate > 0 ? 'text-[#f2a93b]' : 'text-[#b9b3a5]'}>
+                        {telemetry.globalIngestionRate > 0
+                          ? `Pub/Sub active (${telemetry.globalIngestionRate} msg/min)`
+                          : `Pub/Sub ${telemetry.pipelineStatus || 'Awaiting Events'} (0 msg/min)`}
+                      </span>
                     </div>
 
                     <button
@@ -846,14 +853,16 @@ export default function AdminDashboardPage() {
                       </div>
                     </div>
                     <div className="text-2xl sm:text-3xl font-semibold font-mono text-[#f4f1ea] tracking-tight">
-                      ${telemetry.mrr.toLocaleString()}
+                      ${telemetry.mrr.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
                     <div className="text-xs text-[#6b7078] flex items-center justify-between pt-1 gap-2">
                       <div className="flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" />
+                        <span className={`w-1.5 h-1.5 rounded-full ${telemetry.mrr > 0 ? 'bg-[#f2a93b]' : 'bg-[#6b7078]'}`} />
                         <span>Stripe recurring</span>
                       </div>
-                      <span className="text-[11px] font-mono text-[#f2a93b] font-medium">+14.2% MoM</span>
+                      <span className="text-[11px] font-mono text-[#6b7078]">
+                        {telemetry.mrr > 0 ? 'Active billing' : 'Zero paid tiers'}
+                      </span>
                     </div>
                   </div>
 
@@ -877,21 +886,21 @@ export default function AdminDashboardPage() {
                         <div
                           className="bg-[#f2a93b] h-full"
                           style={{
-                            width: `${Math.round(
+                            width: `${(telemetry.activeSubscriptions + telemetry.activeTrials) > 0 ? Math.round(
                               (telemetry.activeSubscriptions /
-                                Math.max(1, telemetry.activeSubscriptions + telemetry.activeTrials)) *
+                                (telemetry.activeSubscriptions + telemetry.activeTrials)) *
                                 100
-                            )}%`,
+                            ) : 0}%`,
                           }}
                         />
                         <div
                           className="bg-[#6b7078] h-full"
                           style={{
-                            width: `${Math.round(
+                            width: `${(telemetry.activeSubscriptions + telemetry.activeTrials) > 0 ? Math.round(
                               (telemetry.activeTrials /
-                                Math.max(1, telemetry.activeSubscriptions + telemetry.activeTrials)) *
+                                (telemetry.activeSubscriptions + telemetry.activeTrials)) *
                                 100
-                            )}%`,
+                            ) : 0}%`,
                           }}
                         />
                       </div>
@@ -914,7 +923,9 @@ export default function AdminDashboardPage() {
                     </div>
                     <div className="text-xs text-[#6b7078] flex items-center justify-between pt-1">
                       <span>GMC Registry</span>
-                      <span className="text-[11px] font-mono text-[#b9b3a5]">Standalone & MCA</span>
+                      <span className="text-[11px] font-mono text-[#b9b3a5]">
+                        {telemetry.totalMonitoredStores > 0 ? 'Connected feeds' : 'No feeds connected'}
+                      </span>
                     </div>
                   </div>
 
@@ -931,7 +942,9 @@ export default function AdminDashboardPage() {
                     </div>
                     <div className="text-xs text-[#6b7078] flex items-center justify-between pt-1">
                       <span>Pub/Sub monitoring</span>
-                      <span className="text-[11px] font-mono text-[#f2a93b]">100% coverage</span>
+                      <span className="text-[11px] font-mono text-[#b9b3a5]">
+                        {telemetry.totalSkusTracked > 0 ? 'Active catalog sync' : 'Pending catalog sync'}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -942,42 +955,44 @@ export default function AdminDashboardPage() {
                   <div className="p-4 sm:p-5 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-mono text-[#45484f]">Ingestion rate</span>
-                      <Radio className="w-3.5 h-3.5 text-[#f2a93b]" />
+                      <Radio className={`w-3.5 h-3.5 ${telemetry.globalIngestionRate > 0 ? 'text-[#f2a93b]' : 'text-[#6b7078]'}`} />
                     </div>
                     <div className="text-xl sm:text-2xl font-semibold font-mono text-[#f4f1ea] tracking-tight flex items-baseline gap-1.5">
                       <span>{telemetry.globalIngestionRate}</span>
                       <span className="text-xs font-mono text-[#f2a93b]">msg/min</span>
                     </div>
-                    <div className="flex items-end gap-1 h-3 pt-0.5">
-                      <span className="w-1.5 h-1.5 bg-[#f2a93b]/40 rounded-[1px]" />
-                      <span className="w-1.5 h-2.5 bg-[#f2a93b]/60 rounded-[1px]" />
-                      <span className="w-1.5 h-2 bg-[#f2a93b]/50 rounded-[1px]" />
-                      <span className="w-1.5 h-3 bg-[#f2a93b]/75 rounded-[1px]" />
-                      <span className="w-1.5 h-2.5 bg-[#f2a93b]/65 rounded-[1px]" />
-                      <span className="w-1.5 h-3 bg-[#f2a93b] rounded-[1px]" />
+                    <div className="flex items-center gap-1.5 text-[11px] font-mono">
+                      <span className={`w-1.5 h-1.5 rounded-full ${telemetry.globalIngestionRate > 0 ? 'bg-[#f2a93b]' : 'bg-[#6b7078]'}`} />
+                      <span className={telemetry.globalIngestionRate > 0 ? 'text-[#f2a93b]' : 'text-[#6b7078]'}>
+                        {telemetry.globalIngestionRate > 0 ? 'Streaming live' : (telemetry.pipelineStatus || 'Awaiting Events')}
+                      </span>
                     </div>
-                    <p className="text-[11px] font-mono text-[#6b7078]">Pub/Sub QoS 1 streaming</p>
+                    <p className="text-[11px] font-mono text-[#6b7078]">
+                      {telemetry.globalIngestionRate > 0 ? 'Pub/Sub QoS 1 streaming' : 'Subscriber queue idle'}
+                    </p>
                   </div>
 
                   {/* Metric 2: Latency */}
                   <div className="p-4 sm:p-5 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-mono text-[#45484f]">Pipeline latency</span>
-                      <Zap className="w-3.5 h-3.5 text-[#6b7078]" />
+                      <Zap className={`w-3.5 h-3.5 ${telemetry.averageLatencyMs > 0 ? 'text-[#f2a93b]' : 'text-[#6b7078]'}`} />
                     </div>
                     <div className="text-xl sm:text-2xl font-semibold font-mono text-[#f4f1ea] tracking-tight flex items-baseline gap-1.5">
-                      <span>{telemetry.averageLatencyMs}</span>
+                      <span>{telemetry.averageLatencyMs > 0 ? telemetry.averageLatencyMs : '0'}</span>
                       <span className="text-xs font-mono text-[#6b7078]">ms avg</span>
                     </div>
                     <div className="w-full bg-[#131418] h-1.5 rounded-[2px] overflow-hidden border border-[rgba(255,255,255,0.08)]">
                       <div
                         className="bg-[#f2a93b] h-full"
                         style={{
-                          width: `${Math.min(100, Math.round((telemetry.averageLatencyMs / 500) * 100))}%`,
+                          width: `${telemetry.averageLatencyMs > 0 ? Math.min(100, Math.round((telemetry.averageLatencyMs / 500) * 100)) : 0}%`,
                         }}
                       />
                     </div>
-                    <p className="text-[11px] font-mono text-[#6b7078]">SLA target &lt; 500ms</p>
+                    <p className="text-[11px] font-mono text-[#6b7078]">
+                      {telemetry.averageLatencyMs > 0 ? 'SLA target < 500ms' : 'No latency events recorded'}
+                    </p>
                   </div>
 
                   {/* Metric 3: Dead Letter Queue */}
@@ -1010,11 +1025,21 @@ export default function AdminDashboardPage() {
                       <Send className="w-3.5 h-3.5 text-[#6b7078]" />
                     </div>
                     <div className="text-xl sm:text-2xl font-semibold font-mono text-[#f4f1ea] tracking-tight flex items-baseline gap-1.5">
-                      <span>{((1 - telemetry.webhookFailureRate) * 100).toFixed(1)}%</span>
-                      <span className="text-xs font-mono text-[#6b7078]">deliverability</span>
+                      <span>
+                        {telemetry.deliverabilityLabel
+                          ? telemetry.deliverabilityLabel
+                          : telemetry.hasDispatches
+                          ? `${((1 - telemetry.webhookFailureRate) * 100).toFixed(1)}%`
+                          : 'No Events Yet'}
+                      </span>
+                      {telemetry.hasDispatches && (
+                        <span className="text-xs font-mono text-[#6b7078]">deliverability</span>
+                      )}
                     </div>
                     <p className="text-[11px] font-mono text-[#6b7078] pt-1">
-                      {(telemetry.webhookFailureRate * 100).toFixed(2)}% outbound 4xx/5xx errors
+                      {telemetry.hasDispatches
+                        ? `${(telemetry.webhookFailureRate * 100).toFixed(1)}% outbound delivery errors`
+                        : 'Awaiting outbound alert dispatches'}
                     </p>
                   </div>
                 </div>
@@ -1401,37 +1426,21 @@ export default function AdminDashboardPage() {
                         </div>
 
                         <div className="space-y-2 font-mono text-xs">
-                          <div className="p-2.5 rounded-[3px] bg-[#0a0b0d] border border-[rgba(255,255,255,0.08)] flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
-                            <div className="flex items-center gap-2.5">
-                              <span className="px-2 py-0.5 rounded-[100px] text-[10.5px] font-mono bg-[rgba(242,169,59,0.06)] text-[#f2a93b] border border-[#7a5a26]">200 OK</span>
-                              <span className="text-[#f4f1ea] font-mono break-all">item_disapproved: missing_required_attribute [gtin]</span>
+                          {dlqMessages.slice(0, 5).map((msg) => (
+                            <div key={msg.id} className="p-2.5 rounded-[3px] bg-[#0a0b0d] border border-[rgba(214,69,69,0.4)] flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                              <div className="flex items-center gap-2.5">
+                                <span className="px-2 py-0.5 rounded-[100px] text-[10.5px] font-mono bg-[rgba(214,69,69,0.08)] text-[#d64545] border border-[rgba(214,69,69,0.4)]">DLQ DROP</span>
+                                <span className="text-[#d64545] font-mono break-all">{msg.failure_reason}</span>
+                              </div>
+                              <span className="text-[#d64545] text-[11px] shrink-0 font-mono">{msg.message_id} / DLQ</span>
                             </div>
-                            <span className="text-[#6b7078] text-[11px] shrink-0 font-mono">104928192 / 14ms</span>
-                          </div>
-
-                          <div className="p-2.5 rounded-[3px] bg-[#0a0b0d] border border-[rgba(255,255,255,0.08)] flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
-                            <div className="flex items-center gap-2.5">
-                              <span className="px-2 py-0.5 rounded-[100px] text-[10.5px] font-mono bg-transparent text-[#6b7078] border border-[#3a3d43]">SKIPPED</span>
-                              <span className="text-[#6b7078] font-mono break-all">item_status_unchanged: product_id: sku_49810</span>
+                          ))}
+                          {dlqMessages.length === 0 && (
+                            <div className="p-6 rounded-[3px] bg-[#0a0b0d] border border-[rgba(255,255,255,0.08)] text-center text-[#6b7078] space-y-1">
+                              <p className="text-xs font-mono text-[#b9b3a5]">No Pub/Sub events received yet.</p>
+                              <p className="text-[11px]">Live streaming terminal will log incoming messages in real time.</p>
                             </div>
-                            <span className="text-[#6b7078] text-[11px] shrink-0 font-mono">294018241 / 4ms</span>
-                          </div>
-
-                          <div className="p-2.5 rounded-[3px] bg-[#0a0b0d] border border-[rgba(255,255,255,0.08)] flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
-                            <div className="flex items-center gap-2.5">
-                              <span className="px-2 py-0.5 rounded-[100px] text-[10.5px] font-mono bg-[rgba(242,169,59,0.06)] text-[#f2a93b] border border-[#7a5a26]">200 OK</span>
-                              <span className="text-[#f4f1ea] font-mono break-all">item_disapproved: pricing_mismatch [price]</span>
-                            </div>
-                            <span className="text-[#6b7078] text-[11px] shrink-0 font-mono">994817263 / 18ms</span>
-                          </div>
-
-                          <div className="p-2.5 rounded-[3px] bg-[#0a0b0d] border border-[rgba(214,69,69,0.4)] flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
-                            <div className="flex items-center gap-2.5">
-                              <span className="px-2 py-0.5 rounded-[100px] text-[10.5px] font-mono bg-[rgba(214,69,69,0.08)] text-[#d64545] border border-[rgba(214,69,69,0.4)]">DLQ DROP</span>
-                              <span className="text-[#d64545] font-mono break-all">UNSUPPORTED_ISSUE_CODE: unexpected payload schema</span>
-                            </div>
-                            <span className="text-[#d64545] text-[11px] shrink-0 font-mono">msg_gcp_9901 / DLQ</span>
-                          </div>
+                          )}
                         </div>
                       </div>
 
@@ -1440,45 +1449,40 @@ export default function AdminDashboardPage() {
                         <div>
                           <div className="flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] pb-3">
                             <h3 className="text-xs font-mono text-[#f4f1ea]">Pipeline Latency Percentiles</h3>
-                            <span className="text-[11px] font-mono text-[#6b7078]">Last 24h</span>
+                            <span className="text-[11px] font-mono text-[#6b7078]">Live dispatches</span>
                           </div>
 
-                          <div className="mt-4 space-y-4 font-mono text-xs">
-                            <div>
-                              <div className="flex justify-between mb-1.5">
-                                <span className="text-[#b9b3a5]">50th percentile (median)</span>
-                                <span className="text-[#f4f1ea] font-semibold">184 ms</span>
-                              </div>
-                              <div className="w-full bg-[#0a0b0d] h-1.5 rounded-[2px] overflow-hidden border border-[rgba(255,255,255,0.08)]">
-                                <div className="bg-[#f2a93b] h-full" style={{ width: '42%' }} />
-                              </div>
-                            </div>
-
-                            <div>
-                              <div className="flex justify-between mb-1.5">
-                                <span className="text-[#b9b3a5]">95th percentile latency</span>
-                                <span className="text-[#b9b3a5] font-semibold">240 ms</span>
-                              </div>
-                              <div className="w-full bg-[#0a0b0d] h-1.5 rounded-[2px] overflow-hidden border border-[rgba(255,255,255,0.08)]">
-                                <div className="bg-[#6b7078] h-full" style={{ width: '58%' }} />
+                          {telemetry.averageLatencyMs > 0 ? (
+                            <div className="mt-4 space-y-4 font-mono text-xs">
+                              <div>
+                                <div className="flex justify-between mb-1.5">
+                                  <span className="text-[#b9b3a5]">Average delivery latency</span>
+                                  <span className="text-[#f4f1ea] font-semibold">{telemetry.averageLatencyMs} ms</span>
+                                </div>
+                                <div className="w-full bg-[#0a0b0d] h-1.5 rounded-[2px] overflow-hidden border border-[rgba(255,255,255,0.08)]">
+                                  <div
+                                    className="bg-[#f2a93b] h-full"
+                                    style={{
+                                      width: `${Math.min(100, Math.round((telemetry.averageLatencyMs / 500) * 100))}%`,
+                                    }}
+                                  />
+                                </div>
                               </div>
                             </div>
-
-                            <div>
-                              <div className="flex justify-between mb-1.5">
-                                <span className="text-[#b9b3a5]">99th percentile latency</span>
-                                <span className="text-[#b9b3a5] font-semibold">310 ms</span>
-                              </div>
-                              <div className="w-full bg-[#0a0b0d] h-1.5 rounded-[2px] overflow-hidden border border-[rgba(255,255,255,0.08)]">
-                                <div className="bg-[#45484f] h-full" style={{ width: '74%' }} />
-                              </div>
+                          ) : (
+                            <div className="mt-4 p-4 rounded-[3px] bg-[#0a0b0d] border border-[rgba(255,255,255,0.08)] text-center text-xs text-[#6b7078]">
+                              No latency events recorded yet. Run a diagnostic fire drill or connect a store feed to measure delivery timing.
                             </div>
-                          </div>
+                          )}
                         </div>
 
                         <div className="p-3 bg-[#0a0b0d] border border-[rgba(255,255,255,0.08)] rounded-[3px] text-xs text-[#6b7078]">
                           <span className="text-[#f2a93b] font-mono">SLA Guarantee: </span>
-                          <span>Target is &lt; 500ms from GCP arrival to Slack alert dispatch. Current pipeline operating at 184ms average.</span>
+                          <span>
+                            {telemetry.averageLatencyMs > 0
+                              ? `Target is < 500ms from GCP arrival to Slack alert dispatch. Current pipeline operating at ${telemetry.averageLatencyMs}ms average.`
+                              : 'Target is < 500ms from GCP arrival to Slack alert dispatch. No latency events measured yet.'}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -1610,11 +1614,11 @@ export default function AdminDashboardPage() {
                         <table className="w-full text-left text-xs min-w-[760px]">
                           <thead className="bg-[#0e0f11] text-[#45484f] border-b border-[rgba(255,255,255,0.08)] font-mono text-[11px]">
                             <tr>
-                              <th className="px-4 py-3 font-normal">Dispatch ID & time</th>
-                              <th className="px-4 py-3 font-normal">Tenant & store</th>
+                              <th className="px-4 py-3 font-normal">Timestamp & ID</th>
+                              <th className="px-4 py-3 font-normal">Target store & GMC ID</th>
                               <th className="px-4 py-3 font-normal">Destination channel</th>
-                              <th className="px-4 py-3 font-normal">Delivery status</th>
-                              <th className="px-4 py-3 font-normal">Payload preview</th>
+                              <th className="px-4 py-3 font-normal">Status code & label</th>
+                              <th className="px-4 py-3 font-normal">Delivery latency</th>
                               <th className="px-4 py-3 font-normal text-right">Actions</th>
                             </tr>
                           </thead>
@@ -1624,12 +1628,14 @@ export default function AdminDashboardPage() {
                                 <tr className="hover:bg-[#131418] transition-colors">
                                   <td className="px-4 py-3">
                                     <div className="font-mono text-xs font-semibold text-[#f4f1ea]">{log.dispatch_id}</div>
-                                    <div className="text-[11px] font-mono text-[#6b7078]">{new Date(log.created_at).toLocaleTimeString()}</div>
+                                    <div className="text-[11px] font-mono text-[#6b7078]">{new Date(log.created_at).toLocaleString()}</div>
                                   </td>
 
                                   <td className="px-4 py-3">
-                                    <div className="font-medium text-[#f4f1ea] text-xs">{log.tenant_email}</div>
-                                    <div className="text-[#6b7078] text-xs">{log.store_url}</div>
+                                    <div className="font-medium text-[#f4f1ea] text-xs">{log.store_name || log.store_url}</div>
+                                    <div className="text-[#6b7078] text-[11px] font-mono">
+                                      {log.gmc_id ? `GMC: ${log.gmc_id}` : (log.store_url || log.tenant_email)}
+                                    </div>
                                   </td>
 
                                   <td className="px-4 py-3">
@@ -1653,28 +1659,32 @@ export default function AdminDashboardPage() {
                                     </span>
                                   </td>
 
-                                  <td className="px-4 py-3 whitespace-nowrap">
-                                    <button
-                                      onClick={() => setExpandedDispatchId(expandedDispatchId === log.id ? null : log.id)}
-                                      className="text-xs text-[#b9b3a5] hover:text-[#f4f1ea] font-medium flex items-center gap-1.5 transition-colors"
-                                    >
-                                      <span>View Block Kit JSON</span>
-                                      {expandedDispatchId === log.id ? <ChevronUp className="w-4 h-4 text-[#f2a93b]" /> : <ChevronDown className="w-4 h-4" />}
-                                    </button>
+                                  <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">
+                                    <span className={log.latency_ms ? 'text-[#f4f1ea]' : 'text-[#6b7078]'}>
+                                      {log.latency_ms != null ? `${log.latency_ms} ms` : '—'}
+                                    </span>
                                   </td>
 
                                   <td className="px-4 py-3 text-right whitespace-nowrap">
                                     <div className="flex items-center justify-end gap-2">
                                       <button
+                                        onClick={() => setExpandedDispatchId(expandedDispatchId === log.id ? null : log.id)}
+                                        className="px-2 py-1 bg-transparent border border-[rgba(255,255,255,0.14)] hover:border-[#7a5a26] text-xs text-[#b9b3a5] hover:text-[#f4f1ea] font-medium rounded-[3px] transition-colors flex items-center gap-1"
+                                      >
+                                        <span>JSON</span>
+                                        {expandedDispatchId === log.id ? <ChevronUp className="w-3.5 h-3.5 text-[#f2a93b]" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                                      </button>
+
+                                      <button
                                         onClick={() => handleRetryDispatch(log.id)}
-                                        className="px-2.5 py-1.5 bg-transparent border border-[rgba(255,255,255,0.14)] hover:border-[#7a5a26] text-[#f4f1ea] font-medium rounded-[3px] text-xs transition-colors"
+                                        className="px-2.5 py-1 bg-transparent border border-[rgba(255,255,255,0.14)] hover:border-[#7a5a26] text-[#f4f1ea] font-medium rounded-[3px] text-xs transition-colors"
                                       >
                                         Retry
                                       </button>
 
                                       <button
                                         onClick={() => handleDisableWebhook(log.destination)}
-                                        className="px-2.5 py-1.5 bg-transparent border border-[rgba(255,255,255,0.14)] hover:border-[rgba(214,69,69,0.4)] text-[#6b7078] hover:text-[#d64545] font-medium rounded-[3px] text-xs transition-colors"
+                                        className="px-2.5 py-1 bg-transparent border border-[rgba(255,255,255,0.14)] hover:border-[rgba(214,69,69,0.4)] text-[#6b7078] hover:text-[#d64545] font-medium rounded-[3px] text-xs transition-colors"
                                       >
                                         Silence
                                       </button>
@@ -1700,7 +1710,7 @@ export default function AdminDashboardPage() {
                             {dispatchLogs.length === 0 && (
                               <tr>
                                 <td colSpan={6} className="px-4 py-12 text-center text-[#6b7078]">
-                                  No outbound webhook logs available.
+                                  No dispatch activity recorded yet. Run a test alert from a store dashboard to view logs.
                                 </td>
                               </tr>
                             )}

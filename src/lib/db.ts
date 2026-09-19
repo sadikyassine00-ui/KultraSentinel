@@ -121,9 +121,12 @@ export interface DispatchLog {
   dispatch_id: string;
   tenant_email: string;
   store_url: string;
+  store_name?: string | null;
+  gmc_id?: string | null;
   destination: string;
   delivery_status: number;
   status_label: 'Delivered' | 'Rate Limited' | 'Invalid Webhook';
+  latency_ms?: number | null;
   payload: Record<string, unknown>;
   created_at: string;
 }
@@ -149,6 +152,10 @@ export interface SuperTelemetry {
   averageLatencyMs: number;
   dlqCount: number;
   webhookFailureRate: number;
+  // Authentic status fields
+  pipelineStatus?: 'Active' | 'Idle' | 'Awaiting Events';
+  hasDispatches?: boolean;
+  deliverabilityLabel?: string;
 }
 
 export interface UserSession {
@@ -618,6 +625,11 @@ export async function ensureSchema(): Promise<boolean> {
       );
     `;
 
+    // Ensure columns exist on dispatch_logs
+    await sql`ALTER TABLE dispatch_logs ADD COLUMN IF NOT EXISTS store_name TEXT;`;
+    await sql`ALTER TABLE dispatch_logs ADD COLUMN IF NOT EXISTS gmc_id TEXT;`;
+    await sql`ALTER TABLE dispatch_logs ADD COLUMN IF NOT EXISTS latency_ms INT;`;
+
     // 8. System Config Table
     await sql`
       CREATE TABLE IF NOT EXISTS system_config (
@@ -772,55 +784,119 @@ export async function getSuperTelemetry(): Promise<SuperTelemetry> {
   if (sql) {
     try {
       await ensureSchema();
+
+      // 1. Live Commercial Metrics & Account Segmentation
+      // Calculate MRR strictly by summing monthly price of active paid non-superadmin accounts
       const tenantsRes = await sql`
         SELECT 
           COUNT(*)::int as total_tenants,
-          COUNT(*) FILTER (WHERE plan_tier IN ('Active Pro', 'Agency Pilot'))::int as paid,
-          COUNT(*) FILTER (WHERE plan_tier = 'Trial')::int as trials,
+          COUNT(*) FILTER (
+            WHERE (subscription_status = 'paid active' OR plan_tier IN ('Active Pro', 'Agency Pilot'))
+              AND LOWER(email) != 'yassinesadik0@gmail.com'
+          )::int as paid,
+          COUNT(*) FILTER (
+            WHERE subscription_status = 'active trial' 
+              AND status != 'suspended'
+              AND LOWER(email) != 'yassinesadik0@gmail.com'
+          )::int as trials,
+          COALESCE(SUM(
+            CASE 
+              WHEN LOWER(email) = 'yassinesadik0@gmail.com' THEN 0
+              WHEN subscription_status = 'paid active' OR plan_tier IN ('Active Pro', 'Agency Pilot') THEN 
+                CASE 
+                  WHEN plan_tier = 'Agency Pilot' OR account_plan = 'agency' THEN 49
+                  ELSE 19
+                END
+              ELSE 0
+            END
+          ), 0)::numeric as mrr,
           COALESCE(SUM(total_skus), 0)::bigint as skus
         FROM tenants;
       `;
 
+      // 2. Monitored Stores: Query exact count of unique, connected Google Merchant Center accounts
       const storesRes = await sql`
-        SELECT COUNT(*)::int as total_stores FROM stores;
+        SELECT COUNT(DISTINCT gmc_id)::int as total_stores 
+        FROM stores 
+        WHERE status = 'active';
       `;
 
+      // 3. Dead Letter Queue: Exact count of unhandled dropped payloads
       const dlqRes = await sql`
-        SELECT COUNT(*)::int as dlq_count FROM dlq_messages WHERE status = 'unhandled';
+        SELECT COUNT(*)::int as dlq_count 
+        FROM dlq_messages 
+        WHERE status = 'unhandled';
       `;
 
-      const paid = tenantsRes[0]?.paid || 48;
-      const trials = tenantsRes[0]?.trials || 112;
-      const skus = Number(tenantsRes[0]?.skus) || 1420850;
-      const stores = storesRes[0]?.total_stores || 248;
-      const dlq = dlqRes[0]?.dlq_count || 3;
+      // 4. Live Pub/Sub Ingestion: Count messages processed in the last 5 minutes
+      const recentMessagesRes = await sql`
+        SELECT COUNT(*)::int as count 
+        FROM processed_messages 
+        WHERE processed_at >= NOW() - INTERVAL '5 minutes';
+      `;
+      const recentMsgs = recentMessagesRes[0]?.count || 0;
+      const ingestionRate = Math.round(recentMsgs / 5);
+
+      // 5. Dispatch Deliverability & Latency:
+      const dispatchesRes = await sql`
+        SELECT 
+          COUNT(*)::int as total,
+          COUNT(*) FILTER (WHERE delivery_status = 200 OR status_label = 'Delivered')::int as delivered,
+          COALESCE(AVG(latency_ms), 0)::int as avg_latency
+        FROM dispatch_logs;
+      `;
+      const totalDispatches = dispatchesRes[0]?.total || 0;
+      const deliveredDispatches = dispatchesRes[0]?.delivered || 0;
+      const avgLatency = dispatchesRes[0]?.avg_latency || 0;
+      const hasDispatches = totalDispatches > 0;
+      const webhookFailureRate = hasDispatches 
+        ? Number(((totalDispatches - deliveredDispatches) / totalDispatches).toFixed(4))
+        : 0;
+
+      const totalStores = storesRes[0]?.total_stores || 0;
+      const pipelineStatus = ingestionRate > 0 
+        ? 'Active' 
+        : (totalStores > 0 ? 'Awaiting Events' : 'Idle');
+
+      const paid = tenantsRes[0]?.paid || 0;
+      const trials = tenantsRes[0]?.trials || 0;
+      const skus = Number(tenantsRes[0]?.skus) || 0;
+      const mrr = Number(tenantsRes[0]?.mrr) || 0;
+      const dlq = dlqRes[0]?.dlq_count || 0;
 
       return {
-        mrr: paid * 99 + 10100, // Calculated MRR based on fleet tiers
+        mrr,
         activeSubscriptions: paid,
         activeTrials: trials,
-        totalMonitoredStores: stores,
+        totalMonitoredStores: totalStores,
         totalSkusTracked: skus,
-        globalIngestionRate: 420,
-        averageLatencyMs: 184,
+        globalIngestionRate: ingestionRate,
+        averageLatencyMs: avgLatency,
         dlqCount: dlq,
-        webhookFailureRate: 0.02,
+        webhookFailureRate,
+        pipelineStatus,
+        hasDispatches,
+        deliverabilityLabel: hasDispatches ? undefined : 'No Events Yet',
       };
     } catch (err) {
       console.warn('[Neon DB] Error querying super telemetry:', err);
     }
   }
 
+  // Pure truthful zero-state fallback
   return {
-    mrr: 14850,
-    activeSubscriptions: 48,
-    activeTrials: 112,
-    totalMonitoredStores: inMemoryStores.length,
-    totalSkusTracked: 1420850,
-    globalIngestionRate: 420,
-    averageLatencyMs: 184,
-    dlqCount: inMemoryDLQ.filter((d) => d.status === 'unhandled').length,
-    webhookFailureRate: 0.02,
+    mrr: 0,
+    activeSubscriptions: 0,
+    activeTrials: 0,
+    totalMonitoredStores: 0,
+    totalSkusTracked: 0,
+    globalIngestionRate: 0,
+    averageLatencyMs: 0,
+    dlqCount: 0,
+    webhookFailureRate: 0,
+    pipelineStatus: 'Idle',
+    hasDispatches: false,
+    deliverabilityLabel: 'No Events Yet',
   };
 }
 
@@ -1945,9 +2021,12 @@ export async function recordDispatchLog(log: {
   dispatch_id: string;
   tenant_email?: string;
   store_url?: string;
+  store_name?: string;
+  gmc_id?: string;
   destination: string;
   delivery_status: number;
   status_label: 'Delivered' | 'Rate Limited' | 'Invalid Webhook';
+  latency_ms?: number;
   payload: Record<string, unknown>;
 }): Promise<void> {
   const sql = getDb();
@@ -1955,8 +2034,16 @@ export async function recordDispatchLog(log: {
     try {
       await ensureSchema();
       await sql`
-        INSERT INTO dispatch_logs (dispatch_id, tenant_email, store_url, destination, delivery_status, status_label, payload, created_at)
-        VALUES (${log.dispatch_id}, ${log.tenant_email || null}, ${log.store_url || null}, ${log.destination}, ${log.delivery_status}, ${log.status_label}, ${JSON.stringify(log.payload)}, NOW());
+        INSERT INTO dispatch_logs (
+          dispatch_id, tenant_email, store_url, store_name, gmc_id,
+          destination, delivery_status, status_label, latency_ms, payload, created_at
+        )
+        VALUES (
+          ${log.dispatch_id}, ${log.tenant_email || null}, ${log.store_url || null},
+          ${log.store_name || null}, ${log.gmc_id || null},
+          ${log.destination}, ${log.delivery_status}, ${log.status_label},
+          ${log.latency_ms ?? null}, ${JSON.stringify(log.payload)}, NOW()
+        );
       `;
       return;
     } catch (err) {
@@ -1969,9 +2056,12 @@ export async function recordDispatchLog(log: {
     dispatch_id: log.dispatch_id,
     tenant_email: log.tenant_email || 'unknown',
     store_url: log.store_url || 'unknown',
+    store_name: log.store_name || null,
+    gmc_id: log.gmc_id || null,
     destination: log.destination,
     delivery_status: log.delivery_status,
     status_label: log.status_label,
+    latency_ms: log.latency_ms ?? null,
     payload: log.payload,
     created_at: new Date().toISOString(),
   });

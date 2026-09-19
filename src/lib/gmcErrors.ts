@@ -15,42 +15,42 @@ export function translateGmcIssue(issueCode: string): TranslatedIssue {
   const code = (issueCode || '').toLowerCase().trim();
 
   // 1. Barcodes / GTIN / UPC
-  if (code.includes('gtin') || code.includes('barcode') || code.includes('missing_required_attribute [gtin]')) {
+  if (code.includes('gtin') || code.includes('barcode') || code.includes('missing_required_attribute [gtin]') || code.includes('invalid_gtin') || code.includes('upc') || code.includes('ean')) {
     return {
       title: 'Missing Barcode (GTIN / UPC)',
-      explanation: 'Google requires a valid GTIN or UPC for branded products to match them across search results.',
-      fixAdvice: 'Add the 12- or 14-digit barcode (GTIN/UPC/EAN) in your product catalog or Shopify admin.',
+      explanation: 'Google requires a valid 12- or 14-digit GTIN, UPC, or EAN for branded products to serve in Google Shopping ads.',
+      fixAdvice: 'Add the valid 12- or 14-digit barcode (GTIN, UPC, or EAN) in your Shopify admin or product feed data.',
       category: 'barcode',
     };
   }
 
-  // 2. Pricing Mismatch
-  if (code.includes('price_mismatch') || code.includes('incorrect_price') || code.includes('price')) {
+  // 2. Promotional Watermark or Image Crawl Errors
+  if (code.includes('watermark') || code.includes('promotional_overlay') || code.includes('image_link') || code.includes('image') || code.includes('photo') || code.includes('thumbnail') || code.includes('resolution')) {
     return {
-      title: 'Price Mismatch Detected',
-      explanation: 'The price in your Google Shopping feed does not match the price shown on your checkout or landing page.',
-      fixAdvice: 'Update your product feed to reflect the current on-site price or check currency conversion settings.',
+      title: 'Promotional Watermark or Image Crawl Error',
+      explanation: 'The product image was rejected due to text overlays, promotional logos, watermarks, or resolution lower than 800x800 pixels.',
+      fixAdvice: 'Upload a clean, high-resolution product image (minimum 800x800px) free of promotional text overlays or watermarks.',
+      category: 'image',
+    };
+  }
+
+  // 3. Price or Availability Mismatch
+  if (code.includes('price_mismatch') || code.includes('incorrect_price') || code.includes('price') || code.includes('availability') || code.includes('stock') || code.includes('out_of_stock') || code.includes('availability_mismatch')) {
+    return {
+      title: 'Price or Availability Mismatch',
+      explanation: 'The price or in-stock status on the landing page does not match the feed data submitted to Google.',
+      fixAdvice: 'Update your product feed to match the current on-page price and inventory status, or review automated schema markup.',
       category: 'pricing',
     };
   }
 
-  // 3. Stock / Availability Mismatch
-  if (code.includes('availability') || code.includes('stock') || code.includes('out_of_stock')) {
+  // 4. Missing Shipping or Tax Attributes
+  if (code.includes('shipping') || code.includes('tax') || code.includes('missing_shipping') || code.includes('delivery')) {
     return {
-      title: 'Stock Status Mismatch',
-      explanation: 'Your product is marked out of stock on your website but is still listed as available in Google Merchant Center.',
-      fixAdvice: 'Sync inventory levels from your Shopify or eCommerce platform to update Google availability.',
-      category: 'inventory',
-    };
-  }
-
-  // 4. Image Quality / Broken Link
-  if (code.includes('image') || code.includes('photo') || code.includes('thumbnail')) {
-    return {
-      title: 'Product Image Issue',
-      explanation: 'Google crawler could not access the product image URL, or the image violates resolution/watermark guidelines.',
-      fixAdvice: 'Ensure the image URL is publicly accessible, at least 800x800px, and free of promotional watermarks.',
-      category: 'image',
+      title: 'Missing Shipping or Tax Attributes',
+      explanation: 'Google rejected the listing because target country shipping rates or tax attributes are undefined.',
+      fixAdvice: 'Configure target country shipping rates and tax settings in Google Merchant Center or your product feed.',
+      category: 'shipping',
     };
   }
 
@@ -64,17 +64,7 @@ export function translateGmcIssue(issueCode: string): TranslatedIssue {
     };
   }
 
-  // 6. Shipping / Tax Calculation
-  if (code.includes('shipping') || code.includes('tax') || code.includes('delivery')) {
-    return {
-      title: 'Shipping Rate Mismatch',
-      explanation: 'The shipping cost provided in your feed does not match what the Google crawler observed during checkout.',
-      fixAdvice: 'Review shipping settings in Merchant Center to align delivery rates with your store checkout.',
-      category: 'shipping',
-    };
-  }
-
-  // 7. Title / Description Formatting
+  // 6. Title / Description Formatting
   if (code.includes('title') || code.includes('description') || code.includes('all_caps')) {
     return {
       title: 'Title or Description Formatting',

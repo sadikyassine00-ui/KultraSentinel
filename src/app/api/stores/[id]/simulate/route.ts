@@ -50,7 +50,30 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ error: 'Invalid store identifier.' }, { status: 400 });
   }
 
-  const storeId = isNaN(Number(id)) ? id : Number(id);
+  // Enforce Active Store Parameter Passing (§1)
+  let body: Record<string, unknown> = {};
+  try {
+    body = await request.json();
+  } catch {
+    // empty body fallback
+  }
+
+  const requestedStoreId = body.storeId ?? body.store_id;
+  if (!requestedStoreId) {
+    return NextResponse.json(
+      { error: 'Missing required parameter: storeId must be explicitly provided in request body.' },
+      { status: 400 }
+    );
+  }
+
+  if (String(requestedStoreId) !== String(id)) {
+    return NextResponse.json(
+      { error: 'Mismatched storeId: request body storeId does not match target route.' },
+      { status: 400 }
+    );
+  }
+
+  const storeId: string | number = isNaN(Number(requestedStoreId)) ? String(requestedStoreId) : Number(requestedStoreId);
 
   // Anti-IDOR: verify store belongs to authenticated tenant
   const store = await getStoreByIdAndTenant(storeId, session.email);
@@ -87,6 +110,13 @@ export async function POST(request: Request, context: RouteContext) {
     const slackResult = await dispatchFireDrillSlackNotification({
       store,
       appUrl: origin,
+      incident: {
+        sku: 'DEMO-RUNNER-402',
+        title: 'Apex Carbon Runner - Size 10.5 (Demo Item)',
+        price: '$165.00',
+        issueCode: 'item_disapproved: missing_required_attribute [gtin]',
+        severity: 'critical',
+      },
     });
 
     return NextResponse.json({
