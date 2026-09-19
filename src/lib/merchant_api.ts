@@ -138,16 +138,31 @@ export interface DiscoveredGmcAccount {
   isAggregator?: boolean;
 }
 
+export interface DiscoveryError {
+  status: number;
+  message: string;
+  apiDisabled?: boolean;
+  scopeMissing?: boolean;
+}
+
+export type DiscoveryResponse = DiscoveredGmcAccount[] & {
+  accounts: DiscoveredGmcAccount[];
+  error?: DiscoveryError;
+};
+
 /**
  * Live Google Merchant Center Account Discovery
  * Queries Google Merchant API (v1 / v1beta) and Content API v2.1 (authinfo & accounts)
  * to discover all authentic Merchant Center accounts and MCAs accessible by the user.
+ * Propagates authentic Google API errors so callers can distinguish between zero stores
+ * and permission / configuration errors.
  */
 export async function discoverMerchantAccounts(
   accessToken: string,
   targetMerchantId?: string
-): Promise<DiscoveredGmcAccount[]> {
+): Promise<DiscoveryResponse> {
   const discoveredMap = new Map<string, DiscoveredGmcAccount>();
+  let discoveryError: DiscoveryError | undefined = undefined;
 
   // Tier 1: Modern Google Merchant API v1 (accounts.list)
   try {
@@ -336,15 +351,38 @@ export async function discoverMerchantAccounts(
         }
       }
     } else {
+      const status = authInfoRes.status;
       const errText = await authInfoRes.text();
-      console.warn(`[Merchant API] accounts/authinfo returned HTTP ${authInfoRes.status}: ${errText}`);
+      console.warn(`[Merchant API] accounts/authinfo returned HTTP ${status}: ${errText}`);
+
+      const isApiDisabled = errText.includes('has not been used in project') || errText.includes('it is disabled') || errText.includes('SERVICE_DISABLED');
+      const isScopeMissing = status === 403 && (errText.includes('insufficient') || errText.includes('PERMISSION_DENIED') || errText.includes('scope'));
+
+      let userFriendlyMessage = errText;
+      if (isApiDisabled) {
+        userFriendlyMessage = 'Google Content API for Shopping has not been enabled in the Google Cloud Project. Please enable it in the Google Cloud Console.';
+      } else if (isScopeMissing) {
+        userFriendlyMessage = 'Google Merchant Center permissions were not granted. Please check the permission checkbox during Google sign-in.';
+      }
+
+      discoveryError = {
+        status,
+        message: userFriendlyMessage,
+        apiDisabled: isApiDisabled,
+        scopeMissing: isScopeMissing,
+      };
     }
-  } catch (authErr) {
-    console.warn('[Merchant API] accounts/authinfo fetch error:', authErr);
+  } catch (authErr: unknown) {
+    const error = authErr as Error;
+    console.warn('[Merchant API] accounts/authinfo fetch error:', error.message);
+    discoveryError = {
+      status: 500,
+      message: error.message || 'Network error querying Google Content API',
+    };
   }
 
   // Tier 3: Strict direct account verification if targetMerchantId is specified
-  // ONLY add if Google Content API or Merchant API returns HTTP 200 confirming genuine access.
+  // Checks accounts.get and productstatuses to verify live, active GMC account access
   if (targetMerchantId && !discoveredMap.has(targetMerchantId)) {
     try {
       const directRes = await fetch(
@@ -365,15 +403,44 @@ export async function discoverMerchantAccounts(
           websiteUrl: directData.websiteUrl || null,
           isAggregator: false,
         });
+        discoveryError = undefined; // Live account confirmed
       } else {
-        console.warn(`[Merchant API] Target merchant #${targetMerchantId} returned HTTP ${directRes.status}. Strict verification rejected fallback.`);
+        // Fallback: Check if catalog productstatuses is accessible (proves active GMC access)
+        try {
+          const statusRes = await fetch(
+            `https://shoppingcontent.googleapis.com/content/v2.1/${encodeURIComponent(targetMerchantId)}/productstatuses?maxResults=1`,
+            {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                Accept: 'application/json',
+              },
+            }
+          );
+          if (statusRes.ok) {
+            discoveredMap.set(targetMerchantId, {
+              merchantId: targetMerchantId,
+              name: `Merchant Center #${targetMerchantId}`,
+              websiteUrl: null,
+              isAggregator: false,
+            });
+            discoveryError = undefined; // Live account confirmed
+          } else {
+            console.warn(`[Merchant API] Target merchant #${targetMerchantId} returned HTTP ${directRes.status} (accounts) and ${statusRes.status} (products).`);
+          }
+        } catch {
+          console.warn(`[Merchant API] Target merchant #${targetMerchantId} returned HTTP ${directRes.status}. Strict verification rejected fallback.`);
+        }
       }
     } catch (directErr) {
       console.warn(`[Merchant API] Target merchant #${targetMerchantId} lookup failed:`, directErr);
     }
   }
 
-  return Array.from(discoveredMap.values());
+  const accountList = Array.from(discoveredMap.values());
+  const response = accountList as DiscoveryResponse;
+  response.accounts = accountList;
+  response.error = accountList.length > 0 ? undefined : discoveryError;
+  return response;
 }
 
 export interface DisapprovedItem {

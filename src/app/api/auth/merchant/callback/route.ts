@@ -100,6 +100,19 @@ export async function GET(request: Request) {
     const tokenData = await tokenRes.json();
     const accessToken = tokenData.access_token;
     const refreshToken = tokenData.refresh_token;
+    const grantedScopes = String(tokenData.scope || '');
+
+    // Check if Google Merchant Center scope was granted
+    const hasContentScope = grantedScopes.includes('https://www.googleapis.com/auth/content');
+    if (!hasContentScope && process.env.NODE_ENV === 'production') {
+      console.warn(`[Merchant OAuth Callback] Token missing content scope for ${session.email}. Granted scopes: ${grantedScopes}`);
+      const noAccountUrl = new URL('/dashboard/connect/no-account', origin);
+      noAccountUrl.searchParams.set('error', 'permission_denied');
+      noAccountUrl.searchParams.set('email', session.email);
+      const res = NextResponse.redirect(noAccountUrl);
+      res.cookies.delete(OAUTH_STATE_COOKIE_NAME);
+      return res;
+    }
 
     // Encrypt refresh token at rest using AES-256-GCM if provided
     const encryptedRefreshToken = refreshToken ? await encryptToken(refreshToken) : undefined;
@@ -108,9 +121,31 @@ export async function GET(request: Request) {
     const targetGmcId = stateResult.returnTo || undefined;
 
     // 4. Live GMC Account Discovery (Google Merchant API & Content API v2.1)
-    const discoveredAccounts = await discoverMerchantAccounts(accessToken, targetGmcId);
+    const discoveryResult = await discoverMerchantAccounts(accessToken, targetGmcId);
+    const discoveredAccounts = discoveryResult.accounts;
 
-    // Case A: Zero GMC accounts found (Strict Verification Gate)
+    // Case A: Google API Error reported during discovery
+    if (discoveryResult.error && discoveredAccounts.length === 0) {
+      if (discoveryResult.error.apiDisabled) {
+        fallbackDashboardUrl.searchParams.set(
+          'error',
+          'Google Content API for Shopping is disabled in your Google Cloud Project. Please enable it in Google Cloud Console.'
+        );
+        return NextResponse.redirect(fallbackDashboardUrl);
+      }
+      if (discoveryResult.error.scopeMissing || discoveryResult.error.status === 403) {
+        const noAccountUrl = new URL('/dashboard/connect/no-account', origin);
+        noAccountUrl.searchParams.set('error', 'permission_denied');
+        noAccountUrl.searchParams.set('email', session.email);
+        const res = NextResponse.redirect(noAccountUrl);
+        res.cookies.delete(OAUTH_STATE_COOKIE_NAME);
+        return res;
+      }
+      fallbackDashboardUrl.searchParams.set('error', `Google API Error: ${discoveryResult.error.message}`);
+      return NextResponse.redirect(fallbackDashboardUrl);
+    }
+
+    // Case B: Zero GMC accounts found (Strict Verification Gate)
     // Halt onboarding immediately: zero stores created, zero trials started, redirect to no-account screen.
     if (discoveredAccounts.length === 0) {
       const pendingCookiePayload = JSON.stringify({

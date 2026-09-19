@@ -70,12 +70,34 @@ export async function POST(request: Request) {
           const acctData = await acctRes.json();
           storeName = acctData.name || storeName || `Merchant Center #${gmcId}`;
         } else if (acctRes.status === 404 || acctRes.status === 403) {
-          const errText = await acctRes.text();
-          console.warn(`[Direct GMC Link] Google rejected merchant #${gmcId} (HTTP ${acctRes.status}): ${errText}`);
-          return NextResponse.json(
-            { error: `Google Merchant Center account #${gmcId} not found or access denied for this Google identity.` },
-            { status: 404 }
-          );
+          // Check if user has catalog productstatuses access (validates active GMC store for non-admin roles)
+          let hasProductAccess = false;
+          try {
+            const productRes = await fetch(
+              `https://shoppingcontent.googleapis.com/content/v2.1/${encodeURIComponent(gmcId)}/productstatuses?maxResults=1`,
+              {
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                  Accept: 'application/json',
+                },
+              }
+            );
+            if (productRes.ok) {
+              hasProductAccess = true;
+              storeName = storeName || `Merchant Center #${gmcId}`;
+            }
+          } catch {
+            // Ignored
+          }
+
+          if (!hasProductAccess) {
+            const errText = await acctRes.text();
+            console.warn(`[Direct GMC Link] Google rejected merchant #${gmcId} (HTTP ${acctRes.status}): ${errText}`);
+            return NextResponse.json(
+              { error: `Google Merchant Center account #${gmcId} not found or access denied for this Google identity.` },
+              { status: 404 }
+            );
+          }
         }
       } catch (verifyErr) {
         console.warn(`[Direct GMC Link] Verification error for merchant #${gmcId}:`, verifyErr);
