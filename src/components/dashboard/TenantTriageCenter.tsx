@@ -75,9 +75,10 @@ interface DashboardApiResponse {
 interface Props {
   initialStoreId?: string | null;
   justConnected?: boolean;
+  impersonateEmail?: string | null;
 }
 
-export default function TenantTriageCenter({ initialStoreId, justConnected = false }: Props) {
+export default function TenantTriageCenter({ initialStoreId, justConnected = false, impersonateEmail }: Props) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState<DashboardApiResponse | null>(null);
@@ -115,10 +116,20 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
   const fetchDashboardData = useCallback(async (storeId?: string | null) => {
     try {
       setError(null);
-      const url = storeId
-        ? `/api/dashboard?store_id=${encodeURIComponent(storeId)}`
-        : '/api/dashboard';
+      const queryParams = new URLSearchParams();
+      if (storeId) queryParams.set('store_id', storeId);
+      if (impersonateEmail) queryParams.set('impersonate', impersonateEmail);
+      const queryString = queryParams.toString();
+      const url = queryString ? `/api/dashboard?${queryString}` : '/api/dashboard';
+
       const res = await fetch(url);
+      if (res.status === 403) {
+        const errJson = await res.json();
+        if (errJson.isSuspended) {
+          window.location.href = '/suspended';
+          return;
+        }
+      }
       if (!res.ok) {
         throw new Error(`Failed to load catalog triage data: HTTP ${res.status}`);
       }
@@ -135,7 +146,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
       setLoading(false);
       setRefreshing(false);
     }
-  }, [justConnected]);
+  }, [justConnected, impersonateEmail]);
 
   useEffect(() => {
     fetchDashboardData(initialStoreId);

@@ -25,7 +25,8 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { action, messageId } = body;
+    const action = body.action;
+    const messageId = body.messageId || body.id;
 
     if (!messageId || !action) {
       return NextResponse.json({ error: 'Missing messageId or action' }, { status: 400 });

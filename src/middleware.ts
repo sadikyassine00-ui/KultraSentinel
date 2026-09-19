@@ -99,6 +99,18 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // 4b. Suspended Screen Route (/suspended)
+  if (pathname === '/suspended') {
+    if (!session) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+    // If account is active and not suspended, restore normal dashboard access
+    if (!session.isSuspended) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+    return NextResponse.next();
+  }
+
   // 5. Customer Routes (/dashboard, /dashboard/:path*)
   if (pathname === '/dashboard' || pathname.startsWith('/dashboard/')) {
     if (!session) {
@@ -109,6 +121,11 @@ export async function middleware(request: NextRequest) {
         return clearCookieResponse(loginUrl);
       }
       return NextResponse.redirect(loginUrl);
+    }
+
+    // Strict Lockout Boundary: Suspended users are locked out from dashboard, settings, stores, and billing
+    if (session.isSuspended) {
+      return NextResponse.redirect(new URL('/suspended', request.url));
     }
 
     // Accessible by both admin and user roles
@@ -150,5 +167,6 @@ export const config = {
     '/register',
     '/dashboard/:path*',
     '/dashboard',
+    '/suspended',
   ],
 };

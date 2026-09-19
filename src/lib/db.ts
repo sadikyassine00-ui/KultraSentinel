@@ -19,6 +19,7 @@ export interface AdminUser {
   google_id?: string | null;
   name?: string | null;
   role: string;
+  status?: 'active' | 'suspended';
   created_at: string;
 }
 
@@ -74,7 +75,7 @@ export interface Store {
   last_message_at: string;
   open_disapprovals: number;
   total_caught: number;
-  status: 'active' | 'orphaned';
+  status: 'active' | 'orphaned' | 'suspended';
   created_at: string;
 }
 
@@ -549,6 +550,7 @@ export async function ensureSchema(): Promise<boolean> {
     await sql`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS account_plan TEXT DEFAULT 'solo';`;
     await sql`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT;`;
     await sql`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT;`;
+    await sql`ALTER TABLE admins ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';`;
 
     // 5. Stores Registry Table
     await sql`
@@ -988,6 +990,150 @@ export async function updateTenant(id: number, updates: Partial<Tenant>): Promis
     return tenant;
   }
   return null;
+}
+
+export async function getTenantById(id: number): Promise<Tenant | null> {
+  const sql = getDb();
+  if (sql) {
+    try {
+      await ensureSchema();
+      const rows = await sql`
+        SELECT * FROM tenants WHERE id = ${id} LIMIT 1;
+      `;
+      if (rows.length > 0) return rows[0] as unknown as Tenant;
+    } catch (err) {
+      console.warn('[Neon DB] Error finding tenant by id:', err);
+    }
+  }
+
+  return inMemoryTenants.find((t) => t.id === id) || null;
+}
+
+export async function updateUserStatus(email: string, status: 'active' | 'suspended'): Promise<void> {
+  const cleanEmail = email.toLowerCase().trim();
+  const sql = getDb();
+  if (sql) {
+    try {
+      await ensureSchema();
+      await sql`
+        UPDATE admins SET status = ${status} WHERE LOWER(email) = ${cleanEmail};
+      `;
+    } catch (err) {
+      console.warn('[Neon DB] Error updating user status:', err);
+    }
+  }
+
+  const admin = inMemoryAdmins.find((a) => a.email.toLowerCase().trim() === cleanEmail);
+  if (admin) {
+    admin.status = status;
+  }
+}
+
+export async function updateStoresStatusByTenantEmail(email: string, status: 'active' | 'suspended'): Promise<void> {
+  const cleanEmail = email.toLowerCase().trim();
+  const sql = getDb();
+  if (sql) {
+    try {
+      await ensureSchema();
+      await sql`
+        UPDATE stores SET status = ${status} WHERE LOWER(tenant_email) = ${cleanEmail};
+      `;
+    } catch (err) {
+      console.warn('[Neon DB] Error updating store statuses:', err);
+    }
+  }
+
+  inMemoryStores.forEach((s) => {
+    if (s.tenant_email && s.tenant_email.toLowerCase().trim() === cleanEmail) {
+      s.status = status;
+    }
+  });
+}
+
+export async function suspendTenant(id: number): Promise<{ success: boolean; tenant: Tenant | null; message: string }> {
+  const tenant = await getTenantById(id);
+  if (!tenant) {
+    return { success: false, tenant: null, message: 'Tenant not found.' };
+  }
+  const cleanEmail = tenant.email.toLowerCase().trim();
+  if (isSuperAdminEmail(cleanEmail)) {
+    return { success: false, tenant, message: 'Security restriction: Superadmin platform owner accounts cannot be suspended.' };
+  }
+
+  // 1. Update tenant status = 'suspended'
+  const updatedTenant = await updateTenant(id, { status: 'suspended' });
+
+  // 2. Update admin user record status = 'suspended'
+  await updateUserStatus(cleanEmail, 'suspended');
+
+  // 3. Update child stores: status = 'suspended'
+  await updateStoresStatusByTenantEmail(cleanEmail, 'suspended');
+
+  // 4. Immediately revoke all active sessions for this user
+  await revokeAllUserSessions(cleanEmail);
+
+  return {
+    success: true,
+    tenant: updatedTenant,
+    message: `Tenant ${tenant.email} suspended. All active sessions revoked, child store monitoring halted, outbound alerts silenced.`,
+  };
+}
+
+export async function unsuspendTenant(id: number): Promise<{ success: boolean; tenant: Tenant | null; message: string }> {
+  const tenant = await getTenantById(id);
+  if (!tenant) {
+    return { success: false, tenant: null, message: 'Tenant not found.' };
+  }
+  const cleanEmail = tenant.email.toLowerCase().trim();
+
+  // 1. Update tenant status = 'active'
+  const updatedTenant = await updateTenant(id, { status: 'active' });
+
+  // 2. Update admin user record status = 'active'
+  await updateUserStatus(cleanEmail, 'active');
+
+  // 3. Update child stores: status = 'active'
+  await updateStoresStatusByTenantEmail(cleanEmail, 'active');
+
+  // 4. Restore active user sessions
+  await restoreUserSessions(cleanEmail);
+
+  return {
+    success: true,
+    tenant: updatedTenant,
+    message: `Tenant ${tenant.email} unsuspended. Normal dashboard access and store monitoring restored.`,
+  };
+}
+
+export async function isTenantSuspended(email: string): Promise<boolean> {
+  if (!email) return false;
+  const cleanEmail = email.toLowerCase().trim();
+  const sql = getDb();
+  if (sql) {
+    try {
+      await ensureSchema();
+      const rows = await sql`
+        SELECT status FROM tenants WHERE LOWER(email) = ${cleanEmail} LIMIT 1;
+      `;
+      if (rows.length > 0) {
+        return rows[0].status === 'suspended';
+      }
+      const adminRows = await sql`
+        SELECT status FROM admins WHERE LOWER(email) = ${cleanEmail} LIMIT 1;
+      `;
+      if (adminRows.length > 0) {
+        return adminRows[0].status === 'suspended';
+      }
+    } catch (err) {
+      console.warn('[Neon DB] Error checking if tenant is suspended:', err);
+    }
+  }
+
+  const tenant = inMemoryTenants.find((t) => t.email.toLowerCase().trim() === cleanEmail);
+  if (tenant) return tenant.status === 'suspended';
+  const admin = inMemoryAdmins.find((a) => a.email.toLowerCase().trim() === cleanEmail);
+  if (admin) return admin.status === 'suspended';
+  return false;
 }
 
 export async function getStores(filter?: { search?: string; accountType?: string }): Promise<Store[]> {
@@ -2376,6 +2522,27 @@ export async function revokeAllUserSessions(email: string): Promise<void> {
   for (const session of inMemorySessions.values()) {
     if (session.email.toLowerCase().trim() === cleanEmail) {
       session.is_revoked = true;
+    }
+  }
+}
+
+export async function restoreUserSessions(email: string): Promise<void> {
+  const cleanEmail = email.toLowerCase().trim();
+  const sql = getDb();
+  if (sql) {
+    try {
+      await ensureSchema();
+      await sql`
+        UPDATE user_sessions SET is_revoked = FALSE WHERE LOWER(email) = ${cleanEmail};
+      `;
+    } catch (err) {
+      console.warn('[Neon DB] Error restoring sessions for user:', err);
+    }
+  }
+
+  for (const session of inMemorySessions.values()) {
+    if (session.email.toLowerCase().trim() === cleanEmail) {
+      session.is_revoked = false;
     }
   }
 }

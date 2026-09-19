@@ -252,6 +252,17 @@ export default function AdminDashboardPage() {
 
   // Tenant Actions
   const handleTenantAction = async (id: number, action: string, plan_tier?: string) => {
+    // Optimistic UI state update for immediate table reactivity
+    if (action === 'suspend') {
+      setTenants((prev) => prev.map((t) => (t.id === id ? { ...t, status: 'suspended' } : t)));
+    } else if (action === 'unsuspend') {
+      setTenants((prev) => prev.map((t) => (t.id === id ? { ...t, status: 'active' } : t)));
+    } else if (action === 'extendTrial') {
+      setTenants((prev) => prev.map((t) => (t.id === id ? { ...t, plan_tier: 'Agency Pilot' } : t)));
+    } else if (action === 'forceReauth') {
+      setTenants((prev) => prev.map((t) => (t.id === id ? { ...t, oauth_status: 'Expiring Soon' } : t)));
+    }
+
     try {
       const res = await fetch('/api/admin/super/tenants', {
         method: 'PATCH',
@@ -262,14 +273,17 @@ export default function AdminDashboardPage() {
       if (res.ok) {
         if (action === 'impersonate' && data.impersonating) {
           setImpersonatingTenant(data.impersonating);
+          setActiveTab('triage');
         }
         setFeedback({ type: 'success', message: data.message || 'Tenant updated successfully.' });
         loadTabData();
       } else {
         setFeedback({ type: 'error', message: data.error || 'Failed to update tenant.' });
+        loadTabData();
       }
     } catch {
       setFeedback({ type: 'error', message: 'Network exception during tenant operation.' });
+      loadTabData();
     }
   };
 
@@ -772,7 +786,11 @@ export default function AdminDashboardPage() {
           )}
 
           {activeTab === 'triage' ? (
-            <TenantTriageCenter initialStoreId={urlStoreId} justConnected={justConnected} />
+            <TenantTriageCenter
+              initialStoreId={urlStoreId}
+              justConnected={justConnected}
+              impersonateEmail={impersonatingTenant?.email}
+            />
           ) : (
             <>
               {/* SECTION 1: Top-Level Platform Telemetry (Global KPIs per GEMINI.md §16) */}

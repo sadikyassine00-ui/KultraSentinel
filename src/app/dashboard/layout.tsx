@@ -40,6 +40,10 @@ export default function TenantDashboardLayout({
       const res = await fetch('/api/auth/me', { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
+        if (data.isSuspended || data.user?.isSuspended) {
+          router.replace('/suspended');
+          return;
+        }
         if (data.authenticated && data.user) {
           setUser(data.user);
           return;
@@ -49,11 +53,18 @@ export default function TenantDashboardLayout({
     } catch {
       setUser(null);
     }
-  }, []);
+  }, [router]);
 
   const fetchStores = useCallback(async () => {
     try {
       const res = await fetch('/api/dashboard', { cache: 'no-store' });
+      if (res.status === 403) {
+        const data = await res.json();
+        if (data.isSuspended) {
+          router.replace('/suspended');
+          return;
+        }
+      }
       if (res.ok) {
         const data = await res.json();
         if (data.billing) {

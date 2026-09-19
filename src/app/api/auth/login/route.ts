@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { findAdminByEmail, createOrUpdateAdmin } from '@/lib/db';
+import { findAdminByEmail, createOrUpdateAdmin, isTenantSuspended } from '@/lib/db';
 import {
   verifyPassword,
   hashPassword,
@@ -120,6 +120,19 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: 'Invalid email or password.' },
         { status: 401 }
+      );
+    }
+
+    // Check account suspension status
+    const isSuspended = await isTenantSuspended(cleanEmail);
+    if (isSuspended) {
+      return NextResponse.json(
+        {
+          error: 'Your account access has been suspended. Please contact support@usekultra.com.',
+          isSuspended: true,
+          redirectUrl: '/suspended',
+        },
+        { status: 403 }
       );
     }
 

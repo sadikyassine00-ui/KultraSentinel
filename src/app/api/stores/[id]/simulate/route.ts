@@ -24,6 +24,15 @@ export async function POST(request: Request, context: RouteContext) {
 
   // 14-Day Free Trial & Subscription Lockout Gate
   const tenant = await findTenantByEmail(session.email);
+  if (tenant?.status === 'suspended') {
+    return NextResponse.json(
+      {
+        error: 'Account access has been suspended. Please contact support@usekultra.com.',
+        isSuspended: true,
+      },
+      { status: 403 }
+    );
+  }
   const billing = evaluateSubscription(tenant);
   if (billing.isLocked && !billing.isSuperAdmin) {
     return NextResponse.json(

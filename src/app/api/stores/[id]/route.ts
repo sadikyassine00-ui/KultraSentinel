@@ -4,6 +4,7 @@ import {
   getStoreByIdAndTenant,
   updateStoreForTenant,
   deleteStoreForTenant,
+  isTenantSuspended,
 } from '@/lib/db';
 
 interface RouteContext {
@@ -16,6 +17,13 @@ export async function GET(request: Request, context: RouteContext) {
     return NextResponse.json(
       { error: 'Authentication required to access store details.' },
       { status: 401 }
+    );
+  }
+
+  if (await isTenantSuspended(session.email)) {
+    return NextResponse.json(
+      { error: 'Account access has been suspended. Please contact support@usekultra.com.', isSuspended: true },
+      { status: 403 }
     );
   }
 
@@ -43,6 +51,13 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json(
       { error: 'Authentication required to modify store.' },
       { status: 401 }
+    );
+  }
+
+  if (await isTenantSuspended(session.email)) {
+    return NextResponse.json(
+      { error: 'Account access has been suspended. Please contact support@usekultra.com.', isSuspended: true },
+      { status: 403 }
     );
   }
 
@@ -81,6 +96,13 @@ export async function DELETE(request: Request, context: RouteContext) {
     return NextResponse.json(
       { error: 'Authentication required to delete store.' },
       { status: 401 }
+    );
+  }
+
+  if (await isTenantSuspended(session.email)) {
+    return NextResponse.json(
+      { error: 'Account access has been suspended. Please contact support@usekultra.com.', isSuspended: true },
+      { status: 403 }
     );
   }
 

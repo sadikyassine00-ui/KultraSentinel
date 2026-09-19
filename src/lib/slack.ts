@@ -31,6 +31,10 @@ export async function dispatchInitialAuditSlackNotification({
   totalAudited,
   appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://usekultra.com',
 }: DispatchInitialAuditParams): Promise<{ success: boolean; outcome: string }> {
+  if (store.status === 'suspended') {
+    return { success: false, outcome: 'silenced_suspended_store' };
+  }
+
   const webhookUrl = store.webhook_url || store.slack_webhook_url || process.env.SLACK_WEBHOOK_URL;
   if (!webhookUrl) {
     return { success: false, outcome: 'skipped_no_webhook' };
@@ -183,6 +187,14 @@ export async function dispatchFireDrillSlackNotification({
   store,
   appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://usekultra.com',
 }: DispatchFireDrillParams): Promise<{ success: boolean; outcome: string; error?: string }> {
+  if (store.status === 'suspended') {
+    return {
+      success: false,
+      outcome: 'silenced_suspended_store',
+      error: 'Store owner account is suspended. Outbound alert notifications are silenced.',
+    };
+  }
+
   const webhookUrl = store.webhook_url || store.slack_webhook_url || process.env.SLACK_WEBHOOK_URL;
   if (!webhookUrl) {
     return {

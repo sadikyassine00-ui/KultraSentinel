@@ -28,6 +28,7 @@ export interface SessionPayload {
   id?: string | number | null;
   sid?: string;
   isSuperAdmin?: boolean;
+  isSuspended?: boolean;
 }
 
 export interface SessionMetadata {
@@ -107,13 +108,18 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
     const role = (isSuper || isAllowedAdminEmail(email)) ? 'admin' : (rawRole === 'admin' ? 'admin' : 'user');
     const sid = (payload.sid as string) || undefined;
 
-    // Check server-side revocation if session ID is attached and running in Node runtime
-    if (sid && process.env.NEXT_RUNTIME !== 'edge') {
+    // Check server-side revocation and suspension status if running in Node runtime
+    let isSuspendedUser = false;
+    if (process.env.NEXT_RUNTIME !== 'edge') {
       try {
-        const { isSessionRevoked } = await import('./db');
-        const revoked = await isSessionRevoked(sid);
-        if (revoked) {
-          return null;
+        const { isSessionRevoked, isTenantSuspended } = await import('./db');
+        isSuspendedUser = await isTenantSuspended(email);
+        if (sid) {
+          const revoked = await isSessionRevoked(sid);
+          // If revoked for normal logout reasons and user is not suspended, invalidate
+          if (revoked && !isSuspendedUser) {
+            return null;
+          }
         }
       } catch {
         // Fall back to cryptographic JWT validity if DB is not reachable
@@ -127,6 +133,7 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
       name: (payload.name as string) || null,
       id: (payload.id as string | number) || null,
       sid,
+      isSuspended: isSuspendedUser,
     };
   } catch {
     return null;

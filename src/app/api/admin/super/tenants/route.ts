@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAuthSession } from '@/lib/auth';
-import { getTenants, updateTenant } from '@/lib/db';
+import { getTenants, updateTenant, suspendTenant, unsuspendTenant } from '@/lib/db';
 
 export async function GET(request: Request) {
   const session = await getAuthSession(request);
@@ -64,13 +64,19 @@ export async function PATCH(request: Request) {
     }
 
     if (action === 'suspend') {
-      const updated = await updateTenant(Number(id), { status: 'suspended' });
-      return NextResponse.json({ success: true, tenant: updated, message: 'Tenant suspended. Pub/Sub processing halted for all child stores.' });
+      const result = await suspendTenant(Number(id));
+      if (!result.success) {
+        return NextResponse.json({ error: result.message }, { status: 400 });
+      }
+      return NextResponse.json({ success: true, tenant: result.tenant, message: result.message });
     }
 
     if (action === 'unsuspend') {
-      const updated = await updateTenant(Number(id), { status: 'active' });
-      return NextResponse.json({ success: true, tenant: updated, message: 'Tenant unsuspended. Ingestion restored.' });
+      const result = await unsuspendTenant(Number(id));
+      if (!result.success) {
+        return NextResponse.json({ error: result.message }, { status: 400 });
+      }
+      return NextResponse.json({ success: true, tenant: result.tenant, message: result.message });
     }
 
     if (action === 'updatePlan') {

@@ -150,10 +150,41 @@ export async function POST(request: Request) {
       );
     }
 
-    // 6b. Subscription Lifecycle & Trial Lockout Gate
+    // 6b. User Suspension & Trial Lockout Gate
+    // If the account or store is suspended, immediately halt execution:
+    // silence Slack alerts, halt event processing, acknowledge message.
+    const tenant = store.tenant_email ? await findTenantByEmail(store.tenant_email) : null;
+    const isSuspended = tenant?.status === 'suspended' || store.status === 'suspended';
+
+    if (isSuspended) {
+      console.log(
+        `[PubSub Ingestion Gate] Muted processing for store '${store.store_url}' (owner: ${store.tenant_email || 'unknown'}): account or store is suspended.`
+      );
+
+      after(async () => {
+        try {
+          await markMessageProcessed(messageId);
+        } catch (workerErr) {
+          console.warn('[PubSub Ingestion Gate] Error marking message processed:', workerErr);
+        }
+      });
+
+      return NextResponse.json(
+        {
+          ok: true,
+          status: 'acknowledged',
+          action: 'muted_suspended_account',
+          message: 'Account or store is suspended. Pub/Sub processing halted.',
+          messageId,
+          latencyMs: Math.round(performance.now() - startTime),
+        },
+        { status: 200 }
+      );
+    }
+
+    // 6c. Subscription Lifecycle & Trial Lockout Gate
     // If the account status is expired or canceled, immediately halt execution:
     // do not format or deliver Slack alert cards, do not upsert incidents.
-    const tenant = store.tenant_email ? await findTenantByEmail(store.tenant_email) : null;
     const subscriptionState = evaluateSubscription(tenant);
 
     if (subscriptionState.isLocked) {

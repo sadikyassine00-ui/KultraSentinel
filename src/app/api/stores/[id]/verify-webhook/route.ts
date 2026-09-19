@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { COOKIE_NAME, verifySessionToken } from '@/lib/token';
-import { getStoreForTenant, updateStoreWebhook, recordDispatchLog } from '@/lib/db';
+import { getStoreForTenant, updateStoreWebhook, recordDispatchLog, isTenantSuspended } from '@/lib/db';
 import { validateWebhookUrl } from '@/lib/security';
 
 export async function POST(
@@ -25,6 +25,13 @@ export async function POST(
     const session = await verifySessionToken(sessionCookie.value);
     if (!session) {
       return NextResponse.json({ error: 'Invalid or expired session' }, { status: 401 });
+    }
+
+    if (await isTenantSuspended(session.email)) {
+      return NextResponse.json(
+        { error: 'Account access has been suspended. Please contact support@usekultra.com.', isSuspended: true },
+        { status: 403 }
+      );
     }
 
     // 2. Anti-IDOR Composite Authorization: verify tenant ownership of store

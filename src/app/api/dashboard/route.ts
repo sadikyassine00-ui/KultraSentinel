@@ -10,12 +10,30 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    const tenantEmail = session.email.toLowerCase().trim();
-    const tenant = await findTenantByEmail(tenantEmail);
-    const billing = evaluateSubscription(tenant);
-
     const url = new URL(request.url);
     const requestedStoreId = url.searchParams.get('store_id');
+    const impersonateParam = url.searchParams.get('impersonate');
+    const isAdmin = session.role === 'admin' || session.isSuperAdmin;
+
+    const tenantEmail = (isAdmin && impersonateParam)
+      ? impersonateParam.toLowerCase().trim()
+      : session.email.toLowerCase().trim();
+
+    const tenant = await findTenantByEmail(tenantEmail);
+
+    // Enforce account status check on protected dashboard data endpoint
+    if (tenant?.status === 'suspended' && !(isAdmin && impersonateParam)) {
+      return NextResponse.json(
+        {
+          error: 'Account access has been suspended. All catalog and incident data queries are blocked.',
+          isSuspended: true,
+          supportEmail: 'support@usekultra.com',
+        },
+        { status: 403 }
+      );
+    }
+
+    const billing = evaluateSubscription(tenant);
 
     // 1. Fetch stores strictly scoped to authenticated tenant
     const stores = await getStoresForTenant(tenantEmail);
