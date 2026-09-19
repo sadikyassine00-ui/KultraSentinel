@@ -26,24 +26,14 @@ export function InstantActivationCta() {
           Stop flying blind between manual Merchant Center checks. Stream real-time Pub/Sub push alerts straight to your team&apos;s Slack channel.
         </p>
 
-        {/* Action Buttons */}
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3.5">
+        {/* Action Button: Strictly One High-Contrast Primary Conversion Action */}
+        <div className="mt-8 flex items-center justify-center">
           <Link
             href="/register"
-            className="btn-primary !rounded-[3px] text-[13.5px] px-7 py-3 font-semibold"
+            className="btn-primary !rounded-[3px] text-[14px] px-8 py-3.5 font-semibold"
           >
             Catch Disapprovals Before Ads Stall
           </Link>
-
-          <a
-            href="https://cal.com/kultra/15min-audit"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-secondary !rounded-[3px] text-[13.5px] px-6 py-3 inline-flex items-center gap-2"
-          >
-            <Calendar className="w-4 h-4 text-[var(--ghost-text)]" strokeWidth={1.5} />
-            <span>Book 15-Min Live Audit</span>
-          </a>
         </div>
 
         {/* Risk-Reversal Subtext Directly Below Primary Action */}

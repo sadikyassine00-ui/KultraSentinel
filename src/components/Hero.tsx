@@ -21,21 +21,14 @@ export function Hero() {
           Google will not text you when policy changes break your catalog. Instant sub-30-second Slack alerts with direct one-click fix links the moment Google&apos;s crawler flags a product violation.
         </p>
 
-        {/* Action Group: Primary and Secondary buttons (§4 radius 3px) */}
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+        {/* Action Group: Strictly One Clear Primary Conversion Action (§4 radius 3px) */}
+        <div className="mt-8 flex items-center justify-center">
           <Link
             href="/register"
-            className="btn-primary !rounded-[3px] text-[13.5px] px-6 py-3 font-semibold"
+            className="btn-primary !rounded-[3px] text-[14px] px-7 py-3.5 font-semibold"
           >
             Protect Your Google Shopping Ads
           </Link>
-
-          <a
-            href="#demo"
-            className="btn-secondary !rounded-[3px] text-[13.5px] px-6 py-3"
-          >
-            View Live Triage Demo
-          </a>
         </div>
 
         {/* Risk-Reversal Subtext Directly Below Primary Action */}

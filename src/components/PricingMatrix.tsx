@@ -108,9 +108,9 @@ export function PricingMatrix({ onSelectPlan }: PricingMatrixProps) {
               <Link
                 href="/register?plan=merchant"
                 onClick={() => onSelectPlan?.('merchant')}
-                className="btn-secondary w-full justify-center text-[13px] py-2.5 !rounded-[3px]"
+                className="btn-secondary w-full justify-center text-[13px] py-2.5 !rounded-[3px] font-semibold"
               >
-                Start free 14-day trial
+                Protect Single Store
               </Link>
             </div>
           </div>
@@ -184,9 +184,9 @@ export function PricingMatrix({ onSelectPlan }: PricingMatrixProps) {
               <Link
                 href="/register?plan=agency"
                 onClick={() => onSelectPlan?.('agency')}
-                className="btn-primary w-full justify-center text-[13px] py-2.5 !rounded-[3px]"
+                className="btn-primary w-full justify-center text-[13px] py-2.5 !rounded-[3px] font-semibold"
               >
-                Start free 14-day trial
+                Protect Agency Fleet
               </Link>
             </div>
           </div>

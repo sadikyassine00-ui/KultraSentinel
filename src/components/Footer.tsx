@@ -65,7 +65,7 @@ export function Footer() {
               </li>
               <li>
                 <Link href="/register" className="hover:text-[var(--ink-primary)] hover:underline underline-offset-4 transition-colors duration-120">
-                  Start free 14-day trial
+                  Protect Your Google Shopping Ads
                 </Link>
               </li>
               <li>

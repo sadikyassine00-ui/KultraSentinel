@@ -114,19 +114,18 @@ export function SecurityCompliance() {
               </div>
             </div>
 
-            <div className="shrink-0 flex flex-col sm:flex-row lg:flex-col gap-3">
+            <div className="shrink-0 flex flex-col items-center sm:items-start lg:items-center gap-2.5">
               <Link
                 href="/register"
-                className="btn-primary text-[13px] py-2.5 px-5 !rounded-[3px] text-center"
+                className="btn-primary text-[13px] py-2.5 px-5 !rounded-[3px] text-center w-full font-semibold"
               >
-                Start free 14-day trial
+                Protect Your Google Shopping Ads
               </Link>
               <Link
                 href="/privacy"
-                className="btn-secondary text-[13px] py-2.5 px-5 !rounded-[3px] text-center flex items-center justify-center gap-1.5"
+                className="text-[12px] text-[var(--ghost-text)] hover:text-[var(--ink-primary)] underline underline-offset-2 transition-colors"
               >
-                <span>Read Privacy Disclosures</span>
-                <ArrowRight className="w-3.5 h-3.5 text-[var(--ghost-text)]" />
+                Read privacy disclosures
               </Link>
             </div>
           </div>
