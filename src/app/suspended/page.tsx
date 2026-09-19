@@ -1,65 +1,30 @@
-'use client';
-
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { ShieldAlert, Mail, LogOut, ExternalLink, RefreshCw } from 'lucide-react';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { ShieldAlert, Mail } from 'lucide-react';
+import { COOKIE_NAME, verifySessionToken } from '@/lib/token';
+import { isTenantSuspended } from '@/lib/db';
+import SuspendedLogoutButton from './SuspendedLogoutButton';
 
-export default function AccountSuspendedPage() {
-  const router = useRouter();
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [checkingStatus, setCheckingStatus] = useState(false);
-  const [signingOut, setSigningOut] = useState(false);
+export default async function AccountSuspendedPage() {
+  const cookieStore = await cookies();
+  const rawToken = cookieStore.get(COOKIE_NAME)?.value;
+  if (!rawToken) {
+    redirect('/login');
+  }
 
-  // Check live status: if account is restored/unsuspended, automatically restore dashboard access
-  const checkAccountStatus = async () => {
-    setCheckingStatus(true);
-    try {
-      const res = await fetch('/api/auth/me', { cache: 'no-store' });
-      if (!res.ok) {
-        // If not authenticated at all, redirect to login
-        router.replace('/login');
-        return;
-      }
-      const data = await res.json();
-      if (data.authenticated && data.user) {
-        setUserEmail(data.user.email);
-        if (!data.isSuspended && !data.user.isSuspended) {
-          // Account was unsuspended! Restore access immediately
-          window.location.href = '/dashboard';
-          return;
-        }
-      } else {
-        router.replace('/login');
-      }
-    } catch {
-      // Non-blocking
-    } finally {
-      setCheckingStatus(false);
-    }
-  };
+  const session = await verifySessionToken(rawToken);
+  if (!session || !session.email) {
+    redirect('/login');
+  }
 
-  useEffect(() => {
-    checkAccountStatus();
-
-    // Heartbeat check every 8 seconds to detect unsuspend live
-    const interval = setInterval(checkAccountStatus, 8000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleSignOut = async () => {
-    setSigningOut(true);
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new Event('auth-change'));
-      }
-      window.location.href = '/login';
-    } catch {
-      window.location.href = '/login';
-    }
-  };
+  // If the user is no longer suspended (e.g. reinstated by admin), restore dashboard access
+  const isSuspended = await isTenantSuspended(session.email);
+  if (!isSuspended) {
+    redirect('/dashboard');
+  }
 
   return (
     <div className="min-h-screen bg-[#0a0b0d] text-[#f4f1ea] flex flex-col justify-between font-sans selection:bg-[rgba(214,69,69,0.2)] selection:text-[#f4f1ea]">
@@ -99,75 +64,39 @@ export default function AccountSuspendedPage() {
               </span>
             </div>
 
-            {/* Title & Description */}
+            {/* Clear Unambiguous Messaging */}
             <div className="space-y-2">
               <h1 className="font-display text-2xl sm:text-3xl font-semibold text-[#f4f1ea] tracking-tight">
                 Account Access Suspended
               </h1>
               <p className="text-[13.5px] text-[#b9b3a5] leading-relaxed">
-                Your merchant account access has been suspended by the platform administrator. Real-time catalog monitoring, Google Pub/Sub ingestion, and outbound Slack notifications have been paused for your stores.
+                Your merchant account access has been suspended by an administrator. Real-time catalog monitoring, Google Pub/Sub ingestion, and outbound Slack notifications have been paused for your stores.
               </p>
             </div>
 
-            {/* Targeted User Identifier */}
-            {userEmail && (
-              <div className="p-3 bg-[#0a0b0d] border border-[rgba(255,255,255,0.08)] rounded-[3px] space-y-1">
-                <div className="text-[10.5px] font-mono text-[#6b7078]">Suspended Account Identifier:</div>
-                <div className="text-xs font-mono text-[#f4f1ea] font-medium truncate">{userEmail}</div>
-              </div>
-            )}
+            {/* Suspended User Identifier */}
+            <div className="p-3 bg-[#0a0b0d] border border-[rgba(255,255,255,0.08)] rounded-[3px] space-y-1">
+              <div className="text-[10.5px] font-mono text-[#6b7078]">Suspended Account Identifier:</div>
+              <div className="text-xs font-mono text-[#f4f1ea] font-medium truncate">{session.email}</div>
+            </div>
 
-            {/* Resolution Box */}
-            <div className="p-4 bg-[rgba(214,69,69,0.04)] border border-[rgba(214,69,69,0.25)] rounded-[3px] space-y-2">
+            {/* Unclickable Protected Resolution Notice */}
+            <div className="p-4 bg-[rgba(214,69,69,0.04)] border border-[rgba(214,69,69,0.25)] rounded-[3px] space-y-2 select-none">
               <div className="text-xs font-semibold text-[#f4f1ea] flex items-center gap-2">
                 <Mail className="w-4 h-4 text-[#d64545]" />
-                <span>Contact Kultra Platform Operations</span>
+                <span>Account Review &amp; Dispute Resolution</span>
               </div>
               <p className="text-[12.5px] text-[#b9b3a5] leading-relaxed">
-                To appeal this decision, resolve billing irregularities, or request immediate reinstatement of catalog protection, please reach out to:
+                This account has been suspended by a platform administrator. To appeal this decision, review catalog policy flags, or request account reinstatement, contact platform support:
               </p>
-              <div className="pt-1">
-                <a
-                  href={`mailto:support@usekultra.com?subject=Account%20Suspension%20Appeal%20-%20${encodeURIComponent(userEmail || 'Merchant')}`}
-                  className="inline-flex items-center gap-1.5 text-xs font-mono text-[#f2a93b] hover:underline underline-offset-4 font-semibold"
-                >
-                  <span>support@usekultra.com</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
+              <div className="pt-1 font-mono text-xs text-[#f2a93b] font-medium tracking-wide">
+                support@usekultra.com
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="space-y-2.5 pt-2">
-              <a
-                href={`mailto:support@usekultra.com?subject=Account%20Suspension%20Appeal%20-%20${encodeURIComponent(userEmail || 'Merchant')}`}
-                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-[#f2a93b] hover:bg-[#f6b855] text-[#1a1305] font-semibold text-xs rounded-[3px] transition-colors"
-              >
-                <Mail className="w-3.5 h-3.5" />
-                <span>Contact support@usekultra.com</span>
-              </a>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={checkAccountStatus}
-                  disabled={checkingStatus}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 border border-[rgba(255,255,255,0.14)] hover:border-[rgba(255,255,255,0.25)] bg-transparent text-[#b9b3a5] hover:text-[#f4f1ea] text-xs font-medium rounded-[3px] transition-colors disabled:opacity-50"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${checkingStatus ? 'animate-spin text-[#f2a93b]' : ''}`} />
-                  <span>{checkingStatus ? 'Checking status...' : 'Check status'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleSignOut}
-                  disabled={signingOut}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 border border-[rgba(214,69,69,0.4)] hover:bg-[rgba(214,69,69,0.08)] bg-transparent text-[#d64545] text-xs font-medium rounded-[3px] transition-colors disabled:opacity-50"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span>{signingOut ? 'Signing out...' : 'Sign out'}</span>
-                </button>
-              </div>
+            {/* Explicit Functional Log Out Action */}
+            <div className="pt-2">
+              <SuspendedLogoutButton />
             </div>
           </div>
 

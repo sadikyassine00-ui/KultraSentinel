@@ -109,7 +109,7 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
     const sid = (payload.sid as string) || undefined;
 
     // Check server-side revocation and suspension status if running in Node runtime
-    let isSuspendedUser = false;
+    let isSuspendedUser = Boolean(payload.isSuspended);
     if (process.env.NEXT_RUNTIME !== 'edge') {
       try {
         const { isSessionRevoked, isTenantSuspended } = await import('./db');

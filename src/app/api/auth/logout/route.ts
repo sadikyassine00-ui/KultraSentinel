@@ -13,6 +13,15 @@ export async function POST(request: Request) {
   }
 
   const response = NextResponse.json({ success: true, message: 'Logged out successfully.' });
-  response.headers.set('Set-Cookie', getClearSessionCookieHeader());
+  response.headers.set('Set-Cookie', getClearSessionCookieHeader(request));
+  response.cookies.set({
+    name: 'kultra_admin_session',
+    value: '',
+    path: '/',
+    maxAge: 0,
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+  });
   return response;
 }

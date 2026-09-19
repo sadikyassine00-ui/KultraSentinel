@@ -125,16 +125,6 @@ export async function POST(request: Request) {
 
     // Check account suspension status
     const isSuspended = await isTenantSuspended(cleanEmail);
-    if (isSuspended) {
-      return NextResponse.json(
-        {
-          error: 'Your account access has been suspended. Please contact support@usekultra.com.',
-          isSuspended: true,
-          redirectUrl: '/suspended',
-        },
-        { status: 403 }
-      );
-    }
 
     // 6. Successful authentication - reset rate limit counters
     resetRateLimit(ipRateLimitKey);
@@ -148,6 +138,7 @@ export async function POST(request: Request) {
         role,
         name: user.name || cleanEmail.split('@')[0],
         id: user.id,
+        isSuspended,
       },
       {
         ipAddress: clientIp,
@@ -156,16 +147,19 @@ export async function POST(request: Request) {
     );
 
     // 8. Sanitize post-login redirect destination (Open-Redirect Defense)
-    const defaultDestination = role === 'admin' ? '/admin/dashboard' : '/dashboard';
-    const safeRedirect = sanitizeRedirectUrl(returnUrl, defaultDestination);
+    // If suspended, force redirect destination directly to /suspended
+    const defaultDestination = isSuspended ? '/suspended' : (role === 'admin' ? '/admin/dashboard' : '/dashboard');
+    const safeRedirect = isSuspended ? '/suspended' : sanitizeRedirectUrl(returnUrl, defaultDestination);
 
     const response = NextResponse.json({
       success: true,
       redirectUrl: safeRedirect,
+      isSuspended,
       user: {
         email: user.email,
         name: user.name,
         role,
+        isSuspended,
       },
     });
 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createOrUpdateAdmin, findTenantByEmail, createTenant, createLead, findAdminByEmail } from '@/lib/db';
+import { createOrUpdateAdmin, findTenantByEmail, createTenant, createLead, findAdminByEmail, isTenantSuspended } from '@/lib/db';
 import { createSessionToken, getSessionCookieHeader, isAllowedAdminEmail, isSuperAdminEmail, isSecureContext, COOKIE_NAME } from '@/lib/auth';
 import { verifyOAuthState, OAUTH_STATE_COOKIE_NAME } from '@/lib/security';
 import { getClientIp } from '@/lib/rate-limit';
@@ -152,7 +152,8 @@ export async function GET(request: Request) {
       }
     }
 
-    // 6. Generate 7-day secure session token with tracking metadata
+    // 6. Check suspension status and generate 7-day secure session token
+    const isSuspended = await isTenantSuspended(email);
     const clientIp = getClientIp(request);
     const userAgent = request.headers.get('user-agent');
     const token = await createSessionToken(
@@ -161,6 +162,7 @@ export async function GET(request: Request) {
         role,
         name: user.name || name,
         id: user.id,
+        isSuspended,
       },
       {
         ipAddress: clientIp,
@@ -168,10 +170,10 @@ export async function GET(request: Request) {
       }
     );
 
-    // 7. Route the user directly into /dashboard (or /admin/dashboard for admins)
-    const targetUrl = role === 'admin'
-      ? new URL('/admin/dashboard', origin)
-      : new URL('/dashboard', origin);
+    // 7. Route the user directly into /suspended if suspended, or /dashboard (/admin/dashboard for admins)
+    const targetUrl = isSuspended
+      ? new URL('/suspended', origin)
+      : (role === 'admin' ? new URL('/admin/dashboard', origin) : new URL('/dashboard', origin));
 
     const response = NextResponse.redirect(targetUrl);
     const isSecure = isSecureContext(request);

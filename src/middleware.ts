@@ -50,6 +50,9 @@ export async function middleware(request: NextRequest) {
   // 3. Public / Guest Routes (/login, /register)
   if (pathname === '/login' || pathname === '/register') {
     if (session) {
+      if (session.isSuspended) {
+        return NextResponse.redirect(new URL('/suspended', request.url));
+      }
       if (session.role === 'admin') {
         return NextResponse.redirect(new URL('/admin/dashboard', request.url));
       }
@@ -76,6 +79,9 @@ export async function middleware(request: NextRequest) {
   // 4. Admin Login Route (/admin/login, /admin/register)
   if (pathname === '/admin/login' || pathname === '/admin/register') {
     if (session) {
+      if (session.isSuspended) {
+        return NextResponse.redirect(new URL('/suspended', request.url));
+      }
       if (session.role === 'admin') {
         return NextResponse.redirect(new URL('/admin/dashboard', request.url));
       }
@@ -100,13 +106,10 @@ export async function middleware(request: NextRequest) {
   }
 
   // 4b. Suspended Screen Route (/suspended)
+  // Exempt this page from standard dashboard redirection rules to eliminate cyclic redirect loops
   if (pathname === '/suspended') {
     if (!session) {
       return NextResponse.redirect(new URL('/login', request.url));
-    }
-    // If account is active and not suspended, restore normal dashboard access
-    if (!session.isSuspended) {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
     }
     return NextResponse.next();
   }
