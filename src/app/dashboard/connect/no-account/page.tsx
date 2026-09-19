@@ -2,6 +2,8 @@ import React from 'react';
 import Link from 'next/link';
 import { ShieldAlert, ExternalLink, RefreshCw, ArrowLeft } from 'lucide-react';
 
+import DirectGmcLinkForm from './DirectGmcLinkForm';
+
 interface Props {
   searchParams: Promise<{ email?: string }>;
 }
@@ -27,14 +29,17 @@ export default async function NoGmcAccountPage({ searchParams }: Props) {
             No Google Merchant Center account found for this Google email
           </h1>
           <p className="text-[13.5px] text-[var(--ghost-text)] leading-[1.6]">
-            We queried the Google Content API for <strong className="text-[var(--ink-primary)] font-mono text-[12.5px]">{email}</strong>, but Google reported zero associated Merchant Center stores or MCA client accounts.
+            We queried Google Merchant Center APIs for <strong className="text-[var(--ink-primary)] font-mono text-[12.5px]">{email}</strong>, but Google reported zero associated Merchant Center stores or MCA client accounts.
           </p>
         </div>
+
+        {/* Direct Link Form */}
+        <DirectGmcLinkForm />
 
         {/* Guidance Box */}
         <div className="p-4 rounded-[var(--radius-sm)] bg-[var(--bg-canvas)] border border-[var(--hairline)] space-y-3">
           <div className="text-[12.5px] font-semibold text-[var(--ink-primary)]">
-            How to resolve:
+            Alternative options:
           </div>
           <ol className="text-[12.5px] text-[var(--ink-secondary)] space-y-2.5 list-decimal list-inside leading-[1.55]">
             <li>

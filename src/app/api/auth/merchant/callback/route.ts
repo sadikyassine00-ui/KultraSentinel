@@ -104,16 +104,41 @@ export async function GET(request: Request) {
     // Encrypt refresh token at rest using AES-256-GCM if provided
     const encryptedRefreshToken = refreshToken ? await encryptToken(refreshToken) : undefined;
 
-    // 4. Live GMC Account Discovery (Directive §2)
-    const discoveredAccounts = await discoverMerchantAccounts(accessToken);
+    // Check if target GMC ID was passed in OAuth state returnTo
+    const targetGmcId = stateResult.returnTo || undefined;
+
+    // 4. Live GMC Account Discovery (Google Merchant API & Content API v2.1)
+    let discoveredAccounts = await discoverMerchantAccounts(accessToken, targetGmcId);
+
+    // If user is superadmin or known owner, and 0 accounts returned, attempt fallback for known store 5838023405
+    if (discoveredAccounts.length === 0 && session.email.toLowerCase() === 'yassinesadik0@gmail.com') {
+      console.info('[Merchant OAuth Callback] Attempting direct fallback discovery for store 5838023405...');
+      discoveredAccounts = await discoverMerchantAccounts(accessToken, '5838023405');
+    }
 
     // Case A: Zero GMC accounts found
-    // If the Google account has 0 associated accounts, DO NOT create a fake catalog or allow onboarding.
+    // Preserve token in short-lived HTTP-only cookie so user can enter GMC ID manually on /dashboard/connect/no-account
     if (discoveredAccounts.length === 0) {
+      const pendingCookiePayload = JSON.stringify({
+        email: session.email,
+        encryptedRefreshToken,
+        accessToken,
+        createdAt: Date.now(),
+      });
+
       const noAccountUrl = new URL('/dashboard/connect/no-account', origin);
       noAccountUrl.searchParams.set('email', session.email);
       const res = NextResponse.redirect(noAccountUrl);
       res.cookies.delete(OAUTH_STATE_COOKIE_NAME);
+      res.cookies.set({
+        name: 'kultra_gmc_pending',
+        value: Buffer.from(pendingCookiePayload).toString('base64'),
+        path: '/',
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 600, // 10 minutes
+      });
       return res;
     }
 

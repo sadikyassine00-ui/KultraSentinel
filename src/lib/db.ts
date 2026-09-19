@@ -1544,6 +1544,17 @@ export async function claimStoreForTenant(params: {
         } catch (trialErr) {
           console.warn('[claimStoreForTenant] Trial activation hook error:', trialErr);
         }
+
+        // Update tenant connected_stores and oauth_status
+        await sql`
+          UPDATE tenants
+          SET 
+            connected_stores = (SELECT COUNT(*)::int FROM stores WHERE LOWER(tenant_email) = ${cleanEmail}),
+            oauth_status = 'connected',
+            last_active = NOW()
+          WHERE LOWER(email) = ${cleanEmail};
+        `;
+
         return { success: true, store: updated[0] as unknown as Store };
       }
 
@@ -1568,6 +1579,17 @@ export async function claimStoreForTenant(params: {
       } catch (trialErr) {
         console.warn('[claimStoreForTenant] Trial activation hook error:', trialErr);
       }
+
+      // Update tenant connected_stores and oauth_status
+      await sql`
+        UPDATE tenants
+        SET 
+          connected_stores = (SELECT COUNT(*)::int FROM stores WHERE LOWER(tenant_email) = ${cleanEmail}),
+          oauth_status = 'connected',
+          last_active = NOW()
+        WHERE LOWER(email) = ${cleanEmail};
+      `;
+
       return { success: true, store: inserted[0] as unknown as Store };
     } catch (err) {
       console.warn('[Neon DB] Error claiming store for tenant:', err);

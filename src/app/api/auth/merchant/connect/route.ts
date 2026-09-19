@@ -25,7 +25,10 @@ export async function GET(request: Request) {
     const redirectUri = `${url.origin}/api/auth/merchant/callback`;
 
     // Generate cryptographically random state and encrypted 10-minute HTTP-only cookie
-    const { state, cookieValue } = await createOAuthState(session.email);
+    const targetGmcId = url.searchParams.get('target_gmc_id') || url.searchParams.get('gmc_id') || undefined;
+    const { state, cookieValue } = await createOAuthState(session.email, targetGmcId);
+
+    const promptParam = url.searchParams.get('prompt') || 'consent select_account';
 
     const params = new URLSearchParams({
       client_id: googleClientId,
@@ -33,7 +36,9 @@ export async function GET(request: Request) {
       response_type: 'code',
       scope: 'https://www.googleapis.com/auth/content openid email profile',
       access_type: 'offline',
-      prompt: 'consent',
+      prompt: promptParam,
+      include_granted_scopes: 'true',
+      login_hint: session.email,
       state,
     });
 
