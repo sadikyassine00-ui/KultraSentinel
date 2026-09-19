@@ -126,7 +126,8 @@ async function cleanProductionDb() {
           subscription_status = 'paid active',
           connected_stores = 0,
           total_skus = 0,
-          incidents_month = 0
+          incidents_month = 0,
+          oauth_status = 'disconnected'
       WHERE LOWER(email) = ${SUPERADMIN_EMAIL};
     `;
 
@@ -149,17 +150,17 @@ async function cleanProductionDb() {
     console.log(`   Deleted ${deletedLeads.length} leads.`);
 
     // 5. Purge Stores & Incidents (Full fresh start)
-    console.log('[Clean DB] 5. Purging all test stores & incidents for a clean slate...');
+    console.log('[Clean DB] 5. Purging all stores & incidents for a clean slate...');
     const deletedIncidents = await sql`DELETE FROM incidents RETURNING id;`;
     const deletedStores = await sql`DELETE FROM stores RETURNING id;`;
     console.log(`   Deleted ${deletedIncidents.length} incidents.`);
     console.log(`   Deleted ${deletedStores.length} stores.`);
 
-    // 6. Purge Operational Queues & Logs
-    console.log('[Clean DB] 6. Purging DLQ, processed messages, dispatches, telemetry...');
+    // 6. Purge Operational Queues & Logs (Full fresh start)
+    console.log('[Clean DB] 6. Purging DLQ, processed messages, all dispatches, telemetry...');
     const deletedDlq = await sql`DELETE FROM dlq_messages RETURNING id;`;
     const deletedProcessed = await sql`DELETE FROM processed_messages RETURNING message_id;`;
-    const deletedDispatches = await sql`DELETE FROM dispatch_logs WHERE LOWER(tenant_email) != ${SUPERADMIN_EMAIL} OR tenant_email IS NULL RETURNING id;`;
+    const deletedDispatches = await sql`DELETE FROM dispatch_logs RETURNING id;`;
     const deletedTelemetry = await sql`DELETE FROM telemetry_events RETURNING id;`;
     console.log(`   Deleted ${deletedDlq.length} DLQ messages.`);
     console.log(`   Deleted ${deletedProcessed.length} processed deduplication messages.`);
