@@ -37,7 +37,7 @@
   /* typography */
   --font-display: 'Fraunces', Georgia, serif;
   --font-body: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+  --font-mono: 'Roboto', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 
   /* spacing */
   --space-1: 4px;

@@ -30,9 +30,10 @@ export function RemediationPipeline() {
 
   return (
     <section
-      id="features"
+      id="how-it-works"
       className="relative w-full py-20 px-4 sm:px-6 bg-[var(--bg-canvas)] border-t border-[var(--hairline)]"
     >
+      <div id="features" className="absolute -top-20 pointer-events-none" />
       <div className="relative z-10 max-w-[1140px] mx-auto">
         {/* Section Header */}
         <div className="max-w-[760px] mb-12">

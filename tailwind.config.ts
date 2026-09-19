@@ -63,7 +63,7 @@ const config: Config = {
         display: ["'Fraunces'", "Georgia", "serif"],
         sans: ["'Inter'", "system-ui", "-apple-system", "sans-serif"],
         body: ["'Inter'", "system-ui", "-apple-system", "sans-serif"],
-        mono: ["'Roboto Mono'", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+        mono: ["'Roboto'", "ui-sans-serif", "system-ui", "-apple-system", "sans-serif"],
       },
       borderRadius: {
         none: "0px",

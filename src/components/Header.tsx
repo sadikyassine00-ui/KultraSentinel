@@ -97,6 +97,14 @@ export function Header() {
   };
 
 
+  const navLinks = [
+    { label: 'How It Works', href: '/#how-it-works' },
+    { label: 'Architecture', href: '/#architecture' },
+    { label: 'Integrations', href: '/#integrations' },
+    { label: 'Pricing', href: '/#pricing' },
+    { label: 'FAQ', href: '/#faq' },
+  ];
+
   const getInitials = (emailOrName: string) => {
     const parts = emailOrName.split('@')[0].split(/[._ -]/);
     if (parts.length >= 2) {
@@ -120,7 +128,7 @@ export function Header() {
     >
       <div className="max-w-[1400px] h-[60px] mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4 sm:gap-6">
         {/* Brand Group */}
-        <div className="flex items-center gap-3 sm:gap-4">
+        <div className="flex items-center gap-3 sm:gap-4 shrink-0">
           <Link
             href="/"
             className="flex items-center rounded-[var(--radius-sm)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal-glow)]"
@@ -135,13 +143,26 @@ export function Header() {
               priority
             />
           </Link>
-          <span className="hidden lg:inline-block font-mono text-[11px] text-[var(--ghost-text-dim)] pl-3 border-l border-[var(--hairline)]">
+          <span className="hidden xl:inline-block font-mono text-[11px] text-[var(--ghost-text-dim)] pl-3 border-l border-[var(--hairline)]">
             Merchant API v1
           </span>
         </div>
 
-        {/* Header Actions: Strictly two actions for visitors (§2 Navigation Audit) */}
-        <div className="flex items-center gap-3">
+        {/* Desktop Navigation Links */}
+        <nav className="hidden md:flex items-center gap-6 lg:gap-8" aria-label="Main Navigation">
+          {navLinks.map((link) => (
+            <Link
+              key={link.label}
+              href={link.href}
+              className="text-[13px] font-medium text-[var(--ghost-text)] hover:text-[var(--ink-primary)] transition-colors duration-120"
+            >
+              {link.label}
+            </Link>
+          ))}
+        </nav>
+
+        {/* Header Actions */}
+        <div className="flex items-center gap-3 shrink-0">
           {user ? (
             /* Logged-In User Profile Pill & Dropdown (§16 Top bar) - Static Status Dot with ZERO animation (§17) */
             <div className="relative" ref={dropdownRef}>
@@ -218,11 +239,11 @@ export function Header() {
               )}
             </div>
           ) : (
-            /* Strictly two interactive actions: low-contrast text link ("Sign In") and high-contrast primary call to value */
+            /* Visitor Actions: Sign In + Call to Value CTA */
             <div className="flex items-center gap-3 sm:gap-4">
               <Link
                 href="/login"
-                className="text-[13px] text-[var(--ghost-text)] hover:text-[var(--ink-primary)] px-2 py-1.5 transition-colors duration-120"
+                className="text-[13px] font-medium text-[var(--ghost-text)] hover:text-[var(--ink-primary)] px-2 py-1.5 transition-colors duration-120"
               >
                 Sign In
               </Link>
@@ -236,51 +257,82 @@ export function Header() {
             </div>
           )}
 
-          {/* Mobile Hamburger Toggle (only for logged-in user to access dashboard actions) */}
-          {user && (
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 text-[var(--ghost-text)] hover:text-[var(--ink-primary)] transition-colors rounded-[var(--radius-sm)] border border-[var(--hairline)] bg-[var(--bg-surface)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal-glow)]"
-              aria-label="Toggle navigation menu"
-              aria-expanded={mobileMenuOpen}
-            >
-              {mobileMenuOpen ? (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              ) : (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              )}
-            </button>
-          )}
+          {/* Mobile Hamburger Toggle for all users */}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden p-2 text-[var(--ghost-text)] hover:text-[var(--ink-primary)] transition-colors rounded-[var(--radius-sm)] border border-[var(--hairline)] bg-[var(--bg-surface)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal-glow)]"
+            aria-label="Toggle navigation menu"
+            aria-expanded={mobileMenuOpen}
+          >
+            {mobileMenuOpen ? (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            )}
+          </button>
         </div>
       </div>
 
-      {/* Mobile Menu Dropdown (strictly for logged-in user navigation) */}
-      {mobileMenuOpen && user && (
-        <div className="md:hidden bg-[var(--bg-surface)] border-b border-[var(--hairline)] px-5 py-3 space-y-2">
-          <div className="pt-2 border-t border-[var(--hairline)] space-y-2">
-            <Link
-              href="/dashboard"
-              onClick={() => setMobileMenuOpen(false)}
-              className="btn-primary !rounded-[3px] w-full justify-center text-[13px] py-2"
-            >
-              Open Catalog Shield
-            </Link>
-            <button
-              type="button"
-              onClick={() => {
-                setMobileMenuOpen(false);
-                handleLogout();
-              }}
-              className="btn-secondary !rounded-[3px] w-full justify-center text-[13px] py-2"
-            >
-              Sign out
-            </button>
+      {/* Mobile Menu Dropdown */}
+      {mobileMenuOpen && (
+        <div className="md:hidden bg-[var(--bg-surface)] border-b border-[var(--hairline)] px-5 py-4 space-y-3">
+          {/* Navigation Links */}
+          <div className="space-y-1">
+            {navLinks.map((link) => (
+              <Link
+                key={link.label}
+                href={link.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className="block text-[14px] font-medium text-[var(--ghost-text)] hover:text-[var(--ink-primary)] py-2 transition-colors border-b border-[var(--hairline)] last:border-none"
+              >
+                {link.label}
+              </Link>
+            ))}
           </div>
+
+          {user ? (
+            <div className="pt-2 border-t border-[var(--hairline)] space-y-2">
+              <Link
+                href="/dashboard"
+                onClick={() => setMobileMenuOpen(false)}
+                className="btn-primary !rounded-[3px] w-full justify-center text-[13px] py-2"
+              >
+                Open Catalog Shield
+              </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  handleLogout();
+                }}
+                className="btn-secondary !rounded-[3px] w-full justify-center text-[13px] py-2"
+              >
+                Sign out
+              </button>
+            </div>
+          ) : (
+            <div className="pt-2 border-t border-[var(--hairline)] flex flex-col gap-2">
+              <Link
+                href="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="btn-secondary !rounded-[3px] w-full justify-center text-[13px] py-2"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/register"
+                onClick={() => setMobileMenuOpen(false)}
+                className="btn-primary !rounded-[3px] w-full justify-center text-[13px] py-2"
+              >
+                Protect Your Google Shopping Ads
+              </Link>
+            </div>
+          )}
         </div>
       )}
     </header>
