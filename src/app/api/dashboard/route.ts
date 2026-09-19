@@ -33,10 +33,14 @@ export async function GET(request: Request) {
       );
     }
 
-    const billing = evaluateSubscription(tenant);
-
     // 1. Fetch stores strictly scoped to authenticated tenant
     const stores = await getStoresForTenant(tenantEmail);
+
+    const billing = evaluateSubscription(tenant, {
+      storeCount: stores.length,
+      slackCount: stores.some((s) => s.webhook_url || s.slack_webhook_url) ? 1 : 0,
+      pubsubStatus: 'Active',
+    });
 
     if (stores.length === 0) {
       return NextResponse.json({
@@ -52,6 +56,14 @@ export async function GET(request: Request) {
           upgradeUrl: billing.upgradeUrl,
           hasTrialStarted: billing.hasTrialStarted,
           isSuperAdmin: billing.isSuperAdmin,
+          planTier: billing.planTier,
+          planName: billing.planName,
+          monthlyPrice: billing.monthlyPrice,
+          formattedPrice: billing.formattedPrice,
+          renewalOrExpirationDate: billing.renewalOrExpirationDate,
+          formattedRenewalOrExpiration: billing.formattedRenewalOrExpiration,
+          isUrgent: billing.isUrgent,
+          quotas: billing.quotas,
         },
         metrics: {
           monitoredProducts: 0,
@@ -162,6 +174,14 @@ export async function GET(request: Request) {
         upgradeUrl: billing.upgradeUrl,
         hasTrialStarted: billing.hasTrialStarted,
         isSuperAdmin: billing.isSuperAdmin,
+        planTier: billing.planTier,
+        planName: billing.planName,
+        monthlyPrice: billing.monthlyPrice,
+        formattedPrice: billing.formattedPrice,
+        renewalOrExpirationDate: billing.renewalOrExpirationDate,
+        formattedRenewalOrExpiration: billing.formattedRenewalOrExpiration,
+        isUrgent: billing.isUrgent,
+        quotas: billing.quotas,
       },
       metrics: {
         monitoredProducts,

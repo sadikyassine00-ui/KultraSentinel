@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import {
   ShieldCheck,
   ShieldAlert,
@@ -11,6 +12,7 @@ import {
   Flame,
   ChevronDown,
   Lock,
+  CreditCard,
 } from 'lucide-react';
 import { Store } from '@/lib/db';
 
@@ -512,6 +514,13 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
             <SlidersHorizontal className="w-3.5 h-3.5 text-[var(--signal)]" />
             <span>Configure alerts</span>
           </button>
+          <Link
+            href="/dashboard/settings?tab=billing"
+            className="btn-secondary text-[12px] py-1.5 px-3 !rounded-[3px] inline-flex items-center gap-1.5"
+          >
+            <CreditCard className="w-3.5 h-3.5 text-[var(--ghost-text)]" />
+            <span>Billing &amp; Quotas</span>
+          </Link>
         </div>
       </div>
 

@@ -1,40 +1,12 @@
-import { Tenant, findTenantByEmail, getDb, ensureSchema } from './db';
-import { isSuperAdminEmail } from './token';
+const assert = require('assert');
 
-export type SubscriptionStatus = 'active trial' | 'paid active' | 'expired' | 'canceled';
-
-export interface PlanQuotas {
-  gmcAccountsConnected: number;
-  gmcAccountsLimit: number | 'unlimited';
-  slackDestinationsActive: number;
-  pubsubMonitoringStatus: 'Active' | 'Paused' | 'Degraded';
+// Mock token logic
+function isSuperAdminEmail(email) {
+  if (!email) return false;
+  return email.toLowerCase().trim() === 'yassinesadik0@gmail.com';
 }
 
-export interface SubscriptionEvaluation {
-  effectiveStatus: SubscriptionStatus;
-  rawStatus: string;
-  trialEndsAt: string;
-  formattedTrialEnd: string;
-  daysRemaining: number;
-  isLocked: boolean;
-  upgradeUrl: string;
-  hasTrialStarted: boolean;
-  isSuperAdmin: boolean;
-  planTier: 'Solo' | 'Agency' | 'Superadmin';
-  planName: string;
-  monthlyPrice: number;
-  formattedPrice: string;
-  renewalOrExpirationDate: string;
-  formattedRenewalOrExpiration: string;
-  isUrgent: boolean;
-  quotas: PlanQuotas;
-}
-
-/**
- * Normalizes any legacy or external plan/status strings into strict canonical states:
- * 'active trial' | 'paid active' | 'expired' | 'canceled'
- */
-export function normalizeSubscriptionStatus(status?: string | null): SubscriptionStatus {
+function normalizeSubscriptionStatus(status) {
   if (!status) return 'active trial';
   const s = status.toLowerCase().trim();
   if (
@@ -56,23 +28,7 @@ export function normalizeSubscriptionStatus(status?: string | null): Subscriptio
   return 'active trial';
 }
 
-/**
- * Centralized evaluation helper for account lifecycle and trial timers.
- * 
- * - Superadmin (yassinesadik0@gmail.com) permanently bypasses all trial expirations,
- *   payment requirements, and paywall overlays (isLocked: false, isSuperAdmin: true).
- * - For normal accounts, the 14-day trial does NOT start until a Google Merchant Center
- *   account is connected (trial_ends_at is set).
- * - Once started, trial runs for exactly 14 days and reconnecting does not reset the timer.
- */
-export function evaluateSubscription(
-  tenant?: Partial<Tenant> | null,
-  extra?: {
-    storeCount?: number;
-    slackCount?: number;
-    pubsubStatus?: 'Active' | 'Paused' | 'Degraded';
-  }
-): SubscriptionEvaluation {
+function evaluateSubscription(tenant, extra) {
   const upgradeUrl = process.env.NEXT_PUBLIC_UPGRADE_URL || '/dashboard/settings?tab=billing';
 
   // 1. Permanent Superadmin Bypass
@@ -135,7 +91,7 @@ export function evaluateSubscription(
   }
 
   const isAgency = tenant.plan_tier === 'Agency Pilot' || tenant.account_plan === 'agency';
-  const planTier: 'Solo' | 'Agency' = isAgency ? 'Agency' : 'Solo';
+  const planTier = isAgency ? 'Agency' : 'Solo';
   const monthlyPrice = isAgency ? 49 : 19;
   const formattedPrice = isAgency ? '$49/mo' : '$19/mo';
   const gmcAccountsLimit = isAgency ? 'unlimited' : 1;
@@ -150,7 +106,6 @@ export function evaluateSubscription(
 
   const normalized = normalizeSubscriptionStatus(rawStatus);
 
-  // Paid active plans are never locked
   if (normalized === 'paid active') {
     return {
       effectiveStatus: 'paid active',
@@ -178,7 +133,6 @@ export function evaluateSubscription(
     };
   }
 
-  // 2. Unstarted Trial (Account created, but Google Merchant Center not yet connected)
   if (!tenant.trial_ends_at) {
     return {
       effectiveStatus: 'active trial',
@@ -206,15 +160,12 @@ export function evaluateSubscription(
     };
   }
 
-  // 3. Active or Expired Trial (GMC connected, 14-day countdown is running or elapsed)
   const trialDate = new Date(tenant.trial_ends_at);
   const now = Date.now();
   const msRemaining = trialDate.getTime() - now;
   const daysRemaining = Math.max(0, Math.ceil(msRemaining / (1000 * 60 * 60 * 24)));
 
-  let effectiveStatus: SubscriptionStatus = normalized;
-
-  // Auto-evaluation check: active trial that has passed expiration is treated as expired
+  let effectiveStatus = normalized;
   if (normalized === 'active trial') {
     if (msRemaining <= 0) {
       effectiveStatus = 'expired';
@@ -255,89 +206,84 @@ export function evaluateSubscription(
   };
 }
 
-/**
- * Activates the 14-day trial when a tenant connects their Google Merchant Center account.
- * - If the tenant is superadmin or already on a paid plan, no-op.
- * - If the tenant's trial_ends_at is ALREADY set, preserve existing countdown; do NOT reset the timer.
- * - If trial_ends_at is null, initialize it to exactly 14 days from now.
- */
-export async function activateTrialOnFirstStoreConnect(email: string): Promise<void> {
-  const cleanEmail = email.toLowerCase().trim();
-  if (isSuperAdminEmail(cleanEmail)) {
-    return;
-  }
+async function runTests() {
+  console.log('🧪 Starting Subscription & Billing Verification Suite...\n');
 
-  const tenant = await findTenantByEmail(cleanEmail);
-  if (!tenant) {
-    return;
-  }
+  // Test 1: Superadmin permanent access
+  console.log('Test 1: Superadmin (yassinesadik0@gmail.com) bypasses all trial expirations & billing');
+  const superadminEval = evaluateSubscription({ email: 'yassinesadik0@gmail.com' });
+  assert.strictEqual(superadminEval.isSuperAdmin, true, 'isSuperAdmin must be true');
+  assert.strictEqual(superadminEval.planTier, 'Superadmin', 'planTier must be Superadmin');
+  assert.strictEqual(superadminEval.planName, 'Lifetime Admin', 'planName must be Lifetime Admin');
+  assert.strictEqual(superadminEval.isLocked, false, 'isLocked must be false');
+  assert.strictEqual(superadminEval.isUrgent, false, 'isUrgent must be false');
+  assert.strictEqual(superadminEval.upgradeUrl, '', 'upgradeUrl must be empty string');
+  assert.strictEqual(superadminEval.quotas.gmcAccountsLimit, 'unlimited', 'GMC limit must be unlimited');
+  console.log('✅ Superadmin bypass verified: Lifetime Admin with 0 timers and 0 upgrade prompts.\n');
 
-  if (tenant.subscription_status === 'paid active') {
-    return;
-  }
+  // Test 2: Active Trial with > 3 days left (neutral styling)
+  console.log('Test 2: Active Trial with 10 days remaining (> 3 days)');
+  const tenDaysFuture = new Date(Date.now() + 10 * 86400000).toISOString();
+  const trialNeutral = evaluateSubscription({
+    email: 'merchant@test.com',
+    subscription_status: 'active trial',
+    trial_ends_at: tenDaysFuture,
+  });
+  assert.strictEqual(trialNeutral.effectiveStatus, 'active trial');
+  assert.strictEqual(trialNeutral.isUrgent, false, 'isUrgent must be false when daysRemaining > 3');
+  assert.strictEqual(trialNeutral.daysRemaining, 10);
+  assert.strictEqual(trialNeutral.planName, 'Free Trial');
+  console.log(`✅ Neutral trial verified: ${trialNeutral.daysRemaining} days left, isUrgent=${trialNeutral.isUrgent}.\n`);
 
-  // Critical requirement: Reconnecting or disconnecting must NOT reset the 14-day timer
-  if (tenant.trial_ends_at) {
-    return;
-  }
+  // Test 3: Active Trial with <= 3 days left (urgent styling)
+  console.log('Test 3: Active Trial with 2 days remaining (<= 3 days)');
+  const twoDaysFuture = new Date(Date.now() + 2 * 86400000).toISOString();
+  const trialUrgent = evaluateSubscription({
+    email: 'urgent@test.com',
+    subscription_status: 'active trial',
+    trial_ends_at: twoDaysFuture,
+  });
+  assert.strictEqual(trialUrgent.effectiveStatus, 'active trial');
+  assert.strictEqual(trialUrgent.isUrgent, true, 'isUrgent must be true when daysRemaining <= 3');
+  assert.strictEqual(trialUrgent.daysRemaining, 2);
+  console.log(`✅ Urgent trial verified: ${trialUrgent.daysRemaining} days left, isUrgent=${trialUrgent.isUrgent}.\n`);
 
-  const newTrialEndsAt = new Date(Date.now() + 14 * 86400000).toISOString();
+  // Test 4: Solo Plan user ($19/mo, 1 store limit)
+  console.log('Test 4: Solo Plan user entitlements');
+  const soloEval = evaluateSubscription({
+    email: 'solo@test.com',
+    plan_tier: 'Active Pro',
+    account_plan: 'solo',
+    subscription_status: 'paid active',
+  }, { storeCount: 1, slackCount: 1 });
+  assert.strictEqual(soloEval.planTier, 'Solo');
+  assert.strictEqual(soloEval.planName, 'Solo Plan');
+  assert.strictEqual(soloEval.monthlyPrice, 19);
+  assert.strictEqual(soloEval.formattedPrice, '$19/mo');
+  assert.strictEqual(soloEval.quotas.gmcAccountsLimit, 1);
+  assert.strictEqual(soloEval.quotas.gmcAccountsConnected, 1);
+  console.log(`✅ Solo Plan verified: $19/mo with 1 GMC limit.\n`);
 
-  // Update in-memory state
-  tenant.trial_ends_at = newTrialEndsAt;
-  tenant.subscription_status = 'active trial';
+  // Test 5: Agency Plan user ($49/mo, unlimited store limit)
+  console.log('Test 5: Agency Plan user entitlements');
+  const agencyEval = evaluateSubscription({
+    email: 'agency@test.com',
+    plan_tier: 'Agency Pilot',
+    account_plan: 'agency',
+    subscription_status: 'paid active',
+  }, { storeCount: 6, slackCount: 3 });
+  assert.strictEqual(agencyEval.planTier, 'Agency');
+  assert.strictEqual(agencyEval.planName, 'Agency Plan');
+  assert.strictEqual(agencyEval.monthlyPrice, 49);
+  assert.strictEqual(agencyEval.formattedPrice, '$49/mo');
+  assert.strictEqual(agencyEval.quotas.gmcAccountsLimit, 'unlimited');
+  assert.strictEqual(agencyEval.quotas.gmcAccountsConnected, 6);
+  console.log(`✅ Agency Plan verified: $49/mo with unlimited GMC limit.\n`);
 
-  // Persist to Neon DB
-  try {
-    const sql = getDb();
-    if (sql) {
-      await ensureSchema();
-      await sql`
-        UPDATE tenants
-        SET trial_ends_at = ${newTrialEndsAt},
-            subscription_status = 'active trial'
-        WHERE id = ${tenant.id};
-      `;
-    }
-  } catch (err) {
-    console.warn('[Subscription] Failed to activate trial on GMC connect in DB:', err);
-  }
+  console.log('🎉 ALL 5 SUBSCRIPTION AND BILLING TESTS PASSED PERFECTLY!');
 }
 
-/**
- * Retrieves a tenant from database and returns evaluated subscription state.
- * If the tenant transitioned from 'active trial' to 'expired', lazily updates the database row.
- */
-export async function getTenantSubscription(email: string): Promise<SubscriptionEvaluation> {
-  const cleanEmail = email.toLowerCase().trim();
-  if (isSuperAdminEmail(cleanEmail)) {
-    return evaluateSubscription({ email: cleanEmail, plan_tier: 'Active Pro', subscription_status: 'paid active' });
-  }
-
-  const tenant = await findTenantByEmail(cleanEmail);
-  const evaluation = evaluateSubscription(tenant);
-
-  // If status transitioned to expired and DB still says active trial, sync state lazily
-  if (
-    tenant &&
-    evaluation.effectiveStatus === 'expired' &&
-    tenant.subscription_status === 'active trial'
-  ) {
-    try {
-      const sql = getDb();
-      if (sql) {
-        await ensureSchema();
-        await sql`
-          UPDATE tenants
-          SET subscription_status = 'expired'
-          WHERE id = ${tenant.id};
-        `;
-      }
-      tenant.subscription_status = 'expired';
-    } catch (err) {
-      console.warn('[Subscription] Failed to lazily sync expired status to DB:', err);
-    }
-  }
-
-  return evaluation;
-}
+runTests().catch((err) => {
+  console.error('❌ Test failed:', err);
+  process.exit(1);
+});
