@@ -54,8 +54,11 @@ export async function GET(request: Request) {
     : new URL('/dashboard', origin);
 
   if (errorParam || !code) {
-    fallbackDashboardUrl.searchParams.set('error', errorParam || 'Merchant Center OAuth was cancelled.');
-    return NextResponse.redirect(fallbackDashboardUrl);
+    const isPermissionDenied = errorParam === 'access_denied' || errorParam === 'permission_denied';
+    fallbackDashboardUrl.searchParams.set('error', isPermissionDenied ? 'permission_denied' : (errorParam || 'cancelled'));
+    const res = NextResponse.redirect(fallbackDashboardUrl);
+    res.cookies.delete(OAUTH_STATE_COOKIE_NAME);
+    return res;
   }
 
   // Verify state tenant email matches active authenticated session
@@ -102,14 +105,12 @@ export async function GET(request: Request) {
     const refreshToken = tokenData.refresh_token;
     const grantedScopes = String(tokenData.scope || '');
 
-    // Check if Google Merchant Center scope was granted
+    // Branch C: Check if Google Merchant Center scope was granted
     const hasContentScope = grantedScopes.includes('https://www.googleapis.com/auth/content');
     if (!hasContentScope && process.env.NODE_ENV === 'production') {
       console.warn(`[Merchant OAuth Callback] Token missing content scope for ${session.email}. Granted scopes: ${grantedScopes}`);
-      const noAccountUrl = new URL('/dashboard/connect/no-account', origin);
-      noAccountUrl.searchParams.set('error', 'permission_denied');
-      noAccountUrl.searchParams.set('email', session.email);
-      const res = NextResponse.redirect(noAccountUrl);
+      fallbackDashboardUrl.searchParams.set('error', 'permission_denied');
+      const res = NextResponse.redirect(fallbackDashboardUrl);
       res.cookies.delete(OAUTH_STATE_COOKIE_NAME);
       return res;
     }
@@ -124,12 +125,11 @@ export async function GET(request: Request) {
     const discoveryResult = await discoverMerchantAccounts(accessToken, targetGmcId);
     const discoveredAccounts = discoveryResult.accounts;
 
-    // Case A: Google API Error reported during discovery
+    // Discovery Error Handling: Route 404/notFound to Branch B, and scopeMissing to Branch C
     if (discoveryResult.error && discoveredAccounts.length === 0) {
       if (discoveryResult.error.notFound || discoveryResult.error.status === 404) {
-        const noAccountUrl = new URL('/dashboard/connect/no-account', origin);
-        noAccountUrl.searchParams.set('email', session.email);
-        const res = NextResponse.redirect(noAccountUrl);
+        fallbackDashboardUrl.searchParams.set('error', 'no_accounts_found');
+        const res = NextResponse.redirect(fallbackDashboardUrl);
         res.cookies.delete(OAUTH_STATE_COOKIE_NAME);
         return res;
       }
@@ -141,10 +141,8 @@ export async function GET(request: Request) {
         return NextResponse.redirect(fallbackDashboardUrl);
       }
       if (discoveryResult.error.scopeMissing || discoveryResult.error.status === 403) {
-        const noAccountUrl = new URL('/dashboard/connect/no-account', origin);
-        noAccountUrl.searchParams.set('error', 'permission_denied');
-        noAccountUrl.searchParams.set('email', session.email);
-        const res = NextResponse.redirect(noAccountUrl);
+        fallbackDashboardUrl.searchParams.set('error', 'permission_denied');
+        const res = NextResponse.redirect(fallbackDashboardUrl);
         res.cookies.delete(OAUTH_STATE_COOKIE_NAME);
         return res;
       }
@@ -152,29 +150,12 @@ export async function GET(request: Request) {
       return NextResponse.redirect(fallbackDashboardUrl);
     }
 
-    // Case B: Zero GMC accounts found (Strict Verification Gate)
-    // Halt onboarding immediately: zero stores created, zero trials started, redirect to no-account screen.
+    // Branch B: Zero GMC accounts found (Strict Verification Gate)
+    // Halt onboarding immediately: zero stores created, zero trials started, route back to onboarding with state indicator.
     if (discoveredAccounts.length === 0) {
-      const pendingCookiePayload = JSON.stringify({
-        email: session.email,
-        encryptedRefreshToken,
-        accessToken,
-        createdAt: Date.now(),
-      });
-
-      const noAccountUrl = new URL('/dashboard/connect/no-account', origin);
-      noAccountUrl.searchParams.set('email', session.email);
-      const res = NextResponse.redirect(noAccountUrl);
+      fallbackDashboardUrl.searchParams.set('error', 'no_accounts_found');
+      const res = NextResponse.redirect(fallbackDashboardUrl);
       res.cookies.delete(OAUTH_STATE_COOKIE_NAME);
-      res.cookies.set({
-        name: 'kultra_gmc_pending',
-        value: Buffer.from(pendingCookiePayload).toString('base64'),
-        path: '/',
-        httpOnly: true,
-        sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production',
-        maxAge: 600, // 10 minutes
-      });
       return res;
     }
 

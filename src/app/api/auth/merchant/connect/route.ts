@@ -42,7 +42,7 @@ export async function GET(request: Request) {
     const targetGmcId = url.searchParams.get('target_gmc_id') || url.searchParams.get('gmc_id') || undefined;
     const { state, cookieValue } = await createOAuthState(session.email, targetGmcId);
 
-    const promptParam = url.searchParams.get('prompt') || 'consent select_account';
+    const promptParam = url.searchParams.get('prompt') || 'select_account consent';
 
     const params = new URLSearchParams({
       client_id: googleClientId,
@@ -52,7 +52,6 @@ export async function GET(request: Request) {
       access_type: 'offline',
       prompt: promptParam,
       include_granted_scopes: 'true',
-      login_hint: session.email,
       state,
     });
 

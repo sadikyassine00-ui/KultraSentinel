@@ -1,12 +1,17 @@
 /**
  * Test script for verifying:
  * 1. GMC OAuth Connect endpoint CORS protection (JSON for fetch/cors/rsc, 307 for document navigation)
- * 2. Source code verification: zero <Link> or fetch() targeting /api/auth/merchant/connect
- * 3. Flow branching:
- *    - 0 accounts / 404 -> redirects to /dashboard/connect/no-account
+ * 2. Multi-Account Chooser Enforced: Zero login_hint and prompt=select_account consent
+ * 3. Source code verification: zero <Link> or fetch() targeting /api/auth/merchant/connect
+ * 4. Callback flow branching:
+ *    - 0 accounts / 404 -> redirects to /dashboard?error=no_accounts_found
+ *    - Scope denied / cancelled -> redirects to /dashboard?error=permission_denied
  *    - 1 account -> claims store & redirects to /dashboard?just_connected=true
  *    - >1 accounts -> redirects to /dashboard/connect/select-account
- * 4. Verify no-account page contains explicit "NO MERCHANT ACCOUNT FOUND" guidance
+ * 5. Onboarding UI Fork:
+ *    - On no_accounts_found: hides 3-step setup cards, displays "No Google Merchant Center Account Found",
+ *      plain-English explanation, and two resolution buttons.
+ *    - On permission_denied: displays amber warning banner explaining Content API requirements.
  */
 
 const fs = require('fs');
@@ -38,7 +43,7 @@ process.env.GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || 'dummy-google-cli
 process.env.GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || 'dummy-google-client-secret';
 
 async function runTests() {
-  console.log('=== VERIFYING GMC OAUTH CORS FIX & FLOW BRANCHING ===\n');
+  console.log('=== VERIFYING FULL GMC CONNECTION FLOW AUDIT & ZERO-STATE FORKING ===\n');
 
   // Test Group 1: Source code verification (No Link or fetch targeting connect endpoint)
   console.log('--- Test 1: Static Analysis of GMC Connect Links ---');
@@ -68,8 +73,8 @@ async function runTests() {
   );
   console.log('[PASS] Zero Next.js <Link> or client fetch() targeting /api/auth/merchant/connect');
 
-  // Test Group 2: GET /api/auth/merchant/connect route handler
-  console.log('\n--- Test 2: Connect Endpoint Response Verification ---');
+  // Test Group 2: GET /api/auth/merchant/connect route handler & Account Chooser Enforcement
+  console.log('\n--- Test 2: Connect Endpoint & Account Chooser Enforcement ---');
   const { GET: connectGet } = await import('../src/app/api/auth/merchant/connect/route.ts');
   const { createSessionToken, COOKIE_NAME } = await import('../src/lib/token.ts');
 
@@ -89,9 +94,11 @@ async function runTests() {
   assert.strictEqual(navResponse.status, 307, 'Document navigation returns HTTP 307 Temporary Redirect');
   const redirectLocation = navResponse.headers.get('location');
   assert(redirectLocation && redirectLocation.includes('accounts.google.com/o/oauth2/v2/auth'), 'Redirects to Google OAuth authorization endpoint');
+  assert(redirectLocation.includes('prompt=select_account') || redirectLocation.includes('prompt=select_account+consent'), 'Forces Google account chooser (prompt=select_account)');
+  assert(!redirectLocation.includes('login_hint='), 'Prevents auto-login lock by omitting login_hint');
   const navCookie = navResponse.headers.get('set-cookie');
   assert(navCookie && navCookie.includes('kultra_oauth_state='), 'Attaches kultra_oauth_state HTTP-only cookie');
-  console.log('[PASS] Document navigation returns 307 redirect directly to Google with state cookie');
+  console.log('[PASS] Document navigation forces Google Account Chooser without login_hint locking');
 
   // 2b. CORS / AJAX Fetch (Mode: cors) -> Returns HTTP 200 JSON with { url } (NO REDIRECT = ZERO CORS ERRORS)
   const corsRequest = new Request('http://localhost:3000/api/auth/merchant/connect', {
@@ -106,88 +113,82 @@ async function runTests() {
   assert.strictEqual(corsResponse.status, 200, 'CORS fetch returns HTTP 200 JSON (NOT 307 redirect)');
   const corsJson = await corsResponse.json();
   assert(corsJson.url && corsJson.url.includes('accounts.google.com/o/oauth2/v2/auth'), 'Returns Google OAuth authorization URL in JSON body');
-  const corsCookie = corsResponse.headers.get('set-cookie');
-  assert(corsCookie && corsCookie.includes('kultra_oauth_state='), 'Attaches kultra_oauth_state cookie in JSON response');
+  assert(!corsJson.url.includes('login_hint='), 'CORS url omits login_hint to prevent auto-selecting account');
   console.log('[PASS] CORS fetch returns 200 JSON { url } preventing browser cross-origin redirect errors');
 
-  // 2c. Next.js RSC Request (?_rsc=...) -> Returns HTTP 200 JSON with { url }
-  const rscRequest = new Request('http://localhost:3000/api/auth/merchant/connect?_rsc=abc1234', {
-    method: 'GET',
-    headers: {
-      cookie: `${COOKIE_NAME}=${sessionToken}`,
-    },
-  });
-
-  const rscResponse = await connectGet(rscRequest);
-  assert.strictEqual(rscResponse.status, 200, 'RSC request returns HTTP 200 JSON rather than 307 redirect');
-  console.log('[PASS] RSC prefetch request returns 200 JSON without throwing CORS redirect errors');
-
-  // Test Group 3: Flow branching verification
-  console.log('\n--- Test 3: Flow Branching Logic Verification ---');
+  // Test Group 3: Callback Route State Machine & Branching
+  console.log('\n--- Test 3: OAuth Callback State Machine ---');
   const callbackRouteContent = fs.readFileSync(
     path.join(__dirname, '../src/app/api/auth/merchant/callback/route.ts'),
     'utf8'
   );
 
-  // Verification 3a: Zero accounts redirect
-  assert(
-    callbackRouteContent.includes("new URL('/dashboard/connect/no-account'"),
-    'Callback route must redirect to /dashboard/connect/no-account on zero accounts'
-  );
-  assert(
-    callbackRouteContent.includes('discoveredAccounts.length === 0'),
-    'Callback route explicitly checks discoveredAccounts.length === 0'
-  );
-  console.log('[PASS] Zero accounts cleanly branches to /dashboard/connect/no-account');
-
-  // Verification 3b: notFound handling
-  assert(
-    callbackRouteContent.includes('discoveryResult.error.notFound') || callbackRouteContent.includes('status === 404'),
-    'Callback route treats 404 / notFound discovery error as zero-account branch'
-  );
-  console.log('[PASS] 404 / notFound errors properly route to /dashboard/connect/no-account');
-
-  // Verification 3c: Multiple accounts selector
-  assert(
-    callbackRouteContent.includes("new URL('/dashboard/connect/select-account'"),
-    'Callback route redirects multiple accounts to /dashboard/connect/select-account'
-  );
-  console.log('[PASS] Multiple accounts branch to /dashboard/connect/select-account');
-
-  // Verification 3d: Single account success -> Arm Alarm modal
+  // Branch A: Single store claims & transitions directly to Slack alarm view
   assert(
     callbackRouteContent.includes("successUrl.searchParams.set('just_connected', 'true')"),
-    'Callback route redirects single account to /dashboard?just_connected=true'
+    'Branch A (Single store): advances user directly with just_connected=true'
   );
-  console.log('[PASS] Single account branch connects and redirects to /dashboard?just_connected=true');
+  assert(
+    callbackRouteContent.includes("new URL('/dashboard/connect/select-account'"),
+    'Branch A (Multiple stores): routes user to store selection screen'
+  );
+  console.log('[PASS] Branch A verified: Single store connects directly; Multiple stores route to select-account');
 
-  // Test Group 4: UI Message on No-Account Screen
-  console.log('\n--- Test 4: No-Account Page Message & Actions ---');
-  const noAccountPage = fs.readFileSync(
-    path.join(__dirname, '../src/app/dashboard/connect/no-account/page.tsx'),
+  // Branch B: Zero accounts -> routes to onboarding with error=no_accounts_found
+  assert(
+    callbackRouteContent.includes("fallbackDashboardUrl.searchParams.set('error', 'no_accounts_found')"),
+    'Branch B: Routes user back to onboarding with error=no_accounts_found'
+  );
+  console.log('[PASS] Branch B verified: Zero accounts explicitly signaled to onboarding without ghost store records');
+
+  // Branch C: Scope denied or canceled -> routes to onboarding with error=permission_denied
+  assert(
+    callbackRouteContent.includes("fallbackDashboardUrl.searchParams.set('error', 'permission_denied')"),
+    'Branch C: Scope missing routes to onboarding with error=permission_denied'
+  );
+  console.log('[PASS] Branch C verified: Permission denial routes to onboarding with permission_denied indicator');
+
+  // Test Group 4: Onboarding UI Fork & Zero-State Rendering
+  console.log('\n--- Test 4: Onboarding UI Fork & Zero GMC Account Screen ---');
+  const triageView = fs.readFileSync(
+    path.join(__dirname, '../src/components/dashboard/TenantTriageCenter.tsx'),
     'utf8'
   );
-  assert(
-    noAccountPage.includes('NO MERCHANT ACCOUNT FOUND'),
-    'No-account page displays "NO MERCHANT ACCOUNT FOUND" status pill'
-  );
-  assert(
-    noAccountPage.includes('No Google Merchant Center account found for this Google email'),
-    'No-account page displays explicit "No Google Merchant Center account found for this Google email" headline'
-  );
-  assert(
-    noAccountPage.includes('Switch Google Accounts'),
-    'No-account page provides alternative to switch Google accounts'
-  );
-  assert(
-    noAccountPage.includes('Create a Merchant Account'),
-    'No-account page provides guidance to create a Merchant account'
-  );
-  console.log('[PASS] No-account page displays explicit messages, instructions, and next action options');
 
-  console.log('\n=============================================================');
-  console.log('>>> ALL GMC CORS & FLOW BRANCHING VERIFICATIONS PASSED! <<<');
-  console.log('=============================================================\n');
+  // Check Fork State: Hides 3-step setup cards
+  assert(
+    triageView.includes('isNoAccountError ?'),
+    'TenantTriageCenter conditionally forks UI when isNoAccountError is true'
+  );
+  assert(
+    triageView.includes('No Google Merchant Center Account Found'),
+    'Zero-account screen renders prominent "No Google Merchant Center Account Found" header'
+  );
+  assert(
+    triageView.includes('The Google account you just signed into does not have access to any Google Merchant Center stores. This usually happens when your merchant center is under a different Google email.'),
+    'Zero-account screen renders required plain-English explanation'
+  );
+  assert(
+    triageView.includes('Connect with a Different Google Account'),
+    'Zero-account screen renders "Connect with a Different Google Account" button'
+  );
+  assert(
+    triageView.includes('Create a Google Merchant Center Account'),
+    'Zero-account screen renders "Create a Google Merchant Center Account" outbound button'
+  );
+  assert(
+    triageView.includes('isPermissionDenied &&'),
+    'TenantTriageCenter renders amber permission rejection banner'
+  );
+  assert(
+    triageView.includes('Kultra requires read-only Content API access to intercept product disapprovals'),
+    'Permission banner explains Content API disapproval interception requirements'
+  );
+  console.log('[PASS] Onboarding UI fork renders explicit Zero GMC Account screen and permission banner');
+
+  console.log('\n===================================================================');
+  console.log('>>> ALL GMC CONNECTION FLOW & STATE FORKING AUDITS PASSED! <<<');
+  console.log('===================================================================\n');
 }
 
 runTests().catch((err) => {

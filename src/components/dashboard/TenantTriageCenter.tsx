@@ -457,42 +457,34 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
   // STATE A: The Zero-Store State (Prompt to connect GMC)
   // ---------------------------------------------------------------------------
   if (!data || data.zeroStore || data.stores.length === 0) {
+    const isNoAccountError = error === 'no_accounts_found' || error === 'no_merchant_account';
+    const isPermissionDenied = error === 'permission_denied' || error === 'access_denied';
+
     return (
       <div className="max-w-2xl mx-auto py-12 px-4">
         <div className="bg-[var(--bg-surface)] border border-[var(--hairline)] rounded-[var(--radius-md)] p-8 sm:p-10 text-center">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[var(--bg-surface-2)] border border-[var(--hairline)] mb-5">
-            <ShieldCheck className="w-6 h-6 text-[var(--signal)]" strokeWidth={1.5} />
-          </div>
-
-          <h1 className="font-serif text-2xl sm:text-3xl font-semibold text-[var(--ink-primary)] tracking-tight mb-3">
-            Sub-30-second disapproval protection
-          </h1>
-
-          <p className="text-[14px] text-[var(--ghost-text)] max-w-lg mx-auto mb-8 leading-[1.55]">
-            Connect your Google Merchant Center account to receive instant Slack alerts the second an item gets rejected by Google crawler policies.
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8 text-left">
-            <div className="bg-[var(--bg-canvas)] border border-[var(--hairline)] rounded-[var(--radius-sm)] p-3.5">
-              <div className="font-mono text-[10.5px] text-[var(--signal)] mb-1">STEP 1</div>
-              <div className="text-[13px] font-medium text-[var(--ink-primary)] mb-1">Connect GMC</div>
-              <div className="text-[12px] text-[var(--ghost-text)]">Content API handshake in two clicks.</div>
+          {/* Permission Rejection Banner (§2) */}
+          {isPermissionDenied && (
+            <div className="mb-6 p-4 rounded-[var(--radius-sm)] bg-[rgba(242,169,59,0.06)] border border-[#7a5a26] text-[#f2a93b] text-[13px] flex items-center justify-between text-left">
+              <div className="flex items-center gap-2.5">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-[#f2a93b]" />
+                <span>
+                  Kultra requires read-only Content API access to intercept product disapprovals in real time. Please reconnect and check the required permissions checkbox.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setError(null)}
+                className="text-[var(--ghost-text)] hover:text-[var(--ink-primary)] ml-3 text-sm leading-none shrink-0"
+                aria-label="Dismiss error"
+              >
+                ✕
+              </button>
             </div>
+          )}
 
-            <div className="bg-[var(--bg-canvas)] border border-[var(--hairline)] rounded-[var(--radius-sm)] p-3.5">
-              <div className="font-mono text-[10.5px] text-[var(--signal)] mb-1">STEP 2</div>
-              <div className="text-[13px] font-medium text-[var(--ink-primary)] mb-1">Set alert channel</div>
-              <div className="text-[12px] text-[var(--ghost-text)]">Arm your Slack channel with verified pings.</div>
-            </div>
-
-            <div className="bg-[var(--bg-canvas)] border border-[var(--hairline)] rounded-[var(--radius-sm)] p-3.5">
-              <div className="font-mono text-[10.5px] text-[var(--signal)] mb-1">STEP 3</div>
-              <div className="text-[13px] font-medium text-[var(--ink-primary)] mb-1">Protect bestsellers</div>
-              <div className="text-[12px] text-[var(--ghost-text)]">Prevent silent drops with 1-click product triage.</div>
-            </div>
-          </div>
-
-          {error && (
+          {/* Generic Error Banner (for unexpected errors) */}
+          {error && !isNoAccountError && !isPermissionDenied && (
             <div className="mb-6 p-4 rounded-[var(--radius-sm)] bg-[var(--danger-wash)] border border-[var(--danger)] text-[var(--danger)] text-[13px] flex items-center justify-between text-left">
               <span>{error}</span>
               <button
@@ -506,18 +498,95 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
             </div>
           )}
 
-          <div className="flex flex-col items-center">
-            <a
-              href="/api/auth/merchant/connect"
-              className="btn-primary px-7 py-3 text-[13.5px] font-semibold !rounded-[3px] inline-flex items-center justify-center text-center"
-            >
-              Connect Google Merchant Center
-            </a>
+          {isNoAccountError ? (
+            /* -----------------------------------------------------------------
+             * FORK STATE: Zero GMC Account Found Screen (§2)
+             * Hides the default three-step setup cards and shows explicit fork UI
+             * --------------------------------------------------------------- */
+            <>
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[rgba(242,169,59,0.06)] border border-[#7a5a26] mb-5">
+                <AlertTriangle className="w-6 h-6 text-[#f2a93b]" strokeWidth={1.5} />
+              </div>
 
-            <div className="mt-2.5 font-mono text-[11px] text-[var(--ghost-text-dim)]">
-              Read-only telemetry / No feed modifications
-            </div>
-          </div>
+              <h1 className="font-serif text-2xl sm:text-3xl font-semibold text-[var(--ink-primary)] tracking-tight mb-3">
+                No Google Merchant Center Account Found
+              </h1>
+
+              <p className="text-[14px] text-[var(--ghost-text)] max-w-lg mx-auto mb-8 leading-[1.55]">
+                The Google account you just signed into does not have access to any Google Merchant Center stores. This usually happens when your merchant center is under a different Google email.
+              </p>
+
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3">
+                <a
+                  href="/api/auth/merchant/connect?prompt=select_account"
+                  className="btn-primary px-6 py-2.5 text-[13px] font-semibold !rounded-[3px] inline-flex items-center justify-center gap-2"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Connect with a Different Google Account</span>
+                </a>
+
+                <a
+                  href="https://accounts.google.com/AccountChooser?continue=https://merchants.google.com/mc/overview"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-secondary px-6 py-2.5 text-[13px] font-semibold !rounded-[3px] inline-flex items-center justify-center gap-1.5 text-[var(--ghost-text)] hover:text-[var(--ink-primary)]"
+                >
+                  <span>Create a Google Merchant Center Account</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </>
+          ) : (
+            /* -----------------------------------------------------------------
+             * DEFAULT STATE: Pristine Onboarding View with 3-Step Cards
+             * --------------------------------------------------------------- */
+            <>
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[var(--bg-surface-2)] border border-[var(--hairline)] mb-5">
+                <ShieldCheck className="w-6 h-6 text-[var(--signal)]" strokeWidth={1.5} />
+              </div>
+
+              <h1 className="font-serif text-2xl sm:text-3xl font-semibold text-[var(--ink-primary)] tracking-tight mb-3">
+                Sub-30-second disapproval protection
+              </h1>
+
+              <p className="text-[14px] text-[var(--ghost-text)] max-w-lg mx-auto mb-8 leading-[1.55]">
+                Connect your Google Merchant Center account to receive instant Slack alerts the second an item gets rejected by Google crawler policies.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8 text-left">
+                <div className="bg-[var(--bg-canvas)] border border-[var(--hairline)] rounded-[var(--radius-sm)] p-3.5">
+                  <div className="font-mono text-[10.5px] text-[var(--signal)] mb-1">STEP 1</div>
+                  <div className="text-[13px] font-medium text-[var(--ink-primary)] mb-1">Connect GMC</div>
+                  <div className="text-[12px] text-[var(--ghost-text)]">Content API handshake in two clicks.</div>
+                </div>
+
+                <div className="bg-[var(--bg-canvas)] border border-[var(--hairline)] rounded-[var(--radius-sm)] p-3.5">
+                  <div className="font-mono text-[10.5px] text-[var(--signal)] mb-1">STEP 2</div>
+                  <div className="text-[13px] font-medium text-[var(--ink-primary)] mb-1">Set alert channel</div>
+                  <div className="text-[12px] text-[var(--ghost-text)]">Arm your Slack channel with verified pings.</div>
+                </div>
+
+                <div className="bg-[var(--bg-canvas)] border border-[var(--hairline)] rounded-[var(--radius-sm)] p-3.5">
+                  <div className="font-mono text-[10.5px] text-[var(--signal)] mb-1">STEP 3</div>
+                  <div className="text-[13px] font-medium text-[var(--ink-primary)] mb-1">Protect bestsellers</div>
+                  <div className="text-[12px] text-[var(--ghost-text)]">Prevent silent drops with 1-click product triage.</div>
+                </div>
+              </div>
+
+              <div className="flex flex-col items-center">
+                <a
+                  href="/api/auth/merchant/connect"
+                  className="btn-primary px-7 py-3 text-[13.5px] font-semibold !rounded-[3px] inline-flex items-center justify-center text-center"
+                >
+                  Connect Google Merchant Center
+                </a>
+
+                <div className="mt-2.5 font-mono text-[11px] text-[var(--ghost-text-dim)]">
+                  Read-only telemetry / No feed modifications
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     );

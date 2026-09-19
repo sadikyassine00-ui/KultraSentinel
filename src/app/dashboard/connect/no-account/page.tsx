@@ -29,7 +29,7 @@ export default async function NoGmcAccountPage({ searchParams }: Props) {
           <h1 className="font-serif text-[24px] sm:text-[26px] font-semibold text-[var(--ink-primary)] leading-tight">
             {isPermissionDenied
               ? 'Google Merchant Center permission was not granted'
-              : 'No Google Merchant Center account found for this Google email'}
+              : 'No Google Merchant Center Account Found'}
           </h1>
           <p className="text-[13.5px] text-[var(--ghost-text)] leading-[1.6]">
             {isPermissionDenied ? (
@@ -38,7 +38,7 @@ export default async function NoGmcAccountPage({ searchParams }: Props) {
               </>
             ) : (
               <>
-                We queried Google Merchant Center APIs for <strong className="text-[var(--ink-primary)] font-mono text-[12.5px]">{email}</strong>, but Google reported zero associated Merchant Center stores or MCA client accounts.
+                The Google account you just signed into does not have access to any Google Merchant Center stores. This usually happens when your merchant center is under a different Google email.
               </>
             )}
           </p>
@@ -69,7 +69,7 @@ export default async function NoGmcAccountPage({ searchParams }: Props) {
             className="btn-primary py-2.5 px-4 text-[13px] font-semibold !rounded-[3px] inline-flex items-center justify-center gap-2"
           >
             <RefreshCw className="w-3.5 h-3.5" />
-            <span>{isPermissionDenied ? 'Authorize Google Merchant Center Permission' : 'Connect different Google account'}</span>
+            <span>{isPermissionDenied ? 'Authorize Google Merchant Center Permission' : 'Connect with a Different Google Account'}</span>
           </a>
 
           <a
@@ -78,7 +78,7 @@ export default async function NoGmcAccountPage({ searchParams }: Props) {
             rel="noopener noreferrer"
             className="btn-secondary py-2.5 px-4 text-[13px] font-semibold !rounded-[3px] inline-flex items-center justify-center gap-1.5 text-[var(--ghost-text)] hover:text-[var(--ink-primary)]"
           >
-            <span>Open Merchant Center</span>
+            <span>Create a Google Merchant Center Account</span>
             <ExternalLink className="w-3.5 h-3.5" />
           </a>
         </div>
