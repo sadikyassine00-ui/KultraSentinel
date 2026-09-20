@@ -95,11 +95,14 @@ export async function GET(request: Request) {
     // 3. Fetch incidents for active store strictly scoped to tenant
     const incidents = await getIncidentsByStore(activeStore.id, tenantEmail);
 
-    // 4. Categorize active vs resolved/acknowledged incidents
+    // 4. Categorize active vs resolved/acknowledged incidents with universal simulation exclusion
     const unresolvedIncidents = incidents.filter(
       (i) => i.status === 'unresolved'
     );
-    const critical = unresolvedIncidents[0] || null;
+    const realUnresolvedIncidents = unresolvedIncidents.filter(
+      (i) => !i.is_simulated && !i.is_test && i.sku !== 'DEMO-RUNNER-402'
+    );
+    const critical = realUnresolvedIncidents[0] || null;
 
     // 5. Dynamic and authentic external deep links (Directive §4)
     // Shopify Edit Links: Only display if actively configured or on a myshopify.com domain
@@ -152,6 +155,8 @@ export async function GET(request: Request) {
         issue_code: inc.issue_code,
         plainEnglish,
         isAccountLevel,
+        is_simulated: Boolean(inc.is_simulated || inc.is_test || inc.sku === 'DEMO-RUNNER-402'),
+        is_test: Boolean(inc.is_test || inc.is_simulated || inc.sku === 'DEMO-RUNNER-402'),
         price: productMeta.price,
         variant: productMeta.variant,
         thumbnailUrl: productMeta.thumbnailUrl,
@@ -170,12 +175,13 @@ export async function GET(request: Request) {
     const webhookVerified = Boolean(activeStore.webhook_verified);
     const hasWebhook = activeWebhook.length > 0;
 
-    // Database-backed monitored products count from tenant record
+    // Authentic catalog data as sole source of truth (Directive §2)
+    // Pull exclusively from authentic GMC synchronization; never fallback to incident counts or total_caught
     const monitoredProducts = tenant?.total_skus && tenant.total_skus > 0
       ? tenant.total_skus
-      : (activeStore.total_caught > 0 ? activeStore.total_caught : Math.max(incidents.length, 0));
+      : 0;
 
-    const approvedProducts = Math.max(0, monitoredProducts - unresolvedIncidents.length);
+    const approvedProducts = Math.max(0, monitoredProducts - realUnresolvedIncidents.length);
 
     // Dynamic channel resolution without hardcoded mock strings (Directive §4)
     // Never display 'Unconfigured' when an active webhook exists.
@@ -189,8 +195,8 @@ export async function GET(request: Request) {
       }
     }
 
-    // Detect store-wide account suspension among unresolved incidents (Directive §1)
-    const hasAccountSuspension = unresolvedIncidents.some(
+    // Detect store-wide account suspension among authentic unresolved incidents (Directive §1)
+    const hasAccountSuspension = realUnresolvedIncidents.some(
       (inc) => isAccountSuspensionCode(inc.issue_code) || translateGmcIssue(inc.issue_code).isAccountLevel
     );
 
@@ -279,7 +285,7 @@ export async function GET(request: Request) {
       metrics: {
         monitoredProducts,
         approvedProducts,
-        activeDisapprovals: unresolvedIncidents.length,
+        activeDisapprovals: realUnresolvedIncidents.length,
         alertPipelineStatus: {
           channel: channelLabel,
           hasWebhook,

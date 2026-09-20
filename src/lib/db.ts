@@ -107,6 +107,7 @@ export interface Incident {
   resolved_at?: string | null;
   details?: Record<string, unknown> | null;
   is_simulated?: boolean;
+  is_test?: boolean;
   created_at: string;
 }
 
@@ -702,10 +703,30 @@ export async function ensureSchema(): Promise<boolean> {
     await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS product_title TEXT;`;
     await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS detected_at TIMESTAMPTZ DEFAULT NOW();`;
     await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS is_simulated BOOLEAN DEFAULT FALSE;`;
+    await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS is_test BOOLEAN DEFAULT FALSE;`;
+    await sql`ALTER TABLE telemetry_events ADD COLUMN IF NOT EXISTS is_test BOOLEAN DEFAULT FALSE;`;
+    await sql`ALTER TABLE dispatch_logs ADD COLUMN IF NOT EXISTS is_test BOOLEAN DEFAULT FALSE;`;
 
-    // Purge any synthetic demo incidents from past runs (Directive §1)
+    // Purge any synthetic demo incidents and mock data (Directive §3)
     try {
-      await sql`DELETE FROM incidents WHERE sku IN ('APX-TR-402', 'OW-8842-BLK-M') AND is_simulated = FALSE;`;
+      await sql`DELETE FROM incidents WHERE sku IN ('DEMO-RUNNER-402', 'APX-TR-402', 'OW-8842-BLK-M') OR offer_id IN ('DEMO-RUNNER-402', 'APX-TR-402', 'OW-8842-BLK-M') OR gmc_id = 'DEMO-GMC';`;
+      await sql`DELETE FROM telemetry_events WHERE details->>'simulated' = 'true' OR details->>'is_test' = 'true';`;
+      await sql`
+        UPDATE stores s
+        SET open_disapprovals = (
+          SELECT COUNT(*)::int FROM incidents i 
+          WHERE i.store_id::text = s.id::text 
+            AND i.status = 'unresolved' 
+            AND COALESCE(i.is_simulated, FALSE) = FALSE 
+            AND COALESCE(i.is_test, FALSE) = FALSE
+        ),
+        total_caught = (
+          SELECT COUNT(*)::int FROM incidents i 
+          WHERE i.store_id::text = s.id::text 
+            AND COALESCE(i.is_simulated, FALSE) = FALSE 
+            AND COALESCE(i.is_test, FALSE) = FALSE
+        );
+      `;
     } catch {
       // Ignore if table doesn't have records
     }
@@ -2043,8 +2064,15 @@ export async function upsertIncident(data: {
   severity: 'critical' | 'warning';
   tenant_email?: string;
   is_simulated?: boolean;
+  is_test?: boolean;
   details?: Record<string, unknown>;
 }): Promise<{ incident: Incident; isNew: boolean }> {
+  const isTestOrSim = Boolean(
+    data.is_simulated ||
+    data.is_test ||
+    (data.sku && (data.sku.startsWith('DEMO-') || data.sku === 'APX-TR-402' || data.sku === 'OW-8842-BLK-M'))
+  );
+
   // Ultra-fast in-memory state mutation (0ms)
   const existingMem = inMemoryIncidents.find(
     (i) =>
@@ -2062,7 +2090,10 @@ export async function upsertIncident(data: {
     existingMem.title = data.title;
     existingMem.severity = data.severity;
     if (data.details) existingMem.details = data.details;
-    if (data.is_simulated !== undefined) existingMem.is_simulated = data.is_simulated;
+    if (isTestOrSim) {
+      existingMem.is_simulated = true;
+      existingMem.is_test = true;
+    }
     resultIncident = existingMem;
   } else {
     isNew = true;
@@ -2086,17 +2117,21 @@ export async function upsertIncident(data: {
       detected_at: now,
       resolved_at: null,
       details: data.details || null,
-      is_simulated: Boolean(data.is_simulated),
+      is_simulated: isTestOrSim,
+      is_test: isTestOrSim,
       created_at: now,
     };
     inMemoryIncidents.push(newIncident);
     resultIncident = newIncident;
 
-    const memStore = inMemoryStores.find((s) => String(s.id) === String(data.storeId));
-    if (memStore) {
-      memStore.open_disapprovals += 1;
-      memStore.total_caught += 1;
-      memStore.last_message_at = now;
+    // Platform-Wide Test Isolation: Never mutate store counters for test/simulated events
+    if (!isTestOrSim) {
+      const memStore = inMemoryStores.find((s) => String(s.id) === String(data.storeId));
+      if (memStore) {
+        memStore.open_disapprovals += 1;
+        memStore.total_caught += 1;
+        memStore.last_message_at = now;
+      }
     }
   }
 
@@ -2114,11 +2149,11 @@ export async function upsertIncident(data: {
         const insertedRows = await sql`
           INSERT INTO incidents (
             store_id, gmc_id, tenant_email, sku, offer_id, title, product_title, issue_code, severity, status,
-            is_simulated, first_detected_at, last_detected_at, detected_at, details
+            is_simulated, is_test, first_detected_at, last_detected_at, detected_at, details
           ) VALUES (
             ${String(data.storeId)}, ${data.gmcId}, ${data.tenant_email || null}, ${data.sku}, ${data.sku},
             ${data.title}, ${data.title}, ${data.issueCode},
-            ${data.severity}, 'unresolved', ${Boolean(data.is_simulated)}, NOW(), NOW(), NOW(), ${JSON.stringify(data.details || {})}
+            ${data.severity}, 'unresolved', ${isTestOrSim}, ${isTestOrSim}, NOW(), NOW(), NOW(), ${JSON.stringify(data.details || {})}
           )
           RETURNING *;
         `;
@@ -2130,11 +2165,15 @@ export async function upsertIncident(data: {
             memRecord.id = resultIncident.id;
           }
         }
-        await sql`
-          UPDATE stores
-          SET open_disapprovals = open_disapprovals + 1, total_caught = total_caught + 1, last_message_at = NOW()
-          WHERE id = ${String(data.storeId)};
-        `;
+
+        // Platform-Wide Test Isolation: Never mutate store counters for test/simulated events
+        if (!isTestOrSim) {
+          await sql`
+            UPDATE stores
+            SET open_disapprovals = open_disapprovals + 1, total_caught = total_caught + 1, last_message_at = NOW()
+            WHERE id = ${String(data.storeId)};
+          `;
+        }
       }
     } catch (err) {
       console.warn('[Neon DB] Incident persistence error:', err);
@@ -2799,7 +2838,7 @@ export async function dismissOrAcknowledgeIncident(
         return { success: false, error: 'Incident not found or unauthorized' };
       }
       const inc = existing[0] as unknown as Incident;
-      const isSimulated = Boolean(inc.is_simulated || inc.sku === 'DEMO-RUNNER-402');
+      const isSimulated = Boolean(inc.is_simulated || inc.is_test || inc.sku === 'DEMO-RUNNER-402');
 
       if (isSimulated) {
         // Test drill incident: delete strictly this single record by unique primary key
@@ -2807,17 +2846,9 @@ export async function dismissOrAcknowledgeIncident(
           DELETE FROM incidents
           WHERE id::text = ${cleanId};
         `;
-        // Decrement open_disapprovals on store by exactly 1
-        await sql`
-          UPDATE stores
-          SET open_disapprovals = GREATEST(0, open_disapprovals - 1)
-          WHERE id::text = ${String(inc.store_id)};
-        `;
-        // Clean in-memory mirror if present
+        // Clean in-memory mirror if present (do not mutate store open_disapprovals as tests never incremented it)
         const memIdx = inMemoryIncidents.findIndex((i) => String(i.id) === cleanId);
         if (memIdx !== -1) inMemoryIncidents.splice(memIdx, 1);
-        const memStore = inMemoryStores.find((s) => String(s.id) === String(inc.store_id));
-        if (memStore) memStore.open_disapprovals = Math.max(0, memStore.open_disapprovals - 1);
 
         return {
           success: true,
@@ -2871,10 +2902,9 @@ export async function dismissOrAcknowledgeIncident(
     if (!store) {
       return { success: false, error: 'Unauthorized to modify incident' };
     }
-    const isSimulated = Boolean(inc.is_simulated || inc.sku === 'DEMO-RUNNER-402');
+    const isSimulated = Boolean(inc.is_simulated || inc.is_test || inc.sku === 'DEMO-RUNNER-402');
     if (isSimulated) {
       inMemoryIncidents.splice(incidentIdx, 1);
-      store.open_disapprovals = Math.max(0, store.open_disapprovals - 1);
       return {
         success: true,
         isSimulated: true,

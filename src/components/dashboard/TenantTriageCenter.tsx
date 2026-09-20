@@ -92,6 +92,8 @@ interface IncidentItem {
   last_detected_at: string;
   resolved_at?: string | null;
   downtimeDuration?: string | null;
+  is_simulated?: boolean;
+  is_test?: boolean;
   shopifyUrl?: string | null;
   gmcUrl?: string | null;
 }
@@ -394,17 +396,9 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
         setData((prev) => {
           if (!prev) return prev;
           const remaining = prev.incidents.filter((i) => String(i.id) !== String(demoIncident.id));
-          const isAlreadyPresent = prev.incidents.some((i) => String(i.id) === String(demoIncident.id));
-          const nextActiveCount = prev.metrics.activeDisapprovals + (isAlreadyPresent ? 0 : 1);
           return {
             ...prev,
             incidents: [demoIncident, ...remaining],
-            criticalIncident: demoIncident,
-            metrics: {
-              ...prev.metrics,
-              activeDisapprovals: nextActiveCount,
-              approvedProducts: Math.max(0, (prev.metrics.monitoredProducts || 0) - nextActiveCount),
-            },
           };
         });
 
@@ -537,17 +531,20 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
         );
       }
       const nextUnresolved = nextIncidents.filter((i) => i.status === 'unresolved');
+      const nextRealUnresolved = nextUnresolved.filter((i) => !i.is_simulated && !(i as unknown as { is_test?: boolean }).is_test && i.sku !== 'DEMO-RUNNER-402');
       return {
         ...prev,
         incidents: nextIncidents,
         criticalIncident:
           prev.criticalIncident && String(prev.criticalIncident.id) === targetIdStr
-            ? (nextUnresolved[0] || null)
+            ? (nextRealUnresolved[0] || null)
             : prev.criticalIncident,
         metrics: {
           ...prev.metrics,
-          activeDisapprovals: nextUnresolved.length,
-          approvedProducts: Math.max(0, (prev.metrics.monitoredProducts || 0) - nextUnresolved.length),
+          activeDisapprovals: nextRealUnresolved.length,
+          approvedProducts: prev.metrics.monitoredProducts === 0
+            ? 0
+            : Math.max(0, (prev.metrics.monitoredProducts || 0) - nextRealUnresolved.length),
         },
       };
     });
@@ -588,17 +585,20 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
             : i
         );
         const restoredUnresolved = restored.filter((i) => i.status === 'unresolved');
+        const restoredRealUnresolved = restoredUnresolved.filter((i) => !i.is_simulated && !(i as unknown as { is_test?: boolean }).is_test && i.sku !== 'DEMO-RUNNER-402');
         return {
           ...prev,
           incidents: restored,
           criticalIncident:
             !prev.criticalIncident || String(prev.criticalIncident.id) === targetIdStr
-              ? (restoredUnresolved[0] || null)
+              ? (restoredRealUnresolved[0] || null)
               : prev.criticalIncident,
           metrics: {
             ...prev.metrics,
-            activeDisapprovals: restoredUnresolved.length,
-            approvedProducts: Math.max(0, (prev.metrics.monitoredProducts || 0) - restoredUnresolved.length),
+            activeDisapprovals: restoredRealUnresolved.length,
+            approvedProducts: prev.metrics.monitoredProducts === 0
+              ? 0
+              : Math.max(0, (prev.metrics.monitoredProducts || 0) - restoredRealUnresolved.length),
           },
         };
       });
@@ -1042,11 +1042,16 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
 
   const { activeStore, metrics, incidents, activityFeed = [] } = data;
   const unresolvedIncidents = incidents.filter((i) => i.status === 'unresolved');
+  const realUnresolvedIncidents = unresolvedIncidents.filter(
+    (i) => !i.is_simulated && !(i as unknown as { is_test?: boolean }).is_test && i.sku !== 'DEMO-RUNNER-402'
+  );
   const acknowledgedIncidents = incidents.filter(
     (i) => i.status === 'acknowledged' || i.status === 'pending_verification'
   );
-  const activeCount = unresolvedIncidents.length;
-  const approvedCount = metrics.approvedProducts ?? Math.max(0, metrics.monitoredProducts - activeCount);
+  const activeCount = realUnresolvedIncidents.length;
+  const approvedCount = metrics.monitoredProducts === 0
+    ? 0
+    : (metrics.approvedProducts ?? Math.max(0, metrics.monitoredProducts - activeCount));
 
   const hasActiveWebhook = Boolean(
     activeStore?.webhook_url ||

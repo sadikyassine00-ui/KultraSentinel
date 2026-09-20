@@ -92,7 +92,7 @@ export async function POST(request: Request, context: RouteContext) {
     const title = (typeof body.title === 'string' && body.title.trim()) ? body.title.trim() : 'Apex Carbon Runner - Size 10.5 (Demo Item)';
     const issueCode = (typeof body.issueCode === 'string' && body.issueCode.trim()) ? body.issueCode.trim() : 'item_disapproved: missing_required_attribute [gtin]';
 
-    // 1. Insert temporary demo incident flagged as is_simulated: true (15-min auto-purge)
+    // 1. Insert temporary demo incident flagged as is_simulated: true and is_test: true (15-min auto-purge)
     const incidentResult = await upsertIncident({
       storeId: store.id,
       gmcId: store.gmc_id || store.merchant_id || 'DEMO-GMC',
@@ -102,8 +102,10 @@ export async function POST(request: Request, context: RouteContext) {
       severity: 'critical',
       tenant_email: session.email,
       is_simulated: true,
+      is_test: true,
       details: {
         simulated: true,
+        is_test: true,
         source: 'synthetic_fire_drill',
         issueDetail: 'Missing required attribute: gtin for apparel product variant',
         expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),

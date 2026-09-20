@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAnySession } from '@/lib/auth';
-import { getStoreForTenant, updateStoreWebhook, isTenantSuspended, upsertIncident, getStoreIncidentCountInWindow } from '@/lib/db';
+import { getStoreForTenant, updateStoreWebhook, isTenantSuspended, getStoreIncidentCountInWindow } from '@/lib/db';
 import { validateWebhookUrl } from '@/lib/security';
 import { dispatchDisapprovalSlackNotification } from '@/lib/slack';
 
@@ -115,26 +115,8 @@ export async function POST(
 
     const latencyMs = Math.round(performance.now() - startTime);
 
-    // 6. State Mutation, Scoped Incident Creation (§2), & Logging
+    // 6. State Mutation & Logging (Ephemeral Verification Ping)
     if (slackResult.success) {
-      // Create temporary demo incident scoped strictly to this active store
-      await upsertIncident({
-        storeId: store.id,
-        gmcId: store.gmc_id || store.merchant_id || 'DEMO-GMC',
-        sku: 'DEMO-RUNNER-402',
-        title: 'Apex Carbon Runner - Size 10.5 (Demo Item)',
-        issueCode: 'item_disapproved: missing_required_attribute [gtin]',
-        severity: 'critical',
-        tenant_email: session.email,
-        is_simulated: true,
-        details: {
-          simulated: true,
-          source: 'diagnostic_test_ping',
-          issueDetail: 'Missing required attribute: gtin for apparel product variant',
-          expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-        },
-      });
-
       await updateStoreWebhook(storeId, session.email, sanitizedUrl, true, 'active', {
         channel: channelInput || store.slack_channel || '#shopping-alerts',
       });

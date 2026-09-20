@@ -369,10 +369,19 @@ export async function POST(request: Request) {
       }
     };
 
+    const isTestOrSim = Boolean(
+      eventData.is_test ||
+      eventData.is_simulated ||
+      eventData.test ||
+      sku.startsWith('DEMO-') ||
+      sku === 'APX-TR-402' ||
+      sku === 'OW-8842-BLK-M'
+    );
+
     // 10. Schedule All Downstream Execution inside Next.js 15 after()
     after(async () => {
       try {
-        await Promise.allSettled([
+        const tasks: Promise<unknown>[] = [
           markMessageProcessed(messageId),
           upsertIncident({
             storeId: store.id,
@@ -381,10 +390,18 @@ export async function POST(request: Request) {
             title,
             issueCode,
             severity,
+            is_simulated: isTestOrSim,
+            is_test: isTestOrSim,
             details: eventData,
           }),
-          dispatchAlert(),
-        ]);
+        ];
+
+        // Platform-Wide Test Isolation: Never trigger live alert cascades for test/simulated events
+        if (!isTestOrSim) {
+          tasks.push(dispatchAlert());
+        }
+
+        await Promise.allSettled(tasks);
       } catch (workerErr) {
         console.error('[PubSub Ingestion Worker Error (Incident)]', workerErr);
       }
