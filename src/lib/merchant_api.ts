@@ -152,6 +152,96 @@ export type DiscoveryResponse = DiscoveredGmcAccount[] & {
   error?: DiscoveryError;
 };
 
+export interface VerifyMerchantResult {
+  ok: boolean;
+  status: number;
+  merchantId: string;
+  storeName?: string;
+  websiteUrl?: string | null;
+  error?: string;
+  acctData?: Record<string, unknown>;
+}
+
+/**
+ * Direct targeted verification of a single Google Merchant Center ID via Content API accounts.get.
+ * Bypasses directory indexing propagation delays for newly created Merchant Center accounts.
+ */
+export async function verifyAndFetchMerchantAccount(params: {
+  merchantId: string;
+  accessToken: string;
+}): Promise<VerifyMerchantResult> {
+  const cleanId = String(params.merchantId).replace(/\D/g, '').trim();
+  if (!cleanId) {
+    return {
+      ok: false,
+      status: 400,
+      merchantId: cleanId,
+      error: 'Invalid Google Merchant Center ID format. Must contain digits only.',
+    };
+  }
+
+  try {
+    const url = `https://shoppingcontent.googleapis.com/content/v2.1/${encodeURIComponent(cleanId)}/accounts/${encodeURIComponent(cleanId)}`;
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${params.accessToken}`,
+        Accept: 'application/json',
+      },
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const storeName = data.name || data.displayName || `Merchant Center #${cleanId}`;
+      const websiteUrl = data.websiteUrl || data.homepageUri || null;
+      return {
+        ok: true,
+        status: 200,
+        merchantId: cleanId,
+        storeName,
+        websiteUrl,
+        acctData: data,
+      };
+    }
+
+    const errText = await res.text();
+    console.warn(`[Merchant API] accounts.get for #${cleanId} returned HTTP ${res.status}: ${errText}`);
+
+    if (res.status === 403 || res.status === 404) {
+      return {
+        ok: false,
+        status: res.status,
+        merchantId: cleanId,
+        error: `Google reported that your currently authenticated email does not have access to Merchant ID ${cleanId}. Reconnect with the correct Google email or grant access in Merchant Center.`,
+      };
+    }
+
+    if (errText.includes('SERVICE_DISABLED') || errText.includes('has not been used in project')) {
+      return {
+        ok: false,
+        status: res.status,
+        merchantId: cleanId,
+        error: 'Google Content API for Shopping is disabled in your Google Cloud Project. Please enable it in Google Cloud Console.',
+      };
+    }
+
+    return {
+      ok: false,
+      status: res.status,
+      merchantId: cleanId,
+      error: `Google API Error (${res.status}): ${errText || 'Failed to verify Merchant Center account.'}`,
+    };
+  } catch (err: unknown) {
+    const e = err as Error;
+    console.error(`[Merchant API] accounts.get network exception for #${cleanId}:`, e);
+    return {
+      ok: false,
+      status: 500,
+      merchantId: cleanId,
+      error: `Network error verifying Merchant ID ${cleanId}: ${e.message}`,
+    };
+  }
+}
+
 /**
  * Live Google Merchant Center Account Discovery
  * Queries Google Merchant API (v1 / v1beta) and Content API v2.1 (authinfo & accounts)
@@ -177,7 +267,12 @@ export async function discoverMerchantAccounts(
 
     if (gmaRes.ok) {
       const gmaData = await gmaRes.json();
-      const accounts = Array.isArray(gmaData.accounts) ? gmaData.accounts : [];
+      const accounts = Array.isArray(gmaData.accounts)
+        ? gmaData.accounts
+        : Array.isArray(gmaData.data?.accounts)
+        ? gmaData.data.accounts
+        : [];
+
       for (const acct of accounts) {
         const rawId = acct.name ? String(acct.name).replace(/^accounts\//, '') : null;
         if (rawId && !discoveredMap.has(rawId)) {
@@ -188,6 +283,10 @@ export async function discoverMerchantAccounts(
             isAggregator: false,
           });
         }
+      }
+
+      if (accounts.length === 0) {
+        console.info('[Merchant API] Google Merchant API v1 returned 0 accounts. Falling back immediately to Content API v2.1 accounts.authinfo.');
       }
     } else {
       // Fallback: try v1beta if v1 is not yet active for this account
@@ -200,7 +299,11 @@ export async function discoverMerchantAccounts(
         });
         if (betaRes.ok) {
           const betaData = await betaRes.json();
-          const accounts = Array.isArray(betaData.accounts) ? betaData.accounts : [];
+          const accounts = Array.isArray(betaData.accounts)
+            ? betaData.accounts
+            : Array.isArray(betaData.data?.accounts)
+            ? betaData.data.accounts
+            : [];
           for (const acct of accounts) {
             const rawId = acct.name ? String(acct.name).replace(/^accounts\//, '') : null;
             if (rawId && !discoveredMap.has(rawId)) {
@@ -235,11 +338,21 @@ export async function discoverMerchantAccounts(
 
     if (authInfoRes.ok) {
       const authInfo = await authInfoRes.json();
-      const identifiers = Array.isArray(authInfo.accountIdentifiers) ? authInfo.accountIdentifiers : [];
+      // Google returns an object containing an accountIdentifiers array,
+      // where each entry contains a merchantId string or number and an optional aggregatorId.
+      // Extract identifiers directly from response.data.accountIdentifiers or response.accountIdentifiers.
+      // Do not check non-existent properties like response.data.accounts, response.data.items, or response.data.resources.
+      const rawIdentifiers =
+        authInfo.accountIdentifiers ??
+        authInfo.data?.accountIdentifiers ??
+        [];
+      const identifiers = Array.isArray(rawIdentifiers) ? rawIdentifiers : [];
 
       for (const ident of identifiers) {
-        const merchantId = ident.merchantId ? String(ident.merchantId) : null;
-        const aggregatorId = ident.aggregatorId ? String(ident.aggregatorId) : null;
+        const rawMerchantId = ident.merchantId ?? ident.merchant_id;
+        const rawAggregatorId = ident.aggregatorId ?? ident.aggregator_id;
+        const merchantId = rawMerchantId != null ? String(rawMerchantId).trim() : null;
+        const aggregatorId = rawAggregatorId != null ? String(rawAggregatorId).trim() : null;
 
         // 1. Fetch individual merchant details
         if (merchantId && !discoveredMap.has(merchantId)) {

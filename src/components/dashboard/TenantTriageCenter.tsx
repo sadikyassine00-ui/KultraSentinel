@@ -22,6 +22,7 @@ import {
   Clock,
   X,
   AlertCircle,
+  ArrowRight,
 } from 'lucide-react';
 import { Store } from '@/lib/db';
 import { isAccountSuspensionCode } from '@/lib/gmcErrors';
@@ -169,6 +170,52 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
   const [inlineFeedback, setInlineFeedback] = useState<string | null>(null);
   const [disconnecting, setDisconnecting] = useState(false);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
+
+  // Manual Merchant ID Verification Fallback
+  const [manualGmcId, setManualGmcId] = useState('');
+  const [manualLinking, setManualLinking] = useState(false);
+  const [manualError, setManualError] = useState<string | null>(null);
+
+  const handleManualLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanId = manualGmcId.replace(/\D/g, '').trim();
+    if (!cleanId) return;
+
+    setManualLinking(true);
+    setManualError(null);
+
+    try {
+      const res = await fetch('/api/auth/merchant/link-direct', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gmcId: cleanId }),
+      });
+
+      const resData = await res.json();
+      if (!res.ok) {
+        throw new Error(
+          resData.error ||
+          `Google reported that your currently authenticated email does not have access to Merchant ID ${cleanId}. Reconnect with the correct Google email or grant access in Merchant Center.`
+        );
+      }
+
+      // Success: clear error and reload dashboard data for newly linked store
+      dismissError();
+      if (resData.redirectUrl) {
+        window.location.href = resData.redirectUrl;
+      } else {
+        await fetchDashboardData();
+      }
+    } catch (err: unknown) {
+      const errorObj = err as Error;
+      setManualError(
+        errorObj.message ||
+        `Google reported that your currently authenticated email does not have access to Merchant ID ${cleanId}. Reconnect with the correct Google email or grant access in Merchant Center.`
+      );
+    } finally {
+      setManualLinking(false);
+    }
+  };
 
   const [simulatingFireDrill, setSimulatingFireDrill] = useState(false);
   const [fireDrillBanner, setFireDrillBanner] = useState<string | null>(null);
@@ -635,6 +682,53 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             </div>
+
+            {isNoAccountError && (
+              <div className="mt-4 pt-3.5 border-t border-[var(--hairline)] max-w-xl">
+                <div className="text-[12px] font-semibold text-[var(--ink-primary)] mb-1 flex items-center gap-1.5">
+                  <ShoppingBag className="w-3.5 h-3.5 text-[var(--signal)]" />
+                  <span>Already have a Merchant ID? Enter it directly.</span>
+                </div>
+                <p className="text-[11.5px] text-[var(--ghost-text)] mb-2.5 leading-relaxed">
+                  Newly created accounts can take up to 30 minutes to appear in Google&apos;s directory index. Bypass the propagation delay by entering your 10-digit Merchant Center ID:
+                </p>
+
+                {manualError && (
+                  <div className="mb-2.5 p-2 rounded-[var(--radius-sm)] bg-[var(--danger-wash)] border border-[var(--danger)] text-[11px] text-[var(--danger)] flex items-start gap-1.5">
+                    <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" />
+                    <span className="leading-snug">{manualError}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleManualLink} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  <input
+                    type="text"
+                    value={manualGmcId}
+                    onChange={(e) => setManualGmcId(e.target.value)}
+                    placeholder="e.g. 5857345262"
+                    required
+                    className="flex-1 bg-[var(--bg-canvas)] border border-[var(--hairline-strong)] focus:border-[var(--signal)] rounded-[var(--radius-sm)] px-3 py-1.5 text-[12px] font-mono text-[var(--ink-primary)] placeholder:text-[var(--ghost-text-dim)] focus:outline-none focus:ring-1 focus:ring-[var(--signal-glow)]"
+                  />
+                  <button
+                    type="submit"
+                    disabled={manualLinking || !manualGmcId.trim()}
+                    className="btn-primary py-1.5 px-3.5 text-[12px] font-semibold !rounded-[3px] inline-flex items-center justify-center gap-1.5 disabled:opacity-50 shrink-0"
+                  >
+                    {manualLinking ? (
+                      <>
+                        <RefreshCw className="w-3 h-3 animate-spin" />
+                        <span>Verifying...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Verify and Link Store</span>
+                        <ArrowRight className="w-3 h-3" />
+                      </>
+                    )}
+                  </button>
+                </form>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -741,6 +835,20 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
   // STATE A: The Zero-Store State (Prompt to connect GMC)
   // ---------------------------------------------------------------------------
   if (!data || data.zeroStore || data.stores.length === 0) {
+    const lowerError = (error || '').toLowerCase().trim();
+    const isNoAccountError =
+      lowerError === 'no_accounts_found' ||
+      lowerError === 'no_merchant_account' ||
+      lowerError === 'zero_accounts' ||
+      lowerError.includes('no_account') ||
+      lowerError.includes('no merchant account');
+
+    const isPermissionDenied =
+      lowerError === 'access_denied' ||
+      lowerError === 'insufficient_permissions' ||
+      lowerError === 'permission_denied' ||
+      lowerError.includes('permission');
+
     return (
       <div className="max-w-2xl mx-auto py-12 px-4">
         {renderErrorBanner()}
@@ -748,50 +856,152 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
         {renderScheduledCancellationBanner()}
 
         <div className="bg-[var(--bg-surface)] border border-[var(--hairline)] rounded-[var(--radius-md)] p-8 sm:p-10 text-center">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[var(--bg-surface-2)] border border-[var(--hairline)] mb-5">
-            <ShieldCheck className="w-6 h-6 text-[var(--signal)]" strokeWidth={1.5} />
-          </div>
+          {isNoAccountError ? (
+            <>
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[var(--danger-wash)] border border-[var(--danger)] mb-5">
+                <AlertTriangle className="w-6 h-6 text-[var(--danger)]" strokeWidth={1.5} />
+              </div>
 
-          <h1 className="font-serif text-2xl sm:text-3xl font-semibold text-[var(--ink-primary)] tracking-tight mb-3">
-            Sub-30-second disapproval protection
-          </h1>
+              <h1 className="font-serif text-2xl sm:text-3xl font-semibold text-[var(--ink-primary)] tracking-tight mb-3">
+                No Google Merchant Center Account Found
+              </h1>
 
-          <p className="text-[14px] text-[var(--ghost-text)] max-w-lg mx-auto mb-8 leading-[1.55]">
-            Connect your Google Merchant Center account to receive instant Slack alerts the second an item gets rejected by Google crawler policies.
-          </p>
+              <p className="text-[14px] text-[var(--ghost-text)] max-w-lg mx-auto mb-6 leading-[1.55]">
+                The Google account you just signed into does not have access to any Google Merchant Center stores. This usually happens when your merchant center is under a different Google email.
+              </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8 text-left">
-            <div className="bg-[var(--bg-canvas)] border border-[var(--hairline)] rounded-[var(--radius-sm)] p-3.5">
-              <div className="font-mono text-[10.5px] text-[var(--signal)] mb-1">STEP 1</div>
-              <div className="text-[13px] font-medium text-[var(--ink-primary)] mb-1">Connect GMC</div>
-              <div className="text-[12px] text-[var(--ghost-text)]">Content API handshake in two clicks.</div>
-            </div>
+              {/* Direct manual Merchant ID verification fallback */}
+              <div className="my-6 p-4 rounded-[var(--radius-sm)] bg-[var(--bg-canvas)] border border-[var(--hairline)] text-left">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-[12.5px] font-semibold text-[var(--ink-primary)] flex items-center gap-2">
+                    <ShoppingBag className="w-3.5 h-3.5 text-[var(--signal)]" />
+                    <span>Already have a Merchant ID? Enter it directly.</span>
+                  </div>
+                  <span className="text-[11px] font-mono text-[var(--ghost-text-dim)]">Direct connect</span>
+                </div>
+                <p className="text-[12px] text-[var(--ghost-text)] leading-[1.5] mb-3">
+                  Newly created Merchant Center accounts can take up to 30 minutes to appear in Google&apos;s directory index. Bypass the propagation delay by entering your 10-digit Merchant Center ID:
+                </p>
 
-            <div className="bg-[var(--bg-canvas)] border border-[var(--hairline)] rounded-[var(--radius-sm)] p-3.5">
-              <div className="font-mono text-[10.5px] text-[var(--signal)] mb-1">STEP 2</div>
-              <div className="text-[13px] font-medium text-[var(--ink-primary)] mb-1">Set alert channel</div>
-              <div className="text-[12px] text-[var(--ghost-text)]">Arm your Slack channel with verified pings.</div>
-            </div>
+                {manualError && (
+                  <div className="mb-3 p-2.5 rounded-[var(--radius-sm)] bg-[var(--danger-wash)] border border-[var(--danger)] text-[11.5px] text-[var(--danger)] flex items-start gap-2">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                    <span className="leading-relaxed">{manualError}</span>
+                  </div>
+                )}
 
-            <div className="bg-[var(--bg-canvas)] border border-[var(--hairline)] rounded-[var(--radius-sm)] p-3.5">
-              <div className="font-mono text-[10.5px] text-[var(--signal)] mb-1">STEP 3</div>
-              <div className="text-[13px] font-medium text-[var(--ink-primary)] mb-1">Protect bestsellers</div>
-              <div className="text-[12px] text-[var(--ghost-text)]">Prevent silent drops with 1-click product triage.</div>
-            </div>
-          </div>
+                <form onSubmit={handleManualLink} className="space-y-3">
+                  <div>
+                    <label className="block text-[11px] font-mono text-[var(--ghost-text)] mb-1">
+                      Merchant Center ID (10 digits) *
+                    </label>
+                    <input
+                      type="text"
+                      value={manualGmcId}
+                      onChange={(e) => setManualGmcId(e.target.value)}
+                      placeholder="e.g. 5857345262"
+                      required
+                      className="w-full bg-[var(--bg-surface)] border border-[var(--hairline-strong)] focus:border-[var(--signal)] rounded-[var(--radius-sm)] px-3 py-2 text-[12.5px] font-mono text-[var(--ink-primary)] placeholder:text-[var(--ghost-text-dim)] focus:outline-none focus:ring-1 focus:ring-[var(--signal-glow)] transition-colors"
+                    />
+                  </div>
 
-          <div className="flex flex-col items-center">
-            <a
-              href="/api/auth/merchant/connect"
-              className="btn-primary px-7 py-3 text-[13.5px] font-semibold !rounded-[3px] inline-flex items-center justify-center text-center"
-            >
-              Connect Google Merchant Center
-            </a>
+                  <button
+                    type="submit"
+                    disabled={manualLinking || !manualGmcId.trim()}
+                    className="btn-primary w-full py-2 px-3 text-[12.5px] font-semibold !rounded-[3px] inline-flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  >
+                    {manualLinking ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Verifying & Linking Store...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Verify and Link Store</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </>
+                    )}
+                  </button>
+                </form>
+              </div>
 
-            <div className="mt-2.5 font-mono text-[11px] text-[var(--ghost-text-dim)]">
-              Read-only telemetry / No feed modifications
-            </div>
-          </div>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3">
+                <a
+                  href="/api/auth/merchant/connect?prompt=select_account"
+                  className="btn-primary px-6 py-2.5 text-[13px] font-semibold !rounded-[3px] inline-flex items-center justify-center gap-2"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Connect with a Different Google Account</span>
+                </a>
+
+                <a
+                  href="https://accounts.google.com/AccountChooser?continue=https://merchants.google.com/mc/overview"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-secondary px-6 py-2.5 text-[13px] font-semibold !rounded-[3px] inline-flex items-center justify-center gap-1.5 text-[var(--ghost-text)] hover:text-[var(--ink-primary)]"
+                >
+                  <span>Create a Google Merchant Center Account</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </>
+          ) : (
+            <>
+              {isPermissionDenied && (
+                <div className="mb-6 p-4 rounded-[var(--radius-sm)] bg-[rgba(242,169,59,0.06)] border border-[#7a5a26] text-left">
+                  <div className="text-[13px] font-medium text-[#f2a93b] mb-1">Permission Required</div>
+                  <p className="text-[12px] text-[var(--ghost-text)] leading-relaxed">
+                    Kultra requires read-only Content API access to intercept product disapprovals. Please grant the requested permissions.
+                  </p>
+                </div>
+              )}
+
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[var(--bg-surface-2)] border border-[var(--hairline)] mb-5">
+                <ShieldCheck className="w-6 h-6 text-[var(--signal)]" strokeWidth={1.5} />
+              </div>
+
+              <h1 className="font-serif text-2xl sm:text-3xl font-semibold text-[var(--ink-primary)] tracking-tight mb-3">
+                Sub-30-second disapproval protection
+              </h1>
+
+              <p className="text-[14px] text-[var(--ghost-text)] max-w-lg mx-auto mb-8 leading-[1.55]">
+                Connect your Google Merchant Center account to receive instant Slack alerts the second an item gets rejected by Google crawler policies.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8 text-left">
+                <div className="bg-[var(--bg-canvas)] border border-[var(--hairline)] rounded-[var(--radius-sm)] p-3.5">
+                  <div className="font-mono text-[10.5px] text-[var(--signal)] mb-1">STEP 1</div>
+                  <div className="text-[13px] font-medium text-[var(--ink-primary)] mb-1">Connect GMC</div>
+                  <div className="text-[12px] text-[var(--ghost-text)]">Content API handshake in two clicks.</div>
+                </div>
+
+                <div className="bg-[var(--bg-canvas)] border border-[var(--hairline)] rounded-[var(--radius-sm)] p-3.5">
+                  <div className="font-mono text-[10.5px] text-[var(--signal)] mb-1">STEP 2</div>
+                  <div className="text-[13px] font-medium text-[var(--ink-primary)] mb-1">Set alert channel</div>
+                  <div className="text-[12px] text-[var(--ghost-text)]">Arm your Slack channel with verified pings.</div>
+                </div>
+
+                <div className="bg-[var(--bg-canvas)] border border-[var(--hairline)] rounded-[var(--radius-sm)] p-3.5">
+                  <div className="font-mono text-[10.5px] text-[var(--signal)] mb-1">STEP 3</div>
+                  <div className="text-[13px] font-medium text-[var(--ink-primary)] mb-1">Protect bestsellers</div>
+                  <div className="text-[12px] text-[var(--ghost-text)]">Prevent silent drops with 1-click product triage.</div>
+                </div>
+              </div>
+
+              <div className="flex flex-col items-center">
+                <a
+                  href="/api/auth/merchant/connect"
+                  className="btn-primary px-7 py-3 text-[13.5px] font-semibold !rounded-[3px] inline-flex items-center justify-center text-center"
+                >
+                  Connect Google Merchant Center
+                </a>
+
+                <div className="mt-2.5 font-mono text-[11px] text-[var(--ghost-text-dim)]">
+                  Read-only telemetry / No feed modifications
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     );

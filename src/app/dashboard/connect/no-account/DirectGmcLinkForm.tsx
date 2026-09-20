@@ -47,19 +47,19 @@ export default function DirectGmcLinkForm() {
       <div className="flex items-center justify-between">
         <div className="text-[12.5px] font-semibold text-[var(--ink-primary)] flex items-center gap-2">
           <Store className="w-3.5 h-3.5 text-[var(--signal)]" />
-          <span>Link by Google Merchant Center ID</span>
+          <span>Already have a Merchant ID? Enter it directly.</span>
         </div>
         <span className="text-[11px] font-mono text-[var(--ghost-text-dim)]">Direct connect</span>
       </div>
 
       <p className="text-[12px] text-[var(--ghost-text)] leading-[1.5]">
-        If your store is active in Merchant Center Next, enter your 10-digit GMC ID to link your catalog directly:
+        Newly created Merchant Center accounts can take up to 30 minutes to appear in Google&apos;s directory index. Bypass the propagation delay by entering your 10-digit Merchant Center ID:
       </p>
 
       {error && (
         <div className="p-2.5 rounded-[var(--radius-sm)] bg-[var(--danger-wash)] border border-[var(--danger)] text-[11.5px] text-[var(--danger)] flex items-start gap-2">
           <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-          <span>{error}</span>
+          <span className="leading-relaxed">{error}</span>
         </div>
       )}
 
@@ -67,13 +67,13 @@ export default function DirectGmcLinkForm() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           <div>
             <label className="block text-[11px] font-mono text-[var(--ghost-text)] mb-1">
-              Merchant Center ID *
+              Merchant Center ID (10 digits) *
             </label>
             <input
               type="text"
               value={gmcId}
               onChange={(e) => setGmcId(e.target.value)}
-              placeholder="e.g. 5838023405"
+              placeholder="e.g. 5857345262"
               required
               className="w-full bg-[var(--bg-surface)] border border-[var(--hairline-strong)] focus:border-[var(--signal)] rounded-[var(--radius-sm)] px-3 py-2 text-[12.5px] font-mono text-[var(--ink-primary)] placeholder:text-[var(--ghost-text-dim)] focus:outline-none focus:ring-1 focus:ring-[var(--signal-glow)] transition-colors"
             />
@@ -87,7 +87,7 @@ export default function DirectGmcLinkForm() {
               type="text"
               value={storeName}
               onChange={(e) => setStoreName(e.target.value)}
-              placeholder="e.g. Kultra Studio"
+              placeholder="e.g. TruckSizer"
               className="w-full bg-[var(--bg-surface)] border border-[var(--hairline-strong)] focus:border-[var(--signal)] rounded-[var(--radius-sm)] px-3 py-2 text-[12.5px] text-[var(--ink-primary)] placeholder:text-[var(--ghost-text-dim)] focus:outline-none focus:ring-1 focus:ring-[var(--signal-glow)] transition-colors"
             />
           </div>
@@ -105,7 +105,7 @@ export default function DirectGmcLinkForm() {
             </>
           ) : (
             <>
-              <span>Link Store #{gmcId || '5838023405'}</span>
+              <span>Verify and Link Store</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </>
           )}

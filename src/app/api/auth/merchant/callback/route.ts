@@ -125,12 +125,34 @@ export async function GET(request: Request) {
     const discoveryResult = await discoverMerchantAccounts(accessToken, targetGmcId);
     const discoveredAccounts = discoveryResult.accounts;
 
+    // Helper to construct pending OAuth cookie for manual Merchant ID verification fallback
+    const setPendingGmcCookie = (response: NextResponse) => {
+      if (accessToken || encryptedRefreshToken) {
+        const pendingPayload = JSON.stringify({
+          email: session.email,
+          encryptedRefreshToken,
+          accessToken,
+          createdAt: Date.now(),
+        });
+        response.cookies.set({
+          name: 'kultra_gmc_pending',
+          value: Buffer.from(pendingPayload).toString('base64'),
+          path: '/',
+          httpOnly: true,
+          sameSite: 'lax',
+          secure: process.env.NODE_ENV === 'production',
+          maxAge: 1800, // 30 minutes
+        });
+      }
+    };
+
     // Discovery Error Handling: Route 404/notFound to Branch B, and scopeMissing to Branch C
     if (discoveryResult.error && discoveredAccounts.length === 0) {
       if (discoveryResult.error.notFound || discoveryResult.error.status === 404) {
         fallbackDashboardUrl.searchParams.set('error', 'no_accounts_found');
         const res = NextResponse.redirect(fallbackDashboardUrl);
         res.cookies.delete(OAUTH_STATE_COOKIE_NAME);
+        setPendingGmcCookie(res);
         return res;
       }
       if (discoveryResult.error.apiDisabled) {
@@ -150,12 +172,13 @@ export async function GET(request: Request) {
       return NextResponse.redirect(fallbackDashboardUrl);
     }
 
-    // Branch B: Zero GMC accounts found (Strict Verification Gate)
-    // Halt onboarding immediately: zero stores created, zero trials started, route back to onboarding with state indicator.
+    // Branch B: Zero GMC accounts found (Directory propagation delay fallback)
+    // Preserve active OAuth tokens in kultra_gmc_pending cookie and route to dashboard with state indicator
     if (discoveredAccounts.length === 0) {
       fallbackDashboardUrl.searchParams.set('error', 'no_accounts_found');
       const res = NextResponse.redirect(fallbackDashboardUrl);
       res.cookies.delete(OAUTH_STATE_COOKIE_NAME);
+      setPendingGmcCookie(res);
       return res;
     }
 

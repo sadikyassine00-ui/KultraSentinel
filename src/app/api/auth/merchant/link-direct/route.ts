@@ -1,8 +1,15 @@
 import { NextResponse, after } from 'next/server';
 import { cookies } from 'next/headers';
 import { COOKIE_NAME, verifySessionToken } from '@/lib/token';
-import { claimStoreForTenant, findTenantByEmail, upsertIncident } from '@/lib/db';
-import { registerMerchantNotificationSubscription, auditExistingDisapprovals } from '@/lib/merchant_api';
+import { claimStoreForTenant, findTenantByEmail, getStoresForTenant, upsertIncident } from '@/lib/db';
+import { decryptToken } from '@/lib/security';
+import { activateTrialOnFirstStoreConnect } from '@/lib/subscription';
+import {
+  registerMerchantNotificationSubscription,
+  auditExistingDisapprovals,
+  verifyAndFetchMerchantAccount,
+  getValidMerchantAccessToken,
+} from '@/lib/merchant_api';
 import { dispatchInitialAuditSlackNotification } from '@/lib/slack';
 
 interface PendingCookieData {
@@ -49,71 +56,89 @@ export async function POST(request: Request) {
       }
     }
 
-    const encryptedRefreshToken = pendingData?.encryptedRefreshToken || undefined;
-    const accessToken = pendingData?.accessToken || undefined;
+    let encryptedRefreshToken = pendingData?.encryptedRefreshToken || undefined;
+    let accessToken = pendingData?.accessToken || undefined;
 
-    // Enforce strict Google Content API verification
-    let storeName = body.storeName?.trim();
-    if (accessToken) {
+    // If accessToken is missing or expired, attempt token refresh via refresh_token
+    if (!accessToken && encryptedRefreshToken) {
       try {
-        const acctRes = await fetch(
-          `https://shoppingcontent.googleapis.com/content/v2.1/${encodeURIComponent(gmcId)}/accounts/${encodeURIComponent(gmcId)}`,
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              Accept: 'application/json',
-            },
-          }
-        );
-
-        if (acctRes.ok) {
-          const acctData = await acctRes.json();
-          storeName = acctData.name || storeName || `Merchant Center #${gmcId}`;
-        } else if (acctRes.status === 404 || acctRes.status === 403) {
-          // Check if user has catalog productstatuses access (validates active GMC store for non-admin roles)
-          let hasProductAccess = false;
-          try {
-            const productRes = await fetch(
-              `https://shoppingcontent.googleapis.com/content/v2.1/${encodeURIComponent(gmcId)}/productstatuses?maxResults=1`,
-              {
-                headers: {
-                  Authorization: `Bearer ${accessToken}`,
-                  Accept: 'application/json',
-                },
-              }
-            );
-            if (productRes.ok) {
-              hasProductAccess = true;
-              storeName = storeName || `Merchant Center #${gmcId}`;
-            }
-          } catch {
-            // Ignored
-          }
-
-          if (!hasProductAccess) {
-            const errText = await acctRes.text();
-            console.warn(`[Direct GMC Link] Google rejected merchant #${gmcId} (HTTP ${acctRes.status}): ${errText}`);
-            return NextResponse.json(
-              { error: `Google Merchant Center account #${gmcId} not found or access denied for this Google identity.` },
-              { status: 404 }
-            );
+        const refreshToken = await decryptToken(encryptedRefreshToken);
+        const clientId = process.env.GOOGLE_CLIENT_ID;
+        const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+        if (clientId && clientSecret && refreshToken) {
+          const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              client_id: clientId,
+              client_secret: clientSecret,
+              refresh_token: refreshToken,
+              grant_type: 'refresh_token',
+            }),
+          });
+          if (tokenRes.ok) {
+            const tokenData = await tokenRes.json();
+            accessToken = tokenData.access_token;
           }
         }
-      } catch (verifyErr) {
-        console.warn(`[Direct GMC Link] Verification error for merchant #${gmcId}:`, verifyErr);
+      } catch (refreshErr) {
+        console.warn('[Direct GMC Link] Token refresh error:', refreshErr);
       }
     }
 
-    if (!storeName) {
-      storeName = `Merchant Center #${gmcId}`;
+    // Fallback: check existing stores for tenant to find a valid refresh token
+    if (!accessToken) {
+      try {
+        const existingStores = await getStoresForTenant(session.email);
+        for (const st of existingStores) {
+          if (st.encrypted_refresh_token) {
+            encryptedRefreshToken = st.encrypted_refresh_token;
+            accessToken = await getValidMerchantAccessToken(st) || undefined;
+            if (accessToken) break;
+          }
+        }
+      } catch (storeErr) {
+        console.warn('[Direct GMC Link] Existing store lookup error:', storeErr);
+      }
     }
+
+    // If no active OAuth session is available, prompt the user to re-authenticate
+    if (!accessToken) {
+      return NextResponse.json(
+        {
+          error: "No active Google OAuth session found. Please click 'Connect a Different Google Account' to authenticate with Google first.",
+        },
+        { status: 401 }
+      );
+    }
+
+    // Execute direct targeted call to Google Content API accounts.get using active OAuth credentials
+    const verifyResult = await verifyAndFetchMerchantAccount({
+      merchantId: gmcId,
+      accessToken,
+    });
+
+    if (!verifyResult.ok) {
+      return NextResponse.json(
+        {
+          error:
+            verifyResult.error ||
+            `Google reported that your currently authenticated email does not have access to Merchant ID ${gmcId}. Reconnect with the correct Google email or grant access in Merchant Center.`,
+          status: verifyResult.status,
+        },
+        { status: verifyResult.status >= 400 && verifyResult.status < 500 ? verifyResult.status : 400 }
+      );
+    }
+
+    // Extract store name and website domain directly from response
+    const storeName = verifyResult.storeName || body.storeName?.trim() || `Merchant Center #${gmcId}`;
+    const storeUrl = verifyResult.websiteUrl || `https://merchants.google.com/mc/overview?account=${gmcId}`;
+    const accountType = 'Standalone Merchant';
 
     const tenant = await findTenantByEmail(session.email);
     const tenantId = tenant ? tenant.id : 1;
-    const storeUrl = `https://merchants.google.com/mc/overview?account=${gmcId}`;
-    const accountType = 'Standalone Merchant';
 
-    // Claim store for tenant in Neon DB
+    // Persist the store record in database
     const claimResult = await claimStoreForTenant({
       gmcId,
       tenantId,
@@ -134,57 +159,64 @@ export async function POST(request: Request) {
       );
     }
 
-    // If access token is available, register Pub/Sub topic and trigger initial catalog scan
-    if (accessToken) {
-      try {
-        await registerMerchantNotificationSubscription({
-          merchantId: gmcId,
-          accessToken,
-          pubsubTopic: claimResult.store?.pubsub_topic,
-        });
-      } catch (subErr) {
-        console.warn('[Direct Link] Pub/Sub registration warning:', subErr);
-      }
-
-      const origin = new URL(request.url).origin;
-      after(async () => {
-        try {
-          console.info(`[Direct Link Audit] Auditing catalog for GMC #${gmcId}...`);
-          const auditResult = await auditExistingDisapprovals(gmcId, accessToken);
-          console.info(
-            `[Direct Link Audit] Found ${auditResult.disapprovals.length} disapprovals out of ${auditResult.totalAudited} items.`
-          );
-
-          for (const item of auditResult.disapprovals) {
-            await upsertIncident({
-              storeId: claimResult.store?.id || 1,
-              gmcId,
-              sku: item.offerId,
-              title: item.title,
-              issueCode: item.issueCode,
-              severity: 'critical',
-              tenant_email: session.email,
-              details: {
-                destination: item.destination,
-                issueDetail: item.issueDetail,
-              },
-            });
-          }
-
-          if (claimResult.store) {
-            await dispatchInitialAuditSlackNotification({
-              store: claimResult.store,
-              disapprovals: auditResult.disapprovals,
-              totalAudited: auditResult.totalAudited,
-              appUrl: origin,
-            });
-          }
-        } catch (auditErr) {
-          console.error('[Direct Link Audit Error]', auditErr);
-        }
-      });
+    // Start the 14-day trial countdown anchored to this connection
+    try {
+      await activateTrialOnFirstStoreConnect(session.email);
+    } catch (trialErr) {
+      console.warn('[Direct Link] Trial activation warning:', trialErr);
     }
 
+    // Register Google Merchant notifications Pub/Sub pipeline
+    try {
+      await registerMerchantNotificationSubscription({
+        merchantId: gmcId,
+        accessToken,
+        pubsubTopic: claimResult.store?.pubsub_topic,
+      });
+    } catch (subErr) {
+      console.warn('[Direct Link] Pub/Sub registration warning:', subErr);
+    }
+
+    // Run non-blocking initial catalog audit and dispatch Slack notification
+    const origin = new URL(request.url).origin;
+    after(async () => {
+      try {
+        console.info(`[Direct Link Audit] Auditing catalog for GMC #${gmcId}...`);
+        const auditResult = await auditExistingDisapprovals(gmcId, accessToken);
+        console.info(
+          `[Direct Link Audit] Found ${auditResult.disapprovals.length} disapprovals out of ${auditResult.totalAudited} items.`
+        );
+
+        for (const item of auditResult.disapprovals) {
+          await upsertIncident({
+            storeId: claimResult.store?.id || 1,
+            gmcId,
+            sku: item.offerId,
+            title: item.title,
+            issueCode: item.issueCode,
+            severity: 'critical',
+            tenant_email: session.email,
+            details: {
+              destination: item.destination,
+              issueDetail: item.issueDetail,
+            },
+          });
+        }
+
+        if (claimResult.store) {
+          await dispatchInitialAuditSlackNotification({
+            store: claimResult.store,
+            disapprovals: auditResult.disapprovals,
+            totalAudited: auditResult.totalAudited,
+            appUrl: origin,
+          });
+        }
+      } catch (auditErr) {
+        console.error('[Direct Link Audit Error]', auditErr);
+      }
+    });
+
+    // Redirect user straight to the active dashboard
     const redirectUrl = session.role === 'admin'
       ? '/admin/dashboard?tab=stores&just_connected=true'
       : `/dashboard?just_connected=true&store_id=${claimResult.store?.id || ''}`;
@@ -195,7 +227,7 @@ export async function POST(request: Request) {
       redirectUrl,
     });
 
-    // Clear pending OAuth cookie
+    // Clear pending OAuth cookie after successful linking
     response.cookies.delete('kultra_gmc_pending');
 
     return response;
