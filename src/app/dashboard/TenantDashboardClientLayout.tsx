@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { LogOut, Shield, ChevronDown, ShieldCheck, LayoutDashboard, CreditCard } from 'lucide-react';
 import { FleetLimitModal } from '@/components/dashboard/FleetLimitModal';
+import { PaddleCheckoutModal } from '@/components/billing/PaddleCheckoutOverlay';
 
 interface AuthUser {
   email: string;
@@ -60,6 +61,8 @@ export default function TenantDashboardClientLayout({
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [storeDropdownOpen, setStoreDropdownOpen] = useState(false);
   const [isFleetModalOpen, setIsFleetModalOpen] = useState(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [checkoutPlan, setCheckoutPlan] = useState<'solo' | 'agency'>('solo');
   const dropdownRef = useRef<HTMLDivElement>(null);
   const storeDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -196,136 +199,118 @@ export default function TenantDashboardClientLayout({
 
             <div className="h-4 w-px bg-[rgba(255,255,255,0.12)] hidden sm:block shrink-0" />
 
-            {/* Store Identifier and Connection Status (§1 Header and Account Anchor & §2 Authentic Store Navigation) */}
+            {/* Store Identifier and Connection Status with Account Quota */}
             {stores.length > 0 && (() => {
               const activeStore = stores.find((s) => String(s.id) === String(activeStoreId)) || stores[0];
+              const isAgencyUser = billing?.planTier === 'Agency' || billing?.planName?.includes('Agency');
+              const maxStoresLimit = isSuperAdminUser ? Infinity : isAgencyUser ? 5 : 1;
+              const maxStoresLabel = isSuperAdminUser ? 'Unlimited' : isAgencyUser ? '5' : '1';
+              const quotaLabel = isSuperAdminUser ? `${stores.length} of ∞` : `${stores.length} of ${maxStoresLabel}`;
+
               return (
                 <div className="flex items-center gap-2.5 min-w-0">
-                  {stores.length > 1 ? (
-                    <div className="relative flex items-center shrink-0" ref={storeDropdownRef}>
-                      <button
-                        type="button"
-                        onClick={() => setStoreDropdownOpen((prev) => !prev)}
-                        className="bg-[#131418] border border-[rgba(255,255,255,0.14)] hover:border-[#7a5a26] text-[#f4f1ea] rounded-[3px] py-1 px-2.5 flex items-center gap-2 text-left focus:outline-none focus:border-[#f2a93b] transition-colors"
-                        aria-haspopup="listbox"
-                        aria-expanded={storeDropdownOpen}
-                        aria-label="Switch active store"
-                      >
-                        <div className="flex flex-col min-w-0 max-w-[130px] sm:max-w-[190px]">
+                  <div className="relative flex items-center shrink-0" ref={storeDropdownRef}>
+                    <button
+                      type="button"
+                      onClick={() => setStoreDropdownOpen((prev) => !prev)}
+                      className="bg-[#131418] border border-[rgba(255,255,255,0.14)] hover:border-[#7a5a26] text-[#f4f1ea] rounded-[3px] py-1 px-2.5 flex items-center gap-2 text-left focus:outline-none focus:border-[#f2a93b] transition-colors"
+                      aria-haspopup="listbox"
+                      aria-expanded={storeDropdownOpen}
+                      aria-label="Switch active store or view store quota"
+                    >
+                      <div className="flex flex-col min-w-0 max-w-[140px] sm:max-w-[200px]">
+                        <div className="flex items-center gap-1.5 min-w-0">
                           <span className="text-[12.5px] font-semibold text-[#f4f1ea] truncate leading-tight">
                             {activeStore?.name}
                           </span>
-                          {activeStore?.domain && (
-                            <span className="text-[10.5px] text-[#b9b3a5] truncate leading-tight">
-                              {activeStore.domain}
-                            </span>
-                          )}
+                          <span className="font-mono text-[10.5px] text-[#b9b3a5] shrink-0 font-medium">
+                            ({quotaLabel})
+                          </span>
                         </div>
-                        <ChevronDown className={`w-3.5 h-3.5 text-[#6b7078] shrink-0 transition-transform duration-150 ${storeDropdownOpen ? 'rotate-180 text-[#f2a93b]' : ''}`} />
-                      </button>
-
-                      {storeDropdownOpen && (() => {
-                        const isSuperAdminUser = Boolean(user?.isAdmin || billing?.isSuperAdmin);
-                        const isAgencyUser = billing?.planTier === 'Agency' || billing?.planName?.includes('Agency');
-                        const maxStoresLabel = isSuperAdminUser ? 'Unlimited' : isAgencyUser ? '5' : '1';
-
-                        return (
-                        <div className="absolute top-full left-0 mt-1.5 w-72 sm:w-80 bg-[#0e0f11] border border-[rgba(255,255,255,0.14)] rounded-[4px] shadow-[0_16px_40px_rgba(0,0,0,0.5)] z-50 py-1.5">
-                          <div className="px-3 py-1.5 text-[10px] font-mono text-[#6b7078] tracking-wider uppercase border-b border-[rgba(255,255,255,0.06)] flex items-center justify-between">
-                            <span>GMC Accounts ({stores.length} of {maxStoresLabel})</span>
-                            <span className="text-[10px] text-[#45484f]">Switch active view</span>
-                          </div>
-
-                          <div className="max-h-64 overflow-y-auto py-1">
-                            {stores.map((s) => {
-                              const isCurrent = String(s.id) === String(activeStoreId);
-                              return (
-                                <button
-                                  key={s.id}
-                                  type="button"
-                                  onClick={() => {
-                                    setStoreDropdownOpen(false);
-                                    if (String(s.id) !== String(activeStoreId)) {
-                                      setActiveStoreId(String(s.id));
-                                      const url = new URL(window.location.href);
-                                      url.searchParams.set('store_id', String(s.id));
-                                      window.location.href = url.pathname + url.search;
-                                    }
-                                  }}
-                                  className={`w-full text-left px-3 py-2 flex items-start justify-between gap-2 transition-colors ${
-                                    isCurrent
-                                      ? 'bg-[rgba(242,169,59,0.08)] border-l-2 border-[#f2a93b]'
-                                      : 'hover:bg-[#131418]'
-                                  }`}
-                                >
-                                  <div className="flex-1 min-w-0">
-                                    <div className="text-[13px] font-semibold text-[#f4f1ea] truncate">
-                                      {s.name}
-                                    </div>
-                                    {s.domain && (
-                                      <div className="text-[11.5px] text-[#b9b3a5] truncate">
-                                        {s.domain}
-                                      </div>
-                                    )}
-                                    <div className="font-mono text-[10px] text-[#6b7078] mt-0.5">
-                                      GMC #{s.gmcId}
-                                    </div>
-                                  </div>
-                                  {isCurrent && (
-                                    <span className="shrink-0 mt-0.5 text-[#f2a93b] font-mono text-[11px] font-medium">
-                                      Active
-                                    </span>
-                                  )}
-                                </button>
-                              );
-                            })}
-                          </div>
-
-                          <div className="border-t border-[rgba(255,255,255,0.08)] pt-1 mt-1 px-1">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setStoreDropdownOpen(false);
-                                if (isSuperAdminUser) {
-                                  window.location.href = '/api/auth/merchant/connect';
-                                  return;
-                                }
-                                if (isAgencyUser && stores.length >= 5) {
-                                  setIsFleetModalOpen(true);
-                                  return;
-                                }
-                                if (!isAgencyUser && stores.length >= 1) {
-                                  window.location.href = '/dashboard/settings?tab=billing&quota_exceeded=solo';
-                                  return;
-                                }
-                                window.location.href = '/api/auth/merchant/connect';
-                              }}
-                              className="w-full text-left px-2.5 py-1.5 rounded-[3px] text-[12px] text-[#f2a93b] hover:bg-[#131418] flex items-center gap-1.5 transition-colors font-medium"
-                            >
-                              <span>+ Connect another GMC...</span>
-                            </button>
-                          </div>
-                        </div>
-                        );
-                      })()}
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 shrink-0">
-                      <div className="flex flex-col min-w-0 max-w-[150px] sm:max-w-[200px]">
-                        <span className="text-[13px] font-semibold text-[#f4f1ea] truncate leading-tight">
-                          {stores[0]?.name}
-                        </span>
-                        {stores[0]?.domain && (
-                          <span className="text-[10.5px] text-[#b9b3a5] truncate leading-tight">
-                            {stores[0].domain}
+                        {activeStore?.domain && (
+                          <span className="text-[10.5px] text-[#6b7078] truncate leading-tight">
+                            {activeStore.domain}
                           </span>
                         )}
                       </div>
-                      <span className="font-mono text-[10.5px] text-[#6b7078] bg-[#131418] px-1.5 py-0.5 rounded border border-[rgba(255,255,255,0.08)] shrink-0">
-                        GMC #{stores[0]?.gmcId}
-                      </span>
-                    </div>
-                  )}
+                      <ChevronDown className={`w-3.5 h-3.5 text-[#6b7078] shrink-0 transition-transform duration-150 ${storeDropdownOpen ? 'rotate-180 text-[#f2a93b]' : ''}`} />
+                    </button>
+
+                    {storeDropdownOpen && (
+                      <div className="absolute top-full left-0 mt-1.5 w-72 sm:w-80 bg-[#0e0f11] border border-[rgba(255,255,255,0.14)] rounded-[4px] shadow-[0_16px_40px_rgba(0,0,0,0.5)] z-50 py-1.5">
+                        <div className="px-3 py-1.5 text-[10px] font-mono text-[#6b7078] tracking-wider uppercase border-b border-[rgba(255,255,255,0.06)] flex items-center justify-between">
+                          <span>GMC Accounts ({quotaLabel})</span>
+                          <span className="text-[10px] text-[#45484f]">Switch active view</span>
+                        </div>
+
+                        <div className="max-h-64 overflow-y-auto py-1">
+                          {stores.map((s) => {
+                            const isCurrent = String(s.id) === String(activeStoreId);
+                            return (
+                              <button
+                                key={s.id}
+                                type="button"
+                                onClick={() => {
+                                  setStoreDropdownOpen(false);
+                                  if (String(s.id) !== String(activeStoreId)) {
+                                    setActiveStoreId(String(s.id));
+                                    const url = new URL(window.location.href);
+                                    url.searchParams.set('store_id', String(s.id));
+                                    window.location.href = url.pathname + url.search;
+                                  }
+                                }}
+                                className={`w-full text-left px-3 py-2 flex items-start justify-between gap-2 transition-colors ${
+                                  isCurrent
+                                    ? 'bg-[rgba(242,169,59,0.08)] border-l-2 border-[#f2a93b]'
+                                    : 'hover:bg-[#131418]'
+                                }`}
+                              >
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-[13px] font-semibold text-[#f4f1ea] truncate">
+                                    {s.name}
+                                  </div>
+                                  {s.domain && (
+                                    <div className="text-[11.5px] text-[#b9b3a5] truncate">
+                                      {s.domain}
+                                    </div>
+                                  )}
+                                  <div className="font-mono text-[10px] text-[#6b7078] mt-0.5">
+                                    GMC #{s.gmcId}
+                                  </div>
+                                </div>
+                                {isCurrent && (
+                                  <span className="shrink-0 mt-0.5 text-[#f2a93b] font-mono text-[11px] font-medium">
+                                    Active
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        <div className="border-t border-[rgba(255,255,255,0.08)] pt-1 mt-1 px-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setStoreDropdownOpen(false);
+                              if (isSuperAdminUser) {
+                                window.location.href = '/api/auth/merchant/connect';
+                                return;
+                              }
+                              if (stores.length >= maxStoresLimit) {
+                                setIsFleetModalOpen(true);
+                                return;
+                              }
+                              window.location.href = '/api/auth/merchant/connect';
+                            }}
+                            className="w-full text-left px-2.5 py-1.5 rounded-[3px] text-[12px] text-[#f2a93b] hover:bg-[#131418] flex items-center gap-1.5 transition-colors font-medium"
+                          >
+                            <span>+ Connect another GMC...</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
                   {/* Live Status Indicator: Green pulsing dot with "Real-Time Watch Active" */}
                   <div className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[rgba(34,197,94,0.3)] bg-[rgba(34,197,94,0.06)] text-[#22c55e] text-[11px] font-mono tracking-[0.02em] shrink-0 font-medium">
@@ -337,9 +322,9 @@ export default function TenantDashboardClientLayout({
             })()}
           </div>
 
-          {/* Right Controls: Plan Status Badge & User Profile Menu */}
+          {/* Right Controls: Unified Status Pill & User Profile Menu */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            {/* 1. Superadmin: "Lifetime Admin" with zero tickers and zero upgrade prompts */}
+            {/* 1. Superadmin: "Lifetime Admin" */}
             {isSuperAdminUser ? (
               <div
                 className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[#7a5a26] bg-[rgba(242,169,59,0.06)] text-[#f2a93b] text-[11px] font-mono tracking-[0.02em] shrink-0 font-medium"
@@ -354,79 +339,71 @@ export default function TenantDashboardClientLayout({
                 {!billing.hasTrialStarted ? (
                   <a
                     href="/api/auth/merchant/connect"
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[#7a5a26] bg-[rgba(242,169,59,0.06)] text-[#f2a93b] hover:border-[#f2a93b] text-[11px] font-mono tracking-[0.02em] transition-colors shrink-0"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-[100px] border border-[#7a5a26] bg-[rgba(242,169,59,0.06)] text-[#f2a93b] hover:border-[#f2a93b] text-[11px] font-mono tracking-[0.02em] transition-colors shrink-0 font-medium"
                     title="Connect your Google Merchant Center account to start your 14-day free trial."
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" aria-hidden="true" />
                     <span>Connect GMC to Start Trial</span>
                   </a>
                 ) : billing.status === 'active trial' ? (
-                  /* 3. Active Trial: Display "Free Trial: X Days Left" paired with "Upgrade" button */
-                  <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                    {billing.daysRemaining > 3 ? (
-                      /* Neutral / subtle brand accent (> 3 days) */
-                      <Link
-                        href="/dashboard/settings?tab=billing"
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[rgba(255,255,255,0.14)] bg-[#131418] text-[#b9b3a5] hover:text-[#f4f1ea] hover:border-[#7a5a26] text-[10.5px] sm:text-[11px] font-mono tracking-[0.02em] transition-colors shrink-0"
-                        title={`14-Day Free Trial ends on ${billing.formattedTrialEnd}. Click to review plan details.`}
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" aria-hidden="true" />
-                        <span>Free Trial: {billing.daysRemaining} {billing.daysRemaining === 1 ? 'Day' : 'Days'} Left</span>
-                      </Link>
-                    ) : (
-                      /* Urgent amber/red styling (<= 3 days) */
-                      <Link
-                        href="/dashboard/settings?tab=billing"
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[#d64545] bg-[rgba(214,69,69,0.08)] text-[#d64545] text-[10.5px] sm:text-[11px] font-mono tracking-[0.02em] font-medium hover:bg-[rgba(214,69,69,0.16)] transition-colors shrink-0"
-                        title={`Urgent: Free Trial ends on ${billing.formattedTrialEnd}. Upgrade now to prevent monitoring disruption.`}
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#d64545] animate-pulse" aria-hidden="true" />
-                        <span>Free Trial: {billing.daysRemaining} {billing.daysRemaining === 1 ? 'Day' : 'Days'} Left</span>
-                      </Link>
-                    )}
-                    <Link
-                      href="/dashboard/settings?tab=billing"
-                      className="btn-primary text-[11px] py-1 px-2.5 !rounded-[3px] font-semibold tracking-tight shrink-0 shadow-none"
-                    >
-                      Upgrade
-                    </Link>
-                  </div>
+                  /* 3. Unified Trial Countdown & Upgrade Pill: Direct Modal Checkout */
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCheckoutPlan('solo');
+                      setIsCheckoutOpen(true);
+                    }}
+                    className={`inline-flex items-center gap-2 px-3 py-1 rounded-[100px] border ${
+                      billing.daysRemaining <= 3
+                        ? 'border-[#d64545] bg-[rgba(214,69,69,0.12)] text-[#d64545] hover:bg-[rgba(214,69,69,0.22)]'
+                        : 'border-[#f2a93b] bg-[rgba(242,169,59,0.1)] text-[#f2a93b] hover:bg-[rgba(242,169,59,0.2)] hover:border-[#f6b855]'
+                    } text-[11px] font-mono tracking-[0.02em] font-semibold transition-all shrink-0 cursor-pointer shadow-[0_0_12px_rgba(242,169,59,0.15)]`}
+                    title={`14-Day Free Trial: ${billing.daysRemaining} days remaining. Click to upgrade.`}
+                    aria-label="Upgrade subscription"
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        billing.daysRemaining <= 3 ? 'bg-[#d64545] animate-pulse' : 'bg-[#f2a93b] animate-pulse'
+                      }`}
+                      aria-hidden="true"
+                    />
+                    <span>{billing.daysRemaining} {billing.daysRemaining === 1 ? 'Day' : 'Days'} Left · Upgrade</span>
+                  </button>
                 ) : billing.status === 'paid active' && (billing.planTier === 'Solo' || billing.planName?.includes('Solo')) ? (
-                  /* 4. Solo Plan: Clean, understated styling */
+                  /* 4. Solo Plan Indicator */
                   <Link
                     href="/dashboard/settings?tab=billing"
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[rgba(255,255,255,0.14)] bg-[#131418] text-[#cfcdc8] hover:text-[#f4f1ea] hover:border-[rgba(255,255,255,0.25)] text-[11px] font-mono tracking-[0.02em] transition-colors shrink-0"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-[100px] border border-[rgba(255,255,255,0.14)] bg-[#131418] text-[#cfcdc8] hover:text-[#f4f1ea] hover:border-[#7a5a26] text-[11px] font-mono tracking-[0.02em] transition-colors shrink-0 font-medium"
                     title="Solo Plan ($19/mo) — Click to view billing and store limits"
                   >
-                    <span>Solo Plan</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e]" aria-hidden="true" />
+                    <span>Solo Plan · {stores.length}/1 Stores</span>
                   </Link>
                 ) : billing.status === 'paid active' && (billing.planTier === 'Agency' || billing.planName?.includes('Agency')) ? (
-                  /* 5. Agency Plan: Active status dot */
+                  /* 5. Agency Fleet Indicator */
                   <Link
                     href="/dashboard/settings?tab=billing"
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[#7a5a26] bg-[rgba(242,169,59,0.06)] text-[#f2a93b] hover:border-[#f2a93b] text-[11px] font-mono tracking-[0.02em] transition-colors shrink-0 font-medium"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-[100px] border border-[#7a5a26] bg-[rgba(242,169,59,0.06)] text-[#f2a93b] hover:border-[#f2a93b] text-[11px] font-mono tracking-[0.02em] transition-colors shrink-0 font-medium"
                     title="Agency Plan ($49/mo) — Click to manage multi-store fleet"
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" aria-hidden="true" />
-                    <span>Agency Plan</span>
+                    <span>Agency Fleet · {stores.length}/5 Stores</span>
                   </Link>
                 ) : (billing.isLocked || billing.status === 'expired') ? (
-                  /* 6. Expired Trial */
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <Link
-                      href="/dashboard/settings?tab=billing"
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[#d64545] bg-[rgba(214,69,69,0.08)] text-[#d64545] text-[10.5px] font-mono tracking-[0.02em] font-medium shrink-0"
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#d64545]" aria-hidden="true" />
-                      <span>Trial Expired</span>
-                    </Link>
-                    <Link
-                      href="/dashboard/settings?tab=billing"
-                      className="btn-primary text-[11px] py-1 px-2.5 !rounded-[3px] font-semibold shrink-0"
-                    >
-                      Upgrade
-                    </Link>
-                  </div>
+                  /* 6. Expired Trial Unified Pill */
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCheckoutPlan('solo');
+                      setIsCheckoutOpen(true);
+                    }}
+                    className="inline-flex items-center gap-2 px-3 py-1 rounded-[100px] border border-[#d64545] bg-[rgba(214,69,69,0.12)] text-[#d64545] hover:bg-[rgba(214,69,69,0.22)] text-[11px] font-mono tracking-[0.02em] font-semibold transition-all shrink-0 cursor-pointer shadow-[0_0_12px_rgba(214,69,69,0.2)]"
+                    title="Trial expired. Click to choose plan and restore monitoring."
+                    aria-label="Trial expired, upgrade now"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#d64545] animate-pulse" aria-hidden="true" />
+                    <span>Trial Expired · Upgrade</span>
+                  </button>
                 ) : null}
               </>
             )}
@@ -539,6 +516,24 @@ export default function TenantDashboardClientLayout({
         onClose={() => setIsFleetModalOpen(false)}
         userEmail={user?.email || ''}
         storeCount={stores.length}
+        maxStores={billing?.planTier === 'Agency' || billing?.planName?.includes('Agency') ? 5 : 1}
+        onUpgradeToAgency={() => {
+          setIsFleetModalOpen(false);
+          setCheckoutPlan('agency');
+          setIsCheckoutOpen(true);
+        }}
+      />
+
+      {/* Subscription Checkout Modal */}
+      <PaddleCheckoutModal
+        isOpen={isCheckoutOpen}
+        plan={checkoutPlan}
+        userEmail={user?.email || ''}
+        onClose={() => setIsCheckoutOpen(false)}
+        onSuccess={() => {
+          setIsCheckoutOpen(false);
+          fetchStores();
+        }}
       />
     </div>
   );

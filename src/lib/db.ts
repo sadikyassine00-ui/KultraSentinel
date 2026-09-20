@@ -1064,7 +1064,7 @@ export async function createTenant(data: {
           subscription_status, trial_ends_at, stripe_customer_id, stripe_subscription_id, created_at
         )
         VALUES (
-          ${userId}, ${cleanEmail}, ${data.companyName}, ${planTier}, ${accountPlan}, 1, 0, 0, 'Valid', 'active',
+          ${userId}, ${cleanEmail}, ${data.companyName}, ${planTier}, ${accountPlan}, 0, 0, 0, 'Pending', 'active',
           ${subscriptionStatus}, ${trialEndsAt}, ${stripeCustomerId}, ${stripeSubscriptionId}, NOW()
         )
         RETURNING *;
@@ -1082,7 +1082,7 @@ export async function createTenant(data: {
     company_name: data.companyName,
     plan_tier: planTier,
     account_plan: accountPlan,
-    connected_stores: 1,
+    connected_stores: 0,
     total_skus: 0,
     incidents_month: 0,
     oauth_status: 'Valid',

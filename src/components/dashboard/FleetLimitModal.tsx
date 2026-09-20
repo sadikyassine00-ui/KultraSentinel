@@ -9,13 +9,17 @@ interface FleetLimitModalProps {
   onClose: () => void;
   userEmail?: string;
   storeCount?: number;
+  maxStores?: number;
+  onUpgradeToAgency?: () => void;
 }
 
 export function FleetLimitModal({
   isOpen,
   onClose,
   userEmail = '',
-  storeCount = 5
+  storeCount = 1,
+  maxStores = 1,
+  onUpgradeToAgency,
 }: FleetLimitModalProps) {
   const [mounted, setMounted] = useState(false);
 
@@ -33,16 +37,28 @@ export function FleetLimitModal({
 
   if (!isOpen || !mounted) return null;
 
-  const mailtoSubject = encodeURIComponent('Custom Agency Fleet Request');
+  const isSolo = maxStores <= 1;
+
+  const mailtoSubject = encodeURIComponent(
+    isSolo ? 'Solo Store Quota Expansion Request' : 'Custom Agency Fleet Request'
+  );
   const mailtoBody = encodeURIComponent(
-    `Hello Kultra Sentinel Concierge Team,\n\n` +
-    `I have reached the 5-store fleet quota on my Agency Fleet plan and require expanded multi-store volume.\n\n` +
-    `Account Email: ${userEmail || 'N/A'}\n` +
-    `Currently Monitored Stores: ${storeCount}\n` +
-    `Estimated Stores Needed: [Enter required store count]\n\n` +
-    `Please assist with custom fleet provisioning, dedicated Slack routing, and priority Pub/Sub pipelines.\n\n` +
-    `Best regards,\n` +
-    `${userEmail || 'Agency Administrator'}`
+    isSolo
+      ? `Hello Kultra Sentinel Concierge Team,\n\n` +
+        `I have reached the 1-store quota on my Solo plan and would like to expand multi-store monitoring.\n\n` +
+        `Account Email: ${userEmail || 'N/A'}\n` +
+        `Current Store Count: ${storeCount}\n\n` +
+        `Please assist with upgrading to Agency Fleet or custom fleet provisioning.\n\n` +
+        `Best regards,\n` +
+        `${userEmail || 'Store Owner'}`
+      : `Hello Kultra Sentinel Concierge Team,\n\n` +
+        `I have reached the 5-store fleet quota on my Agency Fleet plan and require expanded multi-store volume.\n\n` +
+        `Account Email: ${userEmail || 'N/A'}\n` +
+        `Currently Monitored Stores: ${storeCount}\n` +
+        `Estimated Stores Needed: [Enter required store count]\n\n` +
+        `Please assist with custom fleet provisioning, dedicated Slack routing, and priority Pub/Sub pipelines.\n\n` +
+        `Best regards,\n` +
+        `${userEmail || 'Agency Administrator'}`
   );
   const mailtoUrl = `mailto:support@usekultra.com?subject=${mailtoSubject}&body=${mailtoBody}`;
 
@@ -67,7 +83,7 @@ export function FleetLimitModal({
             <ShieldAlert className="w-5 h-5" />
           </div>
           <span className="font-mono text-[11px] tracking-[0.02em] uppercase px-2 py-0.5 rounded-full border border-[#f2a93b]/40 text-[#f2a93b] bg-[#f2a93b]/5">
-            Fleet Capacity Interceptor
+            {isSolo ? 'Store Quota Interceptor' : 'Fleet Capacity Interceptor'}
           </span>
         </div>
 
@@ -75,11 +91,17 @@ export function FleetLimitModal({
           id="fleet-limit-title"
           className="font-serif text-2xl font-semibold text-[#f4f1ea] leading-snug mb-3"
         >
-          Fleet Limit Reached (5 of 5 Stores Active)
+          {isSolo
+            ? `Store Limit Reached (${storeCount} of 1 Store Active)`
+            : (storeCount >= 5 && maxStores === 5)
+            ? 'Fleet Limit Reached (5 of 5 Stores Active)'
+            : `Fleet Limit Reached (${storeCount} of ${maxStores} Stores Active)`}
         </h2>
 
         <p className="font-sans text-[14.5px] leading-[1.55] text-[#b9b3a5] mb-6">
-          Your Agency Fleet tier covers up to 5 monitored stores. Need to protect a larger agency portfolio or multi-client MCA? We provide custom fleet provisioning, dedicated Slack routing, and priority Pub/Sub pipelines.
+          {isSolo
+            ? 'Your Solo plan covers 1 monitored store. To protect multiple storefronts, upgrade to the Agency Fleet tier (up to 5 stores) or contact concierge for dedicated multi-client provisioning.'
+            : 'Your Agency Fleet tier covers up to 5 monitored stores. Need to protect a larger agency portfolio or multi-client MCA? We provide custom fleet provisioning, dedicated Slack routing, and priority Pub/Sub pipelines.'}
         </p>
 
         <div className="p-3 bg-[#131418] border border-white/5 rounded mb-6 flex items-center gap-3">
@@ -87,18 +109,28 @@ export function FleetLimitModal({
           <div className="font-mono text-xs text-[#b9b3a5]">
             Account: <span className="text-[#f4f1ea] font-medium">{userEmail || 'Active Tenant'}</span>
             <span className="mx-2 text-[#45484f]">|</span>
-            Active Stores: <span className="text-[#f2a93b] font-medium">{storeCount} of 5</span>
+            Active Stores: <span className="text-[#f2a93b] font-medium">{storeCount} of {isSolo ? 1 : maxStores}</span>
           </div>
         </div>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <a
-            href={mailtoUrl}
-            className="flex-1 inline-flex items-center justify-center gap-2 bg-[#f2a93b] text-[#1a1305] font-semibold text-[13px] px-4 py-2.5 rounded hover:bg-[#f6b855] active:bg-[#d9932a] active:scale-[0.98] transition-all text-center"
-          >
-            <Mail className="w-4 h-4" />
-            Request Fleet Expansion
-          </a>
+          {isSolo && onUpgradeToAgency ? (
+            <button
+              type="button"
+              onClick={onUpgradeToAgency}
+              className="flex-1 inline-flex items-center justify-center gap-2 bg-[#f2a93b] text-[#1a1305] font-semibold text-[13px] px-4 py-2.5 rounded hover:bg-[#f6b855] active:bg-[#d9932a] active:scale-[0.98] transition-all text-center cursor-pointer"
+            >
+              <span>Upgrade to Agency Fleet (5 Stores)</span>
+            </button>
+          ) : (
+            <a
+              href={mailtoUrl}
+              className="flex-1 inline-flex items-center justify-center gap-2 bg-[#f2a93b] text-[#1a1305] font-semibold text-[13px] px-4 py-2.5 rounded hover:bg-[#f6b855] active:bg-[#d9932a] active:scale-[0.98] transition-all text-center"
+            >
+              <Mail className="w-4 h-4" />
+              <span>{isSolo ? 'Contact Concierge' : 'Request Fleet Expansion'}</span>
+            </a>
+          )}
           <button
             type="button"
             onClick={onClose}
