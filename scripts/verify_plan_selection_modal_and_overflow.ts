@@ -96,8 +96,11 @@ assert(
   'Header renders compact signal Start Trial button on narrow viewports'
 );
 assert(
-  headerContent.includes('overflow-x-hidden') && headerContent.includes('max-w-full'),
-  'Header enforces horizontal overflow prevention'
+  headerContent.includes('max-w-full') &&
+  !headerContent.includes('overflow-x-auto') &&
+  !headerContent.includes('overflow-auto') &&
+  !headerContent.includes('overflow-scroll'),
+  'Header eliminates container scrollbar triggers while constraining bounds'
 );
 
 // 4. Verify Root Layout Containment

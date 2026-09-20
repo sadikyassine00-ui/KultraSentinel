@@ -133,7 +133,7 @@ export function Header({ initialUser = null }: HeaderProps) {
 
   return (
     <header
-      className={`sticky top-0 left-0 w-full max-w-full overflow-x-hidden z-50 transition-colors duration-150 ${
+      className={`sticky top-0 left-0 w-full max-w-full z-50 transition-colors duration-150 ${
         scrolled || mobileMenuOpen
           ? 'bg-[#0a0b0d]/95 backdrop-blur-md border-b border-[var(--hairline)]'
           : 'bg-[#0a0b0d] border-b border-[var(--hairline)]'
@@ -175,21 +175,22 @@ export function Header({ initialUser = null }: HeaderProps) {
         </nav>
 
         {/* Header Actions */}
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {user ? (
-            /* Logged-In User Profile Pill & Dropdown (§16 Top bar) - Static Status Dot with ZERO animation (§17) */
-            <div className="relative" ref={dropdownRef}>
+            /* Logged-In User Profile Pill & Dropdown (§16 Top bar) - Single centered line */
+            <div className="relative shrink-0" ref={dropdownRef}>
               <button
                 type="button"
                 onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="flex items-center gap-2.5 px-3 py-1.5 rounded-[var(--radius-sm)] bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-2)] border border-[var(--hairline)] text-[13px] text-[var(--ink-primary)] transition-colors"
+                className="flex items-center gap-1.5 sm:gap-2 px-1.5 sm:px-2.5 py-1 rounded-[var(--radius-sm)] bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-2)] border border-[var(--hairline)] text-[12.5px] sm:text-[13px] text-[var(--ink-primary)] transition-colors min-h-[36px] shrink-0"
                 aria-expanded={dropdownOpen}
                 aria-haspopup="true"
+                aria-label="User profile and navigation"
               >
-                <div className="w-6 h-6 rounded-full bg-[var(--bg-surface-2)] border border-[var(--hairline)] text-[var(--ink-primary)] flex items-center justify-center font-mono text-[10px] font-semibold shrink-0">
+                <div className="w-7 h-7 rounded-full bg-[var(--bg-surface-2)] border border-[var(--hairline)] text-[var(--ink-primary)] flex items-center justify-center font-mono text-[10px] font-semibold shrink-0">
                   {getInitials(user.name || user.email)}
                 </div>
-                <span className="hidden sm:inline max-w-[120px] truncate text-[13px] text-[var(--ink-primary)]">
+                <span className="hidden sm:inline-block max-w-[100px] md:max-w-[130px] truncate text-[12.5px] sm:text-[13px] text-[var(--ink-primary)] min-w-0">
                   {user.name || user.email}
                 </span>
                 {/* Active Plan Indicator Badge (§7 Design System) */}
@@ -197,8 +198,7 @@ export function Header({ initialUser = null }: HeaderProps) {
                   <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)] shrink-0" aria-hidden="true" />
                   <span>{user.planName || (user.isAdmin ? 'Admin' : 'Active Plan')}</span>
                 </span>
-                <span className="md:hidden w-1.5 h-1.5 rounded-full bg-[var(--signal)] shrink-0" title="Active Session" />
-                <ChevronDown className={`w-3.5 h-3.5 text-[var(--ghost-text)] transition-transform duration-120 ${dropdownOpen ? 'rotate-180 text-[var(--signal)]' : ''}`} />
+                <ChevronDown className={`w-3.5 h-3.5 text-[var(--ghost-text)] shrink-0 transition-transform duration-120 ${dropdownOpen ? 'rotate-180 text-[var(--signal)]' : ''}`} />
               </button>
 
               {/* Profile Dropdown Menu */}

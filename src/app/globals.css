@@ -109,6 +109,20 @@ body {
   background: transparent;
 }
 
+/* Zero-scroll navigation architecture — Headers must never display scrollbars */
+header,
+header > div {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+header::-webkit-scrollbar,
+header > div::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+
 /* Dedicated refined scrollbars for sidebar rail, panels & tables */
 aside,
 .overflow-y-auto,

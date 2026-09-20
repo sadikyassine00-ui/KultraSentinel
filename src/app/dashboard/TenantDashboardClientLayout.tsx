@@ -215,14 +215,14 @@ export default function TenantDashboardClientLayout({
                     <button
                       type="button"
                       onClick={() => setStoreDropdownOpen((prev) => !prev)}
-                      className="bg-[var(--bg-surface-2)] border border-[var(--hairline-strong)] hover:border-[var(--signal-dim)] text-[var(--ink-primary)] rounded-[var(--radius-sm)] py-1 px-1.5 sm:px-2.5 flex items-center gap-1 sm:gap-2 text-left focus:outline-none focus:border-[var(--signal)] focus-visible:ring-2 focus-visible:ring-[var(--signal-glow)] transition-colors min-h-[36px] max-w-[125px] xs:max-w-[170px] sm:max-w-[240px] min-w-0"
+                      className="bg-[var(--bg-surface-2)] border border-[var(--hairline-strong)] hover:border-[var(--signal-dim)] text-[var(--ink-primary)] rounded-[var(--radius-sm)] py-1 px-1.5 sm:px-2.5 flex items-center gap-1 sm:gap-2 text-left focus:outline-none focus:border-[var(--signal)] focus-visible:ring-2 focus-visible:ring-[var(--signal-glow)] transition-colors min-h-[36px] max-w-[125px] xs:max-w-[170px] sm:max-w-[240px] min-w-0 shrink"
                       aria-haspopup="listbox"
                       aria-expanded={storeDropdownOpen}
                       aria-label="Switch active store or view store quota"
                     >
-                      <div className="flex flex-col min-w-0 flex-1">
+                      <div className="flex flex-col min-w-0 flex-1 overflow-hidden">
                         <div className="flex items-center gap-1 min-w-0">
-                          <span className="text-[11.5px] sm:text-[12.5px] font-semibold text-[var(--ink-primary)] truncate leading-tight">
+                          <span className="text-[11.5px] sm:text-[12.5px] font-semibold text-[var(--ink-primary)] truncate min-w-0 flex-1 leading-tight">
                             {activeStore?.name}
                           </span>
                           <span className="font-mono text-[9.5px] sm:text-[10.5px] text-[var(--ink-secondary)] shrink-0 font-medium whitespace-nowrap">
@@ -230,7 +230,7 @@ export default function TenantDashboardClientLayout({
                           </span>
                         </div>
                         {activeStore?.domain && (
-                          <span className="hidden sm:block text-[10px] sm:text-[10.5px] text-[var(--ghost-text)] truncate leading-tight">
+                          <span className="hidden sm:block text-[10px] sm:text-[10.5px] text-[var(--ghost-text)] truncate min-w-0 leading-tight">
                             {activeStore.domain}
                           </span>
                         )}
@@ -319,7 +319,7 @@ export default function TenantDashboardClientLayout({
           </div>
 
           {/* Right Controls: Unified Status Trigger & User Profile Menu */}
-          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             {/* 1. Superadmin: "Lifetime Admin" - Hidden on mobile, tucked in user profile dropdown */}
             {isSuperAdminUser ? (
               <div
@@ -418,28 +418,34 @@ export default function TenantDashboardClientLayout({
               </Link>
             )}
 
-            {/* User Profile Menu with strict 32px circular avatar and >=40px touch hit area */}
-            <div className="relative" ref={dropdownRef}>
+            {/* User Profile Menu with single centered line and compact avatar+chevron on mobile */}
+            <div className="relative shrink-0" ref={dropdownRef}>
               <button
                 type="button"
                 onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="min-w-[40px] min-h-[40px] flex items-center justify-center p-1 rounded-[var(--radius-sm)] hover:bg-[var(--bg-surface-2)] border border-transparent hover:border-[var(--hairline)] transition-colors focus-visible:ring-2 focus-visible:ring-[var(--signal-glow)] outline-none shrink-0"
+                className="min-h-[36px] sm:min-h-[38px] flex items-center gap-1.5 sm:gap-2 px-1 sm:px-2 py-1 rounded-[var(--radius-sm)] hover:bg-[var(--bg-surface-2)] border border-transparent hover:border-[var(--hairline)] transition-colors focus-visible:ring-2 focus-visible:ring-[var(--signal-glow)] outline-none shrink-0"
                 aria-expanded={dropdownOpen}
                 aria-haspopup="true"
                 aria-label="User profile and account settings"
               >
+                {/* 32px circular avatar with guaranteed >= 40px touch hit area */}
                 <div className="w-8 h-8 rounded-full bg-[var(--bg-surface-2)] border border-[var(--hairline-strong)] flex items-center justify-center text-[12px] font-mono font-medium text-[var(--ink-primary)] shrink-0">
                   {user ? getInitials(user.name || user.email) : 'U'}
                 </div>
-                <div className="hidden xl:flex flex-col text-left ml-2">
-                  <span className="text-[12px] font-medium text-[var(--ink-primary)] max-w-[120px] truncate leading-tight">
-                    {user?.name || user?.email || 'Merchant'}
-                  </span>
-                  <span className="text-[10px] font-mono text-[var(--ghost-text)] leading-tight">
-                    {isSuperAdminUser ? 'Lifetime Admin' : billing?.planName || 'Merchant'}
-                  </span>
-                </div>
-                <ChevronDown className={`hidden sm:block ml-1.5 w-3.5 h-3.5 text-[var(--ghost-text)] transition-transform duration-120 ${dropdownOpen ? 'rotate-180 text-[var(--signal)]' : ''}`} />
+
+                {/* Display name: single centered line on tablet/desktop, tucked inside menu on compact screens */}
+                <span className="hidden sm:inline-block max-w-[90px] md:max-w-[130px] truncate text-[12px] md:text-[12.5px] font-medium text-[var(--ink-primary)] min-w-0">
+                  {user?.name || user?.email || 'Merchant'}
+                </span>
+
+                {/* Subscription / admin badge on larger screens */}
+                <span className="hidden xl:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--signal-dim)] text-[10px] font-mono text-[var(--signal)] bg-[var(--signal-wash)] shrink-0 font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)] shrink-0" aria-hidden="true" />
+                  <span>{isSuperAdminUser ? 'Admin' : billing?.planName || 'Merchant'}</span>
+                </span>
+
+                {/* Dropdown chevron: always visible on single line */}
+                <ChevronDown className={`w-3.5 h-3.5 text-[var(--ghost-text)] shrink-0 transition-transform duration-120 ${dropdownOpen ? 'rotate-180 text-[var(--signal)]' : ''}`} />
               </button>
 
               {dropdownOpen && (
