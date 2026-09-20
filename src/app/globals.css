@@ -289,3 +289,31 @@ h1 {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Paddle.js Checkout Frame & Modal Styling (§2, §3, GEMINI.md) */
+.paddle-checkout-frame {
+  width: 100%;
+  min-height: 440px;
+  background: transparent;
+}
+
+.paddle-checkout-frame iframe,
+iframe[name="paddle-checkout-frame"] {
+  width: 100% !important;
+  min-height: 440px !important;
+  border: none !important;
+  background: transparent !important;
+  color-scheme: dark !important;
+}
+
+/* Touch & Mobile Optimization for Checkout Form Inputs (§3) */
+@media screen and (max-width: 767px) {
+  .paddle-checkout-frame input,
+  .paddle-checkout-frame select,
+  .paddle-checkout-frame button,
+  .checkout-touch-target {
+    font-size: 16px !important;
+    min-height: 44px !important;
+  }
+}
+

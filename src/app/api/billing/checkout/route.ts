@@ -37,15 +37,19 @@ export async function POST(request: Request) {
 
     // Call Paddle API (sandbox or production) to create an authentic checkout transaction session
     try {
+      const cleanCustomData: Record<string, string> = {
+        tenantEmail: email,
+        accountPlan: requestedPlan,
+      };
+      if (tenant?.id) {
+        cleanCustomData.userId = String(tenant.id);
+        cleanCustomData.tenantId = String(tenant.id);
+      }
+
       const paddle = getPaddleInstance();
       const transaction = await paddle.transactions.create({
         items: [{ priceId, quantity: 1 }],
-        customData: {
-          tenantEmail: email,
-          accountPlan: requestedPlan,
-          userId: tenant ? String(tenant.id) : undefined,
-          tenantId: tenant ? String(tenant.id) : undefined,
-        },
+        customData: cleanCustomData,
       });
 
       const checkoutUrl = transaction.checkout?.url;

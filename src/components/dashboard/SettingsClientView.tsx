@@ -16,6 +16,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { openPaddleOverlayCheckout } from '@/lib/paddle/client';
+import { PaddleCheckoutModal } from '@/components/billing/PaddleCheckoutOverlay';
 
 interface BillingState {
   status: 'active trial' | 'paid active' | 'expired' | 'canceled';
@@ -60,6 +61,7 @@ export default function SettingsClientView({
   const [userEmail, setUserEmail] = useState<string>('');
   const [stores, setStores] = useState<Array<{ id: number | string; name: string; gmcId: string }>>([]);
   const [processingCheckout, setProcessingCheckout] = useState<'solo' | 'agency' | null>(null);
+  const [checkoutModalPlan, setCheckoutModalPlan] = useState<'solo' | 'agency' | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [showSuccessBanner, setShowSuccessBanner] = useState(checkoutSuccess);
 
@@ -115,66 +117,9 @@ export default function SettingsClientView({
       };
     }
   }, [checkoutSuccess, isPaidActive, isSuperAdmin, fetchBillingData]);
-
-  const handleCheckout = async (plan: 'solo' | 'agency') => {
-    try {
-      setProcessingCheckout(plan);
-      setCheckoutError(null);
-
-      // 1. Request authentic checkout session from the backend
-      const res = await fetch('/api/billing/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to initiate checkout session. Please try again.');
-      }
-
-      const successUrl = `${window.location.origin}/dashboard/settings?tab=billing&checkout_success=true&plan=${plan}`;
-
-      // 2. Open provider native checkout overlay directly on the page if transactionId returned
-      if (data.transactionId) {
-        const opened = await openPaddleOverlayCheckout({
-          transactionId: data.transactionId,
-          successUrl,
-        });
-        if (opened) {
-          setProcessingCheckout(null);
-          return;
-        }
-      }
-
-      // 3. Fallback: clean redirect to hosted checkout URL
-      if (data.url) {
-        window.location.href = data.url;
-        return;
-      }
-
-      // 4. Open provider native checkout overlay directly with verified priceId and metadata
-      if (data.priceId) {
-        const opened = await openPaddleOverlayCheckout({
-          priceId: data.priceId,
-          customerEmail: data.customerEmail,
-          customData: data.customData,
-          successUrl,
-        });
-        if (opened) {
-          setProcessingCheckout(null);
-          return;
-        }
-      }
-
-      throw new Error('No checkout URL or transaction ID returned by payment provider.');
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Network error communicating with billing service.';
-      setCheckoutError(message);
-    } finally {
-      setProcessingCheckout(null);
-    }
+  const handleCheckout = (plan: 'solo' | 'agency') => {
+    setCheckoutError(null);
+    setCheckoutModalPlan(plan);
   };
 
   if (loading) {
@@ -721,6 +666,14 @@ export default function SettingsClientView({
           </div>
         </div>
       )}
+
+      {/* Branded, Mobile-Responsive Paddle Checkout Modal (§2, §3, GEMINI.md) */}
+      <PaddleCheckoutModal
+        isOpen={Boolean(checkoutModalPlan)}
+        plan={checkoutModalPlan || 'solo'}
+        userEmail={userEmail}
+        onClose={() => setCheckoutModalPlan(null)}
+      />
     </div>
   );
 }

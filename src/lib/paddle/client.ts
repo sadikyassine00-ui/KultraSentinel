@@ -56,6 +56,7 @@ export interface OpenCheckoutOptions {
   customerId?: string;
   successUrl?: string;
   customData?: Record<string, unknown>;
+  frameTarget?: string;
   onClose?: () => void;
 }
 
@@ -65,12 +66,32 @@ export async function openPaddleOverlayCheckout(options: OpenCheckoutOptions): P
     return false;
   }
 
+  const isInline = Boolean(options.frameTarget);
   const settings = {
     variant: 'one-page' as const,
     theme: 'dark' as const,
-    displayMode: 'overlay' as const,
+    displayMode: (isInline ? 'inline' : 'overlay') as 'inline' | 'overlay',
+    ...(isInline
+      ? {
+          frameTarget: options.frameTarget,
+          frameInitialHeight: 450,
+          frameStyle: 'width: 100%; min-height: 450px; background-color: transparent; border: none;',
+        }
+      : {}),
     ...(options.successUrl ? { successUrl: options.successUrl } : {}),
   };
+
+  // Filter out any undefined or null keys from customData to prevent Paddle 400 Bad Request
+  const cleanCustomData: Record<string, string | number | boolean> = {};
+  if (options.customData) {
+    for (const [k, v] of Object.entries(options.customData)) {
+      if (v !== undefined && v !== null && (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean')) {
+        cleanCustomData[k] = v;
+      }
+    }
+  }
+
+  const customerEmail = options.customerEmail?.trim().toLowerCase();
 
   if (options.transactionId) {
     paddle.Checkout.open({
@@ -83,9 +104,9 @@ export async function openPaddleOverlayCheckout(options: OpenCheckoutOptions): P
   if (options.priceId) {
     paddle.Checkout.open({
       items: [{ priceId: options.priceId, quantity: 1 }],
-      ...(options.customerEmail ? { customer: { email: options.customerEmail } } : {}),
+      ...(customerEmail ? { customer: { email: customerEmail } } : {}),
       ...(options.customerId ? { customer: { id: options.customerId } } : {}),
-      ...(options.customData ? { customData: options.customData } : {}),
+      ...(Object.keys(cleanCustomData).length > 0 ? { customData: cleanCustomData } : {}),
       settings,
     });
     return true;
