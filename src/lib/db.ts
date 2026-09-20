@@ -75,6 +75,10 @@ export interface Store {
   webhook_url?: string | null;
   slack_webhook_url?: string | null;
   slack_channel?: string | null;
+  slack_channel_id?: string | null;
+  slack_configuration_url?: string | null;
+  slack_team_id?: string | null;
+  slack_team_name?: string | null;
   webhook_verified?: boolean;
   is_active?: boolean;
   pubsub_topic: string;
@@ -282,7 +286,7 @@ const inMemoryTenants: Tenant[] = [
   },
 ];
 
-const inMemoryStores: Store[] = [
+export const inMemoryStores: Store[] = [
   {
     id: 1,
     gmc_id: '104928192',
@@ -614,6 +618,11 @@ export async function ensureSchema(): Promise<boolean> {
     await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS webhook_verified BOOLEAN DEFAULT FALSE;`;
     await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS merchant_id TEXT;`;
     await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS slack_webhook_url TEXT;`;
+    await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS slack_channel TEXT;`;
+    await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS slack_channel_id TEXT;`;
+    await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS slack_configuration_url TEXT;`;
+    await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS slack_team_id TEXT;`;
+    await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS slack_team_name TEXT;`;
     await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;`;
 
     // 6. Dead Letter Queue Table
@@ -1858,9 +1867,22 @@ export async function updateStoreWebhook(
   tenantEmail: string,
   webhookUrl: string,
   verified: boolean,
-  alertStatus: 'active' | 'degraded' = 'active'
+  alertStatus: 'active' | 'degraded' = 'active',
+  extra?: {
+    channel?: string | null;
+    channelId?: string | null;
+    configurationUrl?: string | null;
+    teamId?: string | null;
+    teamName?: string | null;
+  }
 ): Promise<Store | null> {
   const cleanEmail = tenantEmail.toLowerCase().trim();
+  const channel = extra?.channel ?? null;
+  const channelId = extra?.channelId ?? null;
+  const configurationUrl = extra?.configurationUrl ?? null;
+  const teamId = extra?.teamId ?? null;
+  const teamName = extra?.teamName ?? null;
+
   const sql = getDb();
   if (sql) {
     try {
@@ -1869,8 +1891,14 @@ export async function updateStoreWebhook(
         UPDATE stores
         SET
           webhook_url = ${webhookUrl},
+          slack_webhook_url = ${webhookUrl},
           webhook_verified = ${verified},
-          alert_status = ${alertStatus}
+          alert_status = ${alertStatus},
+          slack_channel = COALESCE(${channel}, slack_channel),
+          slack_channel_id = COALESCE(${channelId}, slack_channel_id),
+          slack_configuration_url = COALESCE(${configurationUrl}, slack_configuration_url),
+          slack_team_id = COALESCE(${teamId}, slack_team_id),
+          slack_team_name = COALESCE(${teamName}, slack_team_name)
         WHERE id = ${String(storeId)} AND LOWER(tenant_email) = ${cleanEmail}
         RETURNING *;
       `;
@@ -1886,11 +1914,39 @@ export async function updateStoreWebhook(
   );
   if (store) {
     store.webhook_url = webhookUrl;
+    store.slack_webhook_url = webhookUrl;
     store.webhook_verified = verified;
     store.alert_status = alertStatus;
+    if (channel !== null) store.slack_channel = channel;
+    if (channelId !== null) store.slack_channel_id = channelId;
+    if (configurationUrl !== null) store.slack_configuration_url = configurationUrl;
+    if (teamId !== null) store.slack_team_id = teamId;
+    if (teamName !== null) store.slack_team_name = teamName;
     return store;
   }
   return null;
+}
+
+export async function updateStoreSlackOAuthDetails(
+  storeId: number | string,
+  tenantEmail: string,
+  details: {
+    webhookUrl: string;
+    channel?: string | null;
+    channelId?: string | null;
+    configurationUrl?: string | null;
+    teamId?: string | null;
+    teamName?: string | null;
+  }
+): Promise<Store | null> {
+  return updateStoreWebhook(
+    storeId,
+    tenantEmail,
+    details.webhookUrl,
+    true,
+    'active',
+    details
+  );
 }
 
 export async function markStoreAlertStatus(storeId: number | string, alertStatus: 'active' | 'degraded'): Promise<void> {

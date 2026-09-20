@@ -194,3 +194,50 @@ export function getClearSessionCookieHeader(request?: Request): string {
   const secure = isSecure ? '; Secure' : '';
   return `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secure}`;
 }
+
+/**
+ * Creates a cryptographically signed state parameter for Slack OAuth.
+ * Embeds storeId and tenantEmail to prevent CSRF and cross-account contamination.
+ * Expires in 15 minutes.
+ */
+export async function createSlackOAuthState(payload: {
+  storeId: string | number;
+  tenantEmail: string;
+}): Promise<string> {
+  const secret = getJwtSecret();
+  return new SignJWT({
+    storeId: String(payload.storeId),
+    tenantEmail: payload.tenantEmail.toLowerCase().trim(),
+    type: 'slack_oauth_state',
+  })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('15m')
+    .sign(secret);
+}
+
+/**
+ * Verifies and decodes the Slack OAuth state parameter.
+ * Ensures the state was signed by our server and has not expired.
+ */
+export async function verifySlackOAuthState(
+  state: string
+): Promise<{ storeId: string; tenantEmail: string } | null> {
+  try {
+    const secret = getJwtSecret();
+    const { payload } = await jwtVerify(state, secret);
+    if (
+      payload.type !== 'slack_oauth_state' ||
+      !payload.storeId ||
+      !payload.tenantEmail
+    ) {
+      return null;
+    }
+    return {
+      storeId: String(payload.storeId),
+      tenantEmail: String(payload.tenantEmail),
+    };
+  } catch {
+    return null;
+  }
+}

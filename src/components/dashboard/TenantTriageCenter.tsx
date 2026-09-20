@@ -24,6 +24,7 @@ import {
   X,
   AlertCircle,
   ArrowRight,
+  ShieldAlert,
 } from 'lucide-react';
 import { Store } from '@/lib/db';
 import { isAccountSuspensionCode } from '@/lib/gmcErrors';
@@ -162,9 +163,39 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
 
   const [modalOpen, setModalOpen] = useState(justConnected);
   const [slackWebhookInput, setSlackWebhookInput] = useState('');
+  const [slackChannelInput, setSlackChannelInput] = useState('');
+  const [manualSlackAccordionOpen, setManualSlackAccordionOpen] = useState(false);
+  const [slackConnectedBanner, setSlackConnectedBanner] = useState<{
+    show: boolean;
+    channel: string;
+  } | null>(null);
+  const [slackErrorBanner, setSlackErrorBanner] = useState<string | null>(null);
   const [armingStatus, setArmingStatus] = useState<'idle' | 'testing' | 'armed' | 'error'>('idle');
   const [armingFeedback, setArmingFeedback] = useState<string | null>(null);
   const [verifiedLatency, setVerifiedLatency] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (url.searchParams.get('slack_connected') === 'true') {
+        const channel = url.searchParams.get('channel') || '#shopping-alerts';
+        setSlackConnectedBanner({ show: true, channel });
+        url.searchParams.delete('slack_connected');
+        url.searchParams.delete('channel');
+        const newQuery = url.searchParams.toString();
+        const newUrl = url.pathname + (newQuery ? `?${newQuery}` : '');
+        window.history.replaceState({}, '', newUrl);
+      }
+      if (url.searchParams.has('slack_error')) {
+        const err = url.searchParams.get('slack_error') || 'Slack connection could not be completed';
+        setSlackErrorBanner(err);
+        url.searchParams.delete('slack_error');
+        const newQuery = url.searchParams.toString();
+        const newUrl = url.pathname + (newQuery ? `?${newQuery}` : '');
+        window.history.replaceState({}, '', newUrl);
+      }
+    }
+  }, []);
 
   const [verifyingIncidentId, setVerifyingIncidentId] = useState<string | number | null>(null);
   const [testAlertSending, setTestAlertSending] = useState(false);
@@ -416,6 +447,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
         body: JSON.stringify({
           storeId: data.activeStore.id,
           webhookUrl: slackWebhookInput.trim(),
+          channel: slackChannelInput.trim() || undefined,
         }),
       });
 
@@ -1023,9 +1055,10 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
     (metrics.alertPipelineStatus?.channel && metrics.alertPipelineStatus.channel !== 'Unconfigured')
   );
 
-  const slackDisplayChannel = (metrics.alertPipelineStatus?.channel && metrics.alertPipelineStatus.channel !== 'Unconfigured')
-    ? metrics.alertPipelineStatus.channel
-    : 'Active Webhook';
+  const rawChannel = activeStore?.slack_channel || (metrics.alertPipelineStatus?.channel && metrics.alertPipelineStatus.channel !== 'Unconfigured' ? metrics.alertPipelineStatus.channel : null);
+  const slackDisplayChannel = rawChannel
+    ? (rawChannel.startsWith('#') || rawChannel.startsWith('@') ? rawChannel : `#${rawChannel}`)
+    : (hasActiveWebhook ? '#shopping-alerts' : 'Unconfigured');
 
   const isAccountSuspensionActive = Boolean(
     data.accountSuspension?.isSuspended ||
@@ -1039,6 +1072,43 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
       {renderErrorBanner()}
       {renderPastDueBanner()}
       {renderScheduledCancellationBanner()}
+
+      {/* Slack Connection Live Toast / Feedback Banner */}
+      {slackConnectedBanner?.show && (
+        <div className="p-3.5 rounded-[var(--radius-sm)] bg-[rgba(34,197,94,0.06)] border border-[rgba(34,197,94,0.3)] text-[#22c55e] flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 text-[13px] font-medium">
+            <ShieldCheck className="w-4 h-4 text-[#22c55e] shrink-0" />
+            <span>
+              Kultra Shield Armed: Real-time Google Merchant Center surveillance is live for{' '}
+              <strong>{activeStore?.store_name || activeStore?.store_url}</strong> in{' '}
+              <strong className="font-mono">{slackConnectedBanner.channel}</strong>.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSlackConnectedBanner(null)}
+            className="text-[#22c55e]/70 hover:text-[#22c55e] text-xs font-mono p-1"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {slackErrorBanner && (
+        <div className="p-3.5 rounded-[var(--radius-sm)] bg-[var(--danger-wash)] border border-[var(--danger)] text-[var(--danger)] flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 text-[13px]">
+            <ShieldAlert className="w-4 h-4 text-[var(--danger)] shrink-0" />
+            <span>Slack connection could not be completed: {slackErrorBanner}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSlackErrorBanner(null)}
+            className="text-[var(--danger)]/70 hover:text-[var(--danger)] text-xs font-mono p-1"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* Operational Action Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 py-2 border-b border-[var(--hairline)]">
@@ -1796,71 +1866,126 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
             </div>
 
             <p className="text-[13px] text-[var(--ghost-text)] leading-[1.5]">
-              Where should notifications route when an ad-blocking policy rejection occurs? Paste your Slack Incoming Webhook URL to verify telemetry.
+              Receive instant notifications when Google flags or blocks products in your feed. Critical policy issues will alert your team in &lt; 30 seconds.
             </p>
 
-            <form onSubmit={handleArmSystem} className="space-y-4">
-              <div>
-                <label className="block text-[12.5px] font-semibold text-[var(--ghost-text)] mb-1.5">
-                  Slack Incoming Webhook URL
-                </label>
-                <input
-                  type="url"
-                  required
-                  placeholder="https://hooks.slack.com/services/..."
-                  value={slackWebhookInput}
-                  onChange={(e) => setSlackWebhookInput(e.target.value)}
-                  className="input w-full text-[13px]"
-                />
-              </div>
-
-              {armingFeedback && (
-                <div
-                  className={`text-[12.5px] p-3 rounded-[var(--radius-sm)] border ${
-                    armingStatus === 'armed'
-                      ? 'bg-[var(--signal-wash)] border-[var(--signal-dim)] text-[var(--signal)]'
-                      : 'bg-[var(--danger-wash)] border-[var(--danger)] text-[var(--danger)]'
-                  }`}
-                >
-                  {armingFeedback}
-                  {verifiedLatency && (
-                    <span className="block mt-1 font-mono text-[11px] text-[var(--ghost-text-dim)]">
-                      Latency benchmark: {verifiedLatency}ms
-                    </span>
-                  )}
+            {/* Primary Path: 1-Click Slack OAuth */}
+            <div className="p-4 rounded-[var(--radius-sm)] bg-[var(--bg-canvas)] border border-[var(--hairline)] space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded bg-[#131418] border border-[var(--hairline-strong)] flex items-center justify-center shrink-0">
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
+                    <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.528 2.528 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z" fill="#f2a93b"/>
+                  </svg>
                 </div>
-              )}
-
-              <div className="flex items-center justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="btn-secondary text-[12.5px] py-2 px-3.5 !rounded-[3px]"
-                >
-                  Close
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={armingStatus === 'testing' || armingStatus === 'armed'}
-                  className="btn-primary text-[12.5px] py-2 px-4 disabled:opacity-50 !rounded-[3px]"
-                >
-                  {armingStatus === 'testing' ? (
-                    <>
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      Testing pipeline...
-                    </>
-                  ) : armingStatus === 'armed' ? (
-                    <>
-                      <Check className="w-3.5 h-3.5" />
-                      System armed
-                    </>
-                  ) : (
-                    'Verify and arm alerts'
-                  )}
-                </button>
+                <div className="flex-1">
+                  <div className="text-[13.5px] font-semibold text-[var(--ink-primary)]">
+                    1-Click Slack OAuth Connection
+                  </div>
+                  <p className="text-[12px] text-[var(--ghost-text)] mt-0.5 leading-snug">
+                    Authorize your Slack workspace instantly. Kultra automatically provisions the alert webhook, binds to your selected channel, and dispatches a test confirmation.
+                  </p>
+                </div>
               </div>
-            </form>
+
+              <a
+                href={`/api/auth/slack/connect?store_id=${activeStore?.id}`}
+                className="w-full btn-primary text-[13px] py-2.5 justify-center !rounded-[3px] font-semibold inline-flex items-center gap-2"
+              >
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.528 2.528 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/>
+                </svg>
+                <span>Add to Slack (1-Click)</span>
+              </a>
+            </div>
+
+            {/* Secondary Enterprise Fallback (Manual Webhook Input) */}
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => setManualSlackAccordionOpen((prev) => !prev)}
+                className="text-[12px] text-[var(--ghost-text)] hover:text-[var(--ink-primary)] inline-flex items-center gap-1.5 transition-colors"
+              >
+                <span>Using an enterprise workspace? Configure webhook manually</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-150 ${manualSlackAccordionOpen ? 'rotate-180 text-[var(--signal)]' : ''}`} />
+              </button>
+
+              {manualSlackAccordionOpen && (
+                <form onSubmit={handleArmSystem} className="mt-3 p-4 rounded-[var(--radius-sm)] bg-[var(--bg-surface-2)] border border-[var(--hairline)] space-y-3.5">
+                  <div>
+                    <label className="block text-[12px] font-semibold text-[var(--ghost-text)] mb-1">
+                      Slack Incoming Webhook URL
+                    </label>
+                    <input
+                      type="url"
+                      required
+                      placeholder="https://hooks.slack.com/services/..."
+                      value={slackWebhookInput}
+                      onChange={(e) => setSlackWebhookInput(e.target.value)}
+                      className="input w-full text-[12.5px]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[12px] font-semibold text-[var(--ghost-text)] mb-1">
+                      Channel Name (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="#shopping-alerts"
+                      value={slackChannelInput}
+                      onChange={(e) => setSlackChannelInput(e.target.value)}
+                      className="input w-full text-[12.5px]"
+                    />
+                  </div>
+
+                  {armingFeedback && (
+                    <div
+                      className={`text-[12px] p-2.5 rounded-[var(--radius-sm)] border ${
+                        armingStatus === 'armed'
+                          ? 'bg-[var(--signal-wash)] border-[var(--signal-dim)] text-[var(--signal)]'
+                          : 'bg-[var(--danger-wash)] border-[var(--danger)] text-[var(--danger)]'
+                      }`}
+                    >
+                      {armingFeedback}
+                      {verifiedLatency && (
+                        <span className="block mt-1 font-mono text-[10.5px] text-[var(--ghost-text-dim)]">
+                          Latency benchmark: {verifiedLatency}ms
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-end gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={closeModal}
+                      className="btn-secondary text-[12px] py-1.5 px-3 !rounded-[3px]"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={armingStatus === 'testing' || armingStatus === 'armed'}
+                      className="btn-primary text-[12px] py-1.5 px-3.5 disabled:opacity-50 !rounded-[3px]"
+                    >
+                      {armingStatus === 'testing' ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Verifying...</span>
+                        </>
+                      ) : armingStatus === 'armed' ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-[#22c55e]" />
+                          <span>Verified &amp; Armed</span>
+                        </>
+                      ) : (
+                        'Verify and arm alerts'
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
 
             {/* Store Management & Data Ownership Section */}
             <div className="pt-5 border-t border-[var(--hairline)]">

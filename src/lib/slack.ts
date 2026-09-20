@@ -493,3 +493,105 @@ export async function dispatchFireDrillSlackNotification(
     triggerType: params.triggerType || 'Diagnostic Fire Drill',
   });
 }
+
+/**
+ * Dispatches an automated confirmation ping upon completing Slack OAuth connection.
+ * Delivers immediate proof-of-value confirming real-time surveillance is live.
+ */
+export async function dispatchSlackWelcomePing({
+  store,
+  appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://usekultra.com',
+}: {
+  store: Store;
+  appUrl?: string;
+}): Promise<{ success: boolean; outcome: string; error?: string }> {
+  const webhookUrl = store.webhook_url || store.slack_webhook_url || process.env.SLACK_WEBHOOK_URL;
+  if (!webhookUrl) {
+    return { success: false, outcome: 'skipped_no_webhook', error: 'No webhook URL found' };
+  }
+
+  const gmcId = store.gmc_id || store.merchant_id || 'UNKNOWN';
+  const storeName = store.store_name || store.store_url || 'Merchant Store';
+  const triageUrl = `${appUrl}/dashboard?store_id=${store.id}`;
+
+  const payload = {
+    blocks: [
+      {
+        type: 'header',
+        text: {
+          type: 'plain_text',
+          text: '🛡️ Kultra Shield Armed',
+          emoji: true,
+        },
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `Real-time Google Merchant Center surveillance is now *LIVE* for *${storeName}* (GMC ID: \`${gmcId}\`).\n\nYour ad campaigns and shopping feed are actively protected. Policy disapprovals, account-level warnings, and item demotions will be dispatched to this channel in &lt; 30 seconds.`,
+        },
+      },
+      {
+        type: 'actions',
+        elements: [
+          {
+            type: 'button',
+            text: {
+              type: 'plain_text',
+              text: 'View Catalog Triage Dashboard',
+              emoji: true,
+            },
+            url: triageUrl,
+            style: 'primary',
+          },
+        ],
+      },
+      {
+        type: 'context',
+        elements: [
+          {
+            type: 'mrkdwn',
+            text: `Kultra Sentinel Monitoring Engine | Real-Time Google Merchant API v1 Pub/Sub QoS-1 Stream`,
+          },
+        ],
+      },
+    ],
+  };
+
+  const startTime = performance.now();
+  try {
+    const res = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(5000),
+    });
+    const latency_ms = Math.round(performance.now() - startTime);
+
+    await recordDispatchLog({
+      dispatch_id: `dsp-welcome-${Date.now()}`,
+      tenant_email: store.tenant_email,
+      store_url: store.store_url,
+      store_name: storeName,
+      gmc_id: store.gmc_id,
+      destination: webhookUrl,
+      delivery_status: res.status,
+      status_label: res.ok ? 'Delivered' : 'Invalid Webhook',
+      latency_ms,
+      payload,
+    });
+
+    return {
+      success: res.ok,
+      outcome: res.ok ? 'welcome_dispatched' : `failed_http_${res.status}`,
+    };
+  } catch (err: unknown) {
+    const error = err as Error;
+    console.error('[Slack Notification Engine] Welcome ping failed:', error);
+    return {
+      success: false,
+      outcome: 'network_error',
+      error: error.message || 'Connection timeout to Slack',
+    };
+  }
+}

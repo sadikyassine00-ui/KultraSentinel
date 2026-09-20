@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAnySession } from '@/lib/auth';
-import { getStoreForTenant, updateStoreWebhook, isTenantSuspended, upsertIncident } from '@/lib/db';
+import { getStoreForTenant, updateStoreWebhook, isTenantSuspended, upsertIncident, getStoreIncidentCountInWindow } from '@/lib/db';
 import { validateWebhookUrl } from '@/lib/security';
 import { dispatchDisapprovalSlackNotification } from '@/lib/slack';
 
@@ -65,27 +65,36 @@ export async function POST(
     }
 
     const webhookUrl = (body.webhookUrl || store.webhook_url || store.slack_webhook_url) as string | undefined;
-    if (!webhookUrl) {
+    const channelInput = (body.channel || store.slack_channel) as string | undefined;
+
+    if (!webhookUrl || typeof webhookUrl !== 'string') {
       return NextResponse.json(
-        { error: 'No webhook destination provided or configured for this store.' },
+        { error: 'A valid Slack webhook URL is required to verify alert delivery.' },
         { status: 400 }
       );
     }
 
-    // 4. Input Sanitization & Anti-SSRF Defense
-    const validation = validateWebhookUrl(webhookUrl);
-    if (!validation.valid || !validation.url) {
+    const sanitizedUrl = webhookUrl.trim();
+    const urlValidation = validateWebhookUrl(sanitizedUrl);
+    if (!urlValidation.valid || !urlValidation.url) {
       return NextResponse.json(
-        { error: validation.error || 'Invalid webhook destination' },
+        { error: urlValidation.error || 'Invalid webhook URL provided' },
         { status: 400 }
       );
     }
 
-    const sanitizedUrl = validation.url;
-    const url = new URL(request.url);
-    const origin = url.origin;
+    // 4. Rate-limit test pings: Maximum 5 verification pings per store per 60 seconds (§3)
+    const recentPings = await getStoreIncidentCountInWindow(storeId, 60);
+    if (recentPings >= 5) {
+      return NextResponse.json(
+        {
+          error: 'Rate limit exceeded: A maximum of 5 verification pings are permitted per minute. Please wait before retrying.',
+        },
+        { status: 429 }
+      );
+    }
 
-    // 5. Measure Round-Trip Delivery Latency and Dispatch Enriched Card (§3)
+    // 5. Dispatch Verification Ping with Dynamic Store Attribution & Block Kit Structure (§3)
     const startTime = performance.now();
 
     const slackResult = await dispatchDisapprovalSlackNotification({
@@ -95,7 +104,6 @@ export async function POST(
         slack_webhook_url: sanitizedUrl,
       },
       triggerType: 'Diagnostic Test Ping',
-      appUrl: origin,
       incident: {
         sku: 'DEMO-RUNNER-402',
         title: 'Apex Carbon Runner - Size 10.5 (Demo Item)',
@@ -127,7 +135,9 @@ export async function POST(
         },
       });
 
-      await updateStoreWebhook(storeId, session.email, sanitizedUrl, true, 'active');
+      await updateStoreWebhook(storeId, session.email, sanitizedUrl, true, 'active', {
+        channel: channelInput || store.slack_channel || '#shopping-alerts',
+      });
 
       return NextResponse.json({
         success: true,

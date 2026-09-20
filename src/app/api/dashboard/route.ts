@@ -182,11 +182,10 @@ export async function GET(request: Request) {
     let channelLabel = 'Unconfigured';
     if (hasWebhook) {
       if (activeStore.slack_channel && activeStore.slack_channel.trim().length > 0) {
-        channelLabel = activeStore.slack_channel.trim();
-      } else if (webhookVerified) {
-        channelLabel = '#merchant-alerts';
+        const raw = activeStore.slack_channel.trim();
+        channelLabel = raw.startsWith('#') || raw.startsWith('@') ? raw : `#${raw}`;
       } else {
-        channelLabel = 'Active Webhook';
+        channelLabel = '#shopping-alerts';
       }
     }
 
