@@ -311,26 +311,20 @@ export default function TenantDashboardClientLayout({
                       </div>
                     )}
                   </div>
-
-                  {/* Live Status Indicator: Green pulsing dot with "Real-Time Watch Active" */}
-                  <div className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[rgba(34,197,94,0.3)] bg-[rgba(34,197,94,0.06)] text-[#22c55e] text-[11px] font-mono tracking-[0.02em] shrink-0 font-medium">
-                    <span className="w-2 h-2 rounded-full bg-[#22c55e] animate-pulse" aria-hidden="true" />
-                    <span>Real-Time Watch Active</span>
-                  </div>
                 </div>
               );
             })()}
           </div>
 
-          {/* Right Controls: Unified Status Pill & User Profile Menu */}
+          {/* Right Controls: Unified Status Trigger & User Profile Menu */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {/* 1. Superadmin: "Lifetime Admin" */}
             {isSuperAdminUser ? (
               <div
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[100px] border border-[#7a5a26] bg-[rgba(242,169,59,0.06)] text-[#f2a93b] text-[11px] font-mono tracking-[0.02em] shrink-0 font-medium"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-sm)] border border-[var(--signal-dim)] bg-[var(--signal-wash)] text-[var(--signal)] text-[12px] font-mono shrink-0 font-medium"
                 title="Superadmin Lifetime Access: Zero billing restrictions or quotas"
               >
-                <ShieldCheck className="w-3.5 h-3.5 text-[#f2a93b]" strokeWidth={1.5} />
+                <ShieldCheck className="w-3.5 h-3.5 text-[var(--signal)]" strokeWidth={1.5} />
                 <span>Lifetime Admin</span>
               </div>
             ) : billing && (
@@ -339,31 +333,31 @@ export default function TenantDashboardClientLayout({
                 {!billing.hasTrialStarted ? (
                   <a
                     href="/api/auth/merchant/connect"
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-[100px] border border-[#7a5a26] bg-[rgba(242,169,59,0.06)] text-[#f2a93b] hover:border-[#f2a93b] text-[11px] font-mono tracking-[0.02em] transition-colors shrink-0 font-medium"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] border border-[var(--signal-dim)] bg-[var(--signal-wash)] text-[var(--signal)] hover:border-[var(--signal)] text-[12px] font-mono transition-colors shrink-0 font-medium"
                     title="Connect your Google Merchant Center account to start your 14-day free trial."
                   >
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" aria-hidden="true" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)]" aria-hidden="true" />
                     <span>Connect GMC to Start Trial</span>
                   </a>
                 ) : billing.status === 'active trial' ? (
-                  /* 3. Unified Trial Countdown & Upgrade Pill: Direct Modal Checkout */
+                  /* 3. Unified Trial Countdown & Upgrade Button: Direct Modal Checkout */
                   <button
                     type="button"
                     onClick={() => {
                       setCheckoutPlan('solo');
                       setIsCheckoutOpen(true);
                     }}
-                    className={`inline-flex items-center gap-2 px-3 py-1 rounded-[100px] border ${
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] border ${
                       billing.daysRemaining <= 3
-                        ? 'border-[#d64545] bg-[rgba(214,69,69,0.12)] text-[#d64545] hover:bg-[rgba(214,69,69,0.22)]'
-                        : 'border-[#f2a93b] bg-[rgba(242,169,59,0.1)] text-[#f2a93b] hover:bg-[rgba(242,169,59,0.2)] hover:border-[#f6b855]'
-                    } text-[11px] font-mono tracking-[0.02em] font-semibold transition-all shrink-0 cursor-pointer shadow-[0_0_12px_rgba(242,169,59,0.15)]`}
+                        ? 'border-[var(--danger)] bg-[var(--danger-wash)] text-[var(--danger)] hover:bg-[rgba(214,69,69,0.18)]'
+                        : 'border-[var(--signal)] bg-[var(--signal)] text-[#1a1305] hover:bg-[#f6b855]'
+                    } text-[12px] font-semibold transition-colors shrink-0 cursor-pointer`}
                     title={`14-Day Free Trial: ${billing.daysRemaining} days remaining. Click to upgrade.`}
                     aria-label="Upgrade subscription"
                   >
                     <span
                       className={`w-1.5 h-1.5 rounded-full ${
-                        billing.daysRemaining <= 3 ? 'bg-[#d64545] animate-pulse' : 'bg-[#f2a93b] animate-pulse'
+                        billing.daysRemaining <= 3 ? 'bg-[var(--danger)]' : 'bg-[#1a1305]'
                       }`}
                       aria-hidden="true"
                     />
@@ -373,35 +367,35 @@ export default function TenantDashboardClientLayout({
                   /* 4. Solo Plan Indicator */
                   <Link
                     href="/dashboard/settings?tab=billing"
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-[100px] border border-[rgba(255,255,255,0.14)] bg-[#131418] text-[#cfcdc8] hover:text-[#f4f1ea] hover:border-[#7a5a26] text-[11px] font-mono tracking-[0.02em] transition-colors shrink-0 font-medium"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] border border-[var(--hairline-strong)] bg-[var(--bg-surface-2)] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:border-[var(--signal-dim)] text-[12px] font-mono transition-colors shrink-0 font-medium"
                     title="Solo Plan ($19/mo) — Click to view billing and store limits"
                   >
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e]" aria-hidden="true" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)]" aria-hidden="true" />
                     <span>Solo Plan · {stores.length}/1 Stores</span>
                   </Link>
                 ) : billing.status === 'paid active' && (billing.planTier === 'Agency' || billing.planName?.includes('Agency')) ? (
                   /* 5. Agency Fleet Indicator */
                   <Link
                     href="/dashboard/settings?tab=billing"
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-[100px] border border-[#7a5a26] bg-[rgba(242,169,59,0.06)] text-[#f2a93b] hover:border-[#f2a93b] text-[11px] font-mono tracking-[0.02em] transition-colors shrink-0 font-medium"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] border border-[var(--signal-dim)] bg-[var(--signal-wash)] text-[var(--signal)] hover:border-[var(--signal)] text-[12px] font-mono transition-colors shrink-0 font-medium"
                     title="Agency Plan ($49/mo) — Click to manage multi-store fleet"
                   >
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" aria-hidden="true" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)]" aria-hidden="true" />
                     <span>Agency Fleet · {stores.length}/5 Stores</span>
                   </Link>
                 ) : (billing.isLocked || billing.status === 'expired') ? (
-                  /* 6. Expired Trial Unified Pill */
+                  /* 6. Expired Trial Unified Button */
                   <button
                     type="button"
                     onClick={() => {
                       setCheckoutPlan('solo');
                       setIsCheckoutOpen(true);
                     }}
-                    className="inline-flex items-center gap-2 px-3 py-1 rounded-[100px] border border-[#d64545] bg-[rgba(214,69,69,0.12)] text-[#d64545] hover:bg-[rgba(214,69,69,0.22)] text-[11px] font-mono tracking-[0.02em] font-semibold transition-all shrink-0 cursor-pointer shadow-[0_0_12px_rgba(214,69,69,0.2)]"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] border border-[var(--danger)] bg-[var(--danger-wash)] text-[var(--danger)] hover:bg-[rgba(214,69,69,0.18)] text-[12px] font-semibold transition-colors shrink-0 cursor-pointer"
                     title="Trial expired. Click to choose plan and restore monitoring."
                     aria-label="Trial expired, upgrade now"
                   >
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#d64545] animate-pulse" aria-hidden="true" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--danger)]" aria-hidden="true" />
                     <span>Trial Expired · Upgrade</span>
                   </button>
                 ) : null}

@@ -1111,9 +1111,9 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
 
       {/* Slack Connection Live Toast / Feedback Banner */}
       {slackConnectedBanner?.show && (
-        <div className="p-3.5 rounded-[var(--radius-sm)] bg-[rgba(34,197,94,0.06)] border border-[rgba(34,197,94,0.3)] text-[#22c55e] flex items-center justify-between gap-3">
+        <div className="p-3.5 rounded-[var(--radius-sm)] bg-[var(--signal-wash)] border border-[var(--signal-dim)] text-[var(--ink-primary)] flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 text-[13px] font-medium">
-            <ShieldCheck className="w-4 h-4 text-[#22c55e] shrink-0" />
+            <ShieldCheck className="w-4 h-4 text-[var(--signal)] shrink-0" />
             <span>
               Kultra Shield Armed: Real-time Google Merchant Center surveillance is live for{' '}
               <strong>{activeStore?.store_name || activeStore?.store_url}</strong> in{' '}
@@ -1123,7 +1123,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
           <button
             type="button"
             onClick={() => setSlackConnectedBanner(null)}
-            className="text-[#22c55e]/70 hover:text-[#22c55e] text-xs font-mono p-1"
+            className="text-[var(--ghost-text)] hover:text-[var(--ink-primary)] text-xs font-mono p-1"
           >
             Dismiss
           </button>
@@ -1150,17 +1150,17 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
       <div className="flex flex-wrap items-center justify-between gap-3 py-2.5 border-b border-[var(--hairline)]">
         {/* Left: Proof-of-work Heartbeat Telemetry */}
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-[100px] border border-[rgba(34,197,94,0.3)] bg-[rgba(34,197,94,0.06)] text-[#22c55e] text-[11.5px] font-mono shrink-0 font-medium">
-            <span className="w-2 h-2 rounded-full bg-[#22c55e] animate-pulse" aria-hidden="true" />
-            <span className="font-semibold text-[#22c55e]">Surveillance Active</span>
-            <span className="text-[#22c55e]/40">·</span>
-            <span className="text-[#22c55e]/90">Last sync {metrics.surveillance?.lastSyncFormatted || '2m ago'}</span>
-            <span className="text-[#22c55e]/40">·</span>
-            <span className={activeCount > 0 ? 'text-[var(--danger)] font-semibold' : 'text-[#22c55e]'}>
+          <div className="flex items-center gap-2 font-mono text-[12px]">
+            <span className="w-2 h-2 rounded-full bg-[var(--signal)] shrink-0" aria-hidden="true" />
+            <span className="font-semibold text-[var(--ink-primary)]">Surveillance Active</span>
+            <span className="text-[var(--ghost-line)]">/</span>
+            <span className="text-[var(--ghost-text)]">Last sync {metrics.surveillance?.lastSyncFormatted || '2m ago'}</span>
+            <span className="text-[var(--ghost-line)]">/</span>
+            <span className={activeCount > 0 ? 'text-[var(--danger)] font-medium' : 'text-[var(--ghost-text)]'}>
               {activeCount === 0 ? '0 issues detected' : `${activeCount} ${activeCount === 1 ? 'issue' : 'issues'} detected`}
             </span>
-            <span className="text-[#22c55e]/40 hidden md:inline">·</span>
-            <span className="text-[#22c55e]/75 hidden md:inline font-normal">
+            <span className="text-[var(--ghost-line)] hidden md:inline">/</span>
+            <span className="text-[var(--ghost-text-dim)] hidden md:inline">
               {(metrics.monitoredProducts || approvedCount).toLocaleString()} items verified
             </span>
           </div>
@@ -1169,7 +1169,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
         {/* Right: Relocated Secondary Utility Controls */}
         <div className="flex items-center gap-2">
           {inlineFeedback && (
-            <span className="font-mono text-[11px] text-[#22c55e] font-medium mr-1">{inlineFeedback}</span>
+            <span className="font-mono text-[11px] text-[var(--signal)] font-medium mr-1">{inlineFeedback}</span>
           )}
           <button
             type="button"
@@ -1233,16 +1233,16 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
             <div className="flex items-center justify-between gap-2 mb-2">
               <span className="text-[12px] font-semibold text-[var(--ghost-text)] truncate">Catalog Health &amp; Risk</span>
               {activeCount > 0 ? (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[100px] border border-[#d64545] bg-[rgba(214,69,69,0.12)] text-[#d64545] text-[10px] font-mono font-medium animate-pulse shrink-0">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--danger)] bg-[var(--danger-wash)] text-[var(--danger)] text-[10px] font-mono font-medium shrink-0">
                   <AlertTriangle className="w-3 h-3" />
                   Action Needed
                 </span>
               ) : metrics.monitoredProducts === 0 ? (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[100px] border border-[var(--hairline)] bg-[var(--bg-surface-2)] text-[var(--ghost-text)] text-[10px] font-mono font-medium shrink-0">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--ghost-line)] bg-transparent text-[var(--ghost-text)] text-[10px] font-mono font-medium shrink-0">
                   Empty
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[100px] border border-[rgba(34,197,94,0.3)] bg-[rgba(34,197,94,0.08)] text-[#22c55e] text-[10px] font-mono font-medium shrink-0">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--signal-dim)] bg-[var(--signal-wash)] text-[var(--signal)] text-[10px] font-mono font-medium shrink-0">
                   <CheckCircle2 className="w-3 h-3" />
                   100% Compliant
                 </span>
@@ -1255,7 +1255,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                   ? 'text-[var(--danger)]'
                   : metrics.monitoredProducts === 0
                   ? 'text-[var(--ghost-heading)]'
-                  : 'text-[#22c55e]'
+                  : 'text-[var(--ink-primary)]'
               }`}
             >
               {activeCount > 0
@@ -1269,13 +1269,13 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
           <div className="font-mono text-[11px] mt-3 pt-2.5 border-t border-[var(--hairline)] text-[var(--ghost-text-dim)]">
             {activeCount > 0 ? (
               <span className="text-[var(--danger)] font-medium">
-                Revenue at risk · {activeCount} {activeCount === 1 ? 'SKU' : 'SKUs'} blocked
+                Revenue at risk / {activeCount} {activeCount === 1 ? 'SKU' : 'SKUs'} blocked
               </span>
             ) : metrics.monitoredProducts === 0 ? (
               <span>Add items in Google Merchant Center</span>
             ) : (
-              <span className="text-[#22c55e]/90 font-medium">
-                $0 revenue at risk · 0 policy flags
+              <span className="text-[var(--ghost-text)] font-medium">
+                $0 revenue at risk / 0 policy flags
               </span>
             )}
           </div>
@@ -1295,7 +1295,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
               {/* 1. Serving Ads */}
               <div className="flex items-center justify-between text-[11.5px] font-mono leading-tight">
                 <div className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e]" aria-hidden="true" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)]" aria-hidden="true" />
                   <span className="text-[var(--ink-primary)]">Serving Ads</span>
                 </div>
                 <span className="font-semibold text-[var(--ink-primary)]">
@@ -1306,10 +1306,10 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
               {/* 2. Expiring Soon */}
               <div className="flex items-center justify-between text-[11.5px] font-mono leading-tight">
                 <div className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" aria-hidden="true" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal-dim)]" aria-hidden="true" />
                   <span className="text-[var(--ink-secondary)]">Expiring Soon</span>
                 </div>
-                <span className="text-[#f2a93b] font-medium">
+                <span className="text-[var(--signal)] font-medium">
                   {(metrics.inventoryBreakdown?.expiringSoon ?? 0).toLocaleString()}
                 </span>
               </div>
@@ -1351,12 +1351,12 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
             <div className="flex items-center justify-between gap-2 mb-2">
               <span className="text-[12px] font-semibold text-[var(--ghost-text)] truncate">Slack Alert Routing</span>
               {hasActiveWebhook ? (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[100px] border border-[rgba(34,197,94,0.3)] bg-[rgba(34,197,94,0.06)] text-[#22c55e] text-[10px] font-mono font-medium shrink-0">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e]" />
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--signal-dim)] bg-[var(--signal-wash)] text-[var(--signal)] text-[10px] font-mono font-medium shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)]" />
                   Connected
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[100px] border border-[var(--ghost-line)] bg-transparent text-[var(--ghost-text)] text-[10px] font-mono font-medium shrink-0">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--ghost-line)] bg-transparent text-[var(--ghost-text)] text-[10px] font-mono font-medium shrink-0">
                   Unconfigured
                 </span>
               )}
@@ -1395,8 +1395,8 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
           <div>
             <div className="flex items-center justify-between gap-2 mb-2">
               <span className="text-[12px] font-semibold text-[var(--ghost-text)] truncate">Surveillance Engine</span>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[100px] border border-[rgba(34,197,94,0.3)] bg-[rgba(34,197,94,0.06)] text-[#22c55e] text-[10px] font-mono font-medium shrink-0">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e] animate-pulse" />
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--signal-dim)] bg-[var(--signal-wash)] text-[var(--signal)] text-[10px] font-mono font-medium shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)]" />
                 Active
               </span>
             </div>
@@ -1404,7 +1404,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
             <div className="space-y-1.5 mt-1">
               <div className="font-mono text-[13px] font-semibold text-[var(--ink-primary)] leading-tight flex items-baseline justify-between">
                 <span>Pub/Sub Listener:</span>
-                <span className="text-[#22c55e] text-[12px] font-medium">Connected</span>
+                <span className="text-[var(--signal)] text-[12px] font-medium">Connected</span>
               </div>
               <div className="font-mono text-[11.5px] text-[var(--ink-secondary)] flex items-baseline justify-between">
                 <span>Push Latency:</span>
@@ -1470,7 +1470,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
             </div>
 
             <div className="max-w-xl mx-auto space-y-2">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-[100px] border border-[var(--hairline)] bg-[var(--bg-surface-2)] text-[var(--ghost-text)] text-[11px] font-mono font-medium">
+              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-[var(--radius-pill)] border border-[var(--ghost-line)] bg-transparent text-[var(--ghost-text)] text-[11px] font-mono font-medium">
                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--ghost-text)]" />
                 <span>EMPTY CATALOG</span>
               </div>
@@ -1508,20 +1508,20 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
 
             <div className="pt-6 border-t border-[var(--hairline)] max-w-lg mx-auto flex items-center justify-around text-center text-[11px] font-mono text-[var(--ghost-text-dim)]">
               <div>Continuous Pub/Sub stream: Active</div>
-              <div>•</div>
+              <div className="text-[var(--ghost-line)]">/</div>
               <div>Auto-sync on feed upload</div>
             </div>
           </div>
         ) : activeCount === 0 ? (
           /* CONDITION B: Zero-State Experience (All Products Approved) */
           <div className="bg-[var(--bg-surface)] border border-[var(--hairline)] rounded-[var(--radius-md)] p-8 sm:p-12 text-center space-y-5">
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-[rgba(34,197,94,0.08)] border border-[rgba(34,197,94,0.3)]">
-              <CheckCircle2 className="w-7 h-7 text-[#22c55e]" strokeWidth={1.5} />
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-[var(--signal-wash)] border border-[var(--signal-dim)]">
+              <CheckCircle2 className="w-7 h-7 text-[var(--signal)]" strokeWidth={1.5} />
             </div>
 
             <div className="max-w-xl mx-auto space-y-2">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-[100px] border border-[rgba(34,197,94,0.3)] bg-[rgba(34,197,94,0.06)] text-[#22c55e] text-[11px] font-mono font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e]" />
+              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-[var(--radius-pill)] border border-[var(--signal-dim)] bg-[var(--signal-wash)] text-[var(--signal)] text-[11px] font-mono font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)]" />
                 <span>100% COMPLIANT FEED</span>
               </div>
 
@@ -1548,7 +1548,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
 
             <div className="pt-6 border-t border-[var(--hairline)] max-w-lg mx-auto flex items-center justify-around text-center text-[11px] font-mono text-[var(--ghost-text-dim)]">
               <div>Continuous Pub/Sub stream: Active</div>
-              <div>•</div>
+              <div className="text-[var(--ghost-line)]">/</div>
               <div>Sub-30s notification guarantee</div>
             </div>
           </div>
@@ -1564,7 +1564,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                       <AlertTriangle className="w-5 h-5 text-[var(--danger)]" />
                     </div>
                     <div>
-                      <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[100px] border border-[rgba(214,69,69,0.4)] bg-[rgba(214,69,69,0.1)] text-[var(--danger)] text-[10.5px] font-mono font-semibold tracking-wide">
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--danger)] bg-[var(--danger-wash)] text-[var(--danger)] text-[10.5px] font-mono font-semibold tracking-wide">
                         <span>STORE-WIDE EMERGENCY</span>
                       </div>
                       <h3 className="text-[17px] font-semibold text-[var(--ink-primary)] mt-1">
@@ -1647,7 +1647,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
               <div>
                 <h2 className="text-[16px] font-semibold text-[var(--ink-primary)] flex items-center gap-2">
                   <span>Active Disapprovals Requiring Action</span>
-                  <span className="font-mono text-[11px] px-2 py-0.5 rounded-full bg-[rgba(214,69,69,0.12)] text-[#d64545] border border-[#d64545] font-semibold">
+                  <span className="font-mono text-[11px] px-2 py-0.5 rounded-[var(--radius-pill)] bg-[var(--danger-wash)] text-[var(--danger)] border border-[var(--danger)] font-semibold">
                     {activeCount}
                   </span>
                 </h2>
@@ -1829,7 +1829,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                     <span className="text-[13.5px] font-semibold text-[var(--ghost-heading)] group-hover:text-[var(--ink-primary)] transition-colors">
                       Acknowledged Disapprovals
                     </span>
-                    <span className="font-mono text-[11px] px-2 py-0.5 rounded-full bg-[var(--bg-canvas)] text-[var(--ghost-text)] border border-[var(--hairline)] font-medium">
+                    <span className="font-mono text-[11px] px-2 py-0.5 rounded-[var(--radius-pill)] bg-[var(--bg-canvas)] text-[var(--ghost-text)] border border-[var(--hairline)] font-medium">
                       {acknowledgedIncidents.length}
                     </span>
                   </div>
@@ -1848,7 +1848,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                       >
                         <div className="flex items-center justify-between text-[11px] font-mono border-b border-[var(--hairline)] pb-2">
                           <div className="flex items-center gap-2">
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[100px] border border-[var(--ghost-line)] bg-[var(--bg-surface-2)] text-[var(--ghost-text)] text-[10.5px] font-medium">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--ghost-line)] bg-[var(--bg-surface-2)] text-[var(--ghost-text)] text-[10.5px] font-medium">
                               Acknowledged
                             </span>
                             <span className="text-[var(--ghost-text-dim)]">
@@ -1910,8 +1910,8 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
             </div>
           </div>
 
-          <div className="flex items-center gap-2 font-mono text-[11px] text-[#22c55e] bg-[rgba(34,197,94,0.06)] border border-[rgba(34,197,94,0.2)] px-2.5 py-1 rounded-[100px] shrink-0">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e] animate-pulse" />
+          <div className="flex items-center gap-1.5 font-mono text-[11px] text-[var(--signal)] bg-[var(--signal-wash)] border border-[var(--signal-dim)] px-2.5 py-1 rounded-[var(--radius-pill)] shrink-0 font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)]" />
             <span>24/7 Background Surveillance Live</span>
           </div>
         </div>
@@ -1980,7 +1980,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                       <td className="py-3 px-4 text-[12.5px] text-[var(--ink-primary)] leading-snug align-top">
                         <span>{evt.message}</span>
                         {isSimulation && (
-                          <span className="ml-2 font-mono text-[10px] text-[#f2a93b] bg-[rgba(242,169,59,0.1)] px-1.5 py-0.5 rounded border border-[#7a5a26]">
+                          <span className="ml-2 font-mono text-[10px] text-[var(--signal)] bg-[var(--signal-wash)] px-1.5 py-0.5 rounded-[var(--radius-sm)] border border-[var(--signal-dim)]">
                             Test Isolation Active
                           </span>
                         )}
@@ -1989,23 +1989,23 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                       {/* Operational Status Badge */}
                       <td className="py-3 px-4 text-right whitespace-nowrap align-top">
                         {normalizedStatus === 'Nominal' ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[100px] border border-[rgba(34,197,94,0.3)] bg-[rgba(34,197,94,0.08)] text-[#22c55e] text-[10.5px] font-mono font-medium">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e]" />
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--ghost-line)] bg-transparent text-[var(--ghost-text)] text-[10.5px] font-mono font-medium">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--ghost-line)]" />
                             Nominal
                           </span>
                         ) : normalizedStatus === 'Active' ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[100px] border border-[#d64545] bg-[rgba(214,69,69,0.12)] text-[#d64545] text-[10.5px] font-mono font-medium animate-pulse">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#d64545]" />
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--danger)] bg-[var(--danger-wash)] text-[var(--danger)] text-[10.5px] font-mono font-medium">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--danger)]" />
                             Active
                           </span>
                         ) : normalizedStatus === 'Resolved' ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[100px] border border-[var(--hairline)] bg-[var(--bg-surface-2)] text-[var(--ghost-heading)] text-[10.5px] font-mono font-medium">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--ghost-line)] bg-transparent text-[var(--ghost-heading)] text-[10.5px] font-mono font-medium">
                             <span className="w-1.5 h-1.5 rounded-full bg-[var(--ghost-text)]" />
                             Resolved
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[100px] border border-[#7a5a26] bg-[rgba(242,169,59,0.08)] text-[#f2a93b] text-[10.5px] font-mono font-medium">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" />
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--signal-dim)] bg-[var(--signal-wash)] text-[var(--signal)] text-[10.5px] font-mono font-medium">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)]" />
                             Simulation
                           </span>
                         )}
@@ -2165,7 +2165,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                         </>
                       ) : armingStatus === 'armed' ? (
                         <>
-                          <Check className="w-3.5 h-3.5 text-[#22c55e]" />
+                          <Check className="w-3.5 h-3.5 text-[var(--signal)]" />
                           <span>Verified &amp; Armed</span>
                         </>
                       ) : (

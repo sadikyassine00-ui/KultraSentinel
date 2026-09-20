@@ -15,7 +15,7 @@ export function DashboardIllustration() {
           <div className="flex items-center justify-between gap-2 pb-4 border-b border-[var(--hairline)]">
             {/* Status Pill Badge */}
             <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[rgba(214,69,69,0.1)] border border-[var(--danger)] text-[var(--danger)] font-mono text-[10.5px] sm:text-[11px] font-semibold tracking-wider">
-              <span className="w-2 h-2 rounded-full bg-[var(--danger)] animate-pulse" />
+              <span className="w-2 h-2 rounded-full bg-[var(--danger)]" />
               DISAPPROVAL DETECTED
             </span>
 
