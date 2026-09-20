@@ -71,10 +71,11 @@ export async function POST(request: Request) {
       const err = paddleErr as { message?: string; code?: string };
       console.warn('[Paddle Server Transaction Notice]:', err?.message || err);
 
-      // If Paddle account has no default payment link configured yet in dashboard,
-      // return the verified priceId and authenticated metadata for Paddle.js native client overlay initiation.
+      // If Paddle server-side transaction creation cannot be completed (e.g. default payment link not configured
+      // in Paddle dashboard, or server API key credential issue), return the verified priceId and metadata
+      // for Paddle.js native client overlay initiation.
       // NOTE: ZERO direct DB mutation occurs! Account remains in trial until signed webhook arrives.
-      if (err?.code === 'transaction_default_checkout_url_not_set') {
+      if (priceId) {
         return NextResponse.json({
           priceId,
           plan: requestedPlan,

@@ -27,7 +27,7 @@ export const PADDLE_PLANS: Record<'solo' | 'agency', PaddlePlanConfig> = {
     billingFrequency: 1,
     taxCategory: 'saas',
     priceIdEnvVar: 'NEXT_PUBLIC_PADDLE_SOLO_PRICE_ID',
-    defaultPriceId: 'pri_kultra_solo_19',
+    defaultPriceId: 'pri_01m2zs530hep63n941x430mzv9',
     description: 'Single GMC Store 24/7 Monitoring and Disapproval Shield',
   },
   agency: {
@@ -42,18 +42,30 @@ export const PADDLE_PLANS: Record<'solo' | 'agency', PaddlePlanConfig> = {
     billingFrequency: 1,
     taxCategory: 'saas',
     priceIdEnvVar: 'NEXT_PUBLIC_PADDLE_AGENCY_PRICE_ID',
-    defaultPriceId: 'pri_kultra_agency_49',
+    defaultPriceId: 'pri_01m2zs53ec1e4cjvn2fqc7aav1',
     description: 'Unlimited GMC Stores, MCA Architecture and Priority Instant Dispatch',
   },
 };
 
 export function getPaddleEnvironment(): 'sandbox' | 'production' {
   const env = process.env.NEXT_PUBLIC_PADDLE_ENV?.toLowerCase().trim();
-  return env === 'production' ? 'production' : 'sandbox';
+  if (env === 'sandbox') return 'sandbox';
+  if (env === 'production') {
+    const clientToken = (process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN || '').trim();
+    const apiKey = (process.env.PADDLE_API_KEY || process.env.PADDLE_SANDBOX_API_KEY || '').trim();
+    if (clientToken.startsWith('test_') || apiKey.startsWith('pdl_sdbx_')) {
+      return 'sandbox';
+    }
+    return 'production';
+  }
+  return 'sandbox';
 }
 
 export function getPaddleClientToken(): string {
-  return process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN?.trim() || '';
+  return (
+    process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN?.trim() ||
+    'test_27df0f0ea51cecfeb0216654924'
+  );
 }
 
 export function getPaddlePriceId(plan: 'solo' | 'agency'): string {

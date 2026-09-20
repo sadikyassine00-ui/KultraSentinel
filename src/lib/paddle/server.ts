@@ -13,7 +13,8 @@ export function getPaddleInstance(): Paddle {
     return cachedPaddle;
   }
 
-  const isProduction = getPaddleEnvironment() === 'production';
+  const isSandboxKey = apiKey.startsWith('pdl_sdbx_');
+  const isProduction = !isSandboxKey && getPaddleEnvironment() === 'production';
   const options: PaddleOptions = {
     environment: isProduction ? Environment.production : Environment.sandbox,
     logLevel: isProduction ? LogLevel.error : LogLevel.warn,
