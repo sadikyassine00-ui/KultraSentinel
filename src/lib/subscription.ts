@@ -265,7 +265,9 @@ export function evaluateSubscription(
   }
 
   // 2. Unstarted Trial (Account created, but Google Merchant Center not yet connected)
-  if (!tenant.trial_ends_at) {
+  const hasConnectedStores = storeCount > 0 || (typeof tenant?.connected_stores === 'number' && tenant.connected_stores > 0);
+
+  if (!tenant.trial_ends_at && !hasConnectedStores) {
     return {
       effectiveStatus: 'active trial',
       rawStatus: 'active trial',
@@ -295,7 +297,9 @@ export function evaluateSubscription(
   }
 
   // 3. Active or Expired Trial (GMC connected, 14-day countdown is running or elapsed)
-  const trialDate = new Date(tenant.trial_ends_at);
+  const trialDate = tenant.trial_ends_at
+    ? new Date(tenant.trial_ends_at)
+    : new Date(Date.now() + 14 * 86400000);
   const now = Date.now();
   const msRemaining = trialDate.getTime() - now;
   const daysRemaining = Math.max(0, Math.ceil(msRemaining / (1000 * 60 * 60 * 24)));
@@ -405,7 +409,25 @@ export async function getTenantSubscription(email: string): Promise<Subscription
   }
 
   const tenant = await findTenantByEmail(cleanEmail);
-  const evaluation = evaluateSubscription(tenant);
+
+  // Check if tenant has connected stores to ensure accurate trial evaluation
+  let storeCount = 0;
+  try {
+    const { getStoresForTenant } = await import('./db');
+    const stores = await getStoresForTenant(cleanEmail);
+    storeCount = stores.length;
+
+    // Auto-activate trial if store is connected but trial was not persisted
+    if (storeCount > 0 && tenant && !tenant.trial_ends_at) {
+      await activateTrialOnFirstStoreConnect(cleanEmail);
+      tenant.trial_ends_at = new Date(Date.now() + 14 * 86400000).toISOString();
+      tenant.subscription_status = 'active trial';
+    }
+  } catch {
+    // Non-blocking fallback
+  }
+
+  const evaluation = evaluateSubscription(tenant, { storeCount });
 
   // If status transitioned to expired and DB still says active trial, sync state lazily
   if (

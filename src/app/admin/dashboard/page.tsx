@@ -178,7 +178,7 @@ export default function AdminDashboardPage() {
   // Load telemetry & active tab data
   const loadTelemetry = useCallback(async () => {
     try {
-      const res = await fetch('/api/admin/super/telemetry');
+      const res = await fetch('/api/admin/super/telemetry', { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         setTelemetry(data.telemetry);
@@ -205,7 +205,8 @@ export default function AdminDashboardPage() {
 
       if (activeTab === 'tenants') {
         const res = await fetch(
-          `/api/admin/super/tenants?search=${encodeURIComponent(tenantSearch)}&planTier=${encodeURIComponent(tenantPlanFilter)}&status=${encodeURIComponent(tenantStatusFilter)}`
+          `/api/admin/super/tenants?search=${encodeURIComponent(tenantSearch)}&planTier=${encodeURIComponent(tenantPlanFilter)}&status=${encodeURIComponent(tenantStatusFilter)}`,
+          { cache: 'no-store' }
         );
         if (res.ok) {
           const data = await res.json();
@@ -213,26 +214,27 @@ export default function AdminDashboardPage() {
         }
       } else if (activeTab === 'stores') {
         const res = await fetch(
-          `/api/admin/super/stores?search=${encodeURIComponent(storeSearch)}&accountType=${encodeURIComponent(storeAccountFilter)}`
+          `/api/admin/super/stores?search=${encodeURIComponent(storeSearch)}&accountType=${encodeURIComponent(storeAccountFilter)}`,
+          { cache: 'no-store' }
         );
         if (res.ok) {
           const data = await res.json();
           setStores(data.stores || []);
         }
       } else if (activeTab === 'pipeline') {
-        const res = await fetch('/api/admin/super/dlq');
+        const res = await fetch('/api/admin/super/dlq', { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           setDlqMessages(data.messages || []);
         }
       } else if (activeTab === 'dispatches') {
-        const res = await fetch('/api/admin/super/dispatches');
+        const res = await fetch('/api/admin/super/dispatches', { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           setDispatchLogs(data.dispatches || []);
         }
       } else if (activeTab === 'config') {
-        const res = await fetch('/api/admin/super/config');
+        const res = await fetch('/api/admin/super/config', { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           setConfig(data.config);
@@ -502,7 +504,7 @@ export default function AdminDashboardPage() {
 
       {/* Refined Sidebar Navigation (Collapsible Rail per GEMINI.md §16) */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 bg-[#0e0f11] border-r border-[rgba(255,255,255,0.08)] flex flex-col justify-between transition-all duration-200 ease-in-out lg:static lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto shrink-0 ${
+        className={`fixed inset-y-0 left-0 z-50 bg-[#0e0f11] border-r border-[rgba(255,255,255,0.08)] flex flex-col justify-between transition-all duration-200 ease-in-out lg:translate-x-0 lg:sticky lg:top-[60px] lg:h-[calc(100vh-60px)] lg:overflow-y-auto shrink-0 ${
           mobileMenuOpen ? 'translate-x-0 w-64' : '-translate-x-full lg:translate-x-0'
         } ${sidebarCollapsed ? 'lg:w-16' : 'lg:w-60'}`}
       >

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getAuthSession } from '@/lib/auth';
 import { getTenants, updateTenant, suspendTenant, unsuspendTenant } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   const session = await getAuthSession(request);
   if (!session) {

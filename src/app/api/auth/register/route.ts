@@ -94,7 +94,12 @@ export async function POST(request: Request) {
     });
 
     // 8. Create tenant record with consistent defaults
-    // Note: Trial starts only upon Google Merchant Center connection
+    // If the merchant already connected a GMC store during onboarding, start the 14-day trial immediately
+    const { getStoresForTenant, getDb } = await import('@/lib/db');
+    const existingStores = await getStoresForTenant(cleanEmail);
+    const hasExistingStores = existingStores.length > 0;
+    const initialTrialEndsAt = hasExistingStores ? new Date(Date.now() + 14 * 86400000).toISOString() : null;
+
     const tenant = await createTenant({
       email: cleanEmail,
       companyName: cleanCompany,
@@ -102,9 +107,29 @@ export async function POST(request: Request) {
       accountType: cleanAccountType,
       accountPlan: cleanAccountType === 'agency' ? 'agency' : 'solo',
       subscriptionStatus: isSuper ? 'paid active' : 'active trial',
-      trialEndsAt: null,
+      trialEndsAt: initialTrialEndsAt,
       website: website || cleanCompany.toLowerCase().replace(/[^a-z0-9]/g, '') + '.com',
     });
+
+    if (hasExistingStores) {
+      try {
+        const sql = getDb();
+        if (sql) {
+          await sql`
+            UPDATE stores
+            SET tenant_id = ${tenant.id}
+            WHERE LOWER(tenant_email) = ${cleanEmail};
+          `;
+          await sql`
+            UPDATE tenants
+            SET connected_stores = ${existingStores.length}, oauth_status = 'connected'
+            WHERE id = ${tenant.id};
+          `;
+        }
+      } catch (linkErr) {
+        console.warn('[Register] Failed to link existing stores to tenant:', linkErr);
+      }
+    }
 
     // 9. Record lead for platform CRM telemetry
     await createLead({

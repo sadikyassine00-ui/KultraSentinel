@@ -7,8 +7,10 @@ const match = envContent.match(/DATABASE_URL=["']?([^"'\r\n]+)["']?/);
 const sql = neon(match[1]);
 
 async function run() {
-  const rows = await sql`SELECT id, email, plan_tier, subscription_status, stripe_customer_id, paddle_customer_id, paddle_subscription_id FROM tenants;`;
-  console.log(JSON.stringify(rows, null, 2));
+  const tenants = await sql`SELECT * FROM tenants;`;
+  console.log('TENANTS:', JSON.stringify(tenants, null, 2));
+  const stores = await sql`SELECT * FROM stores;`;
+  console.log('STORES:', JSON.stringify(stores, null, 2));
 }
 
 run().catch(console.error);

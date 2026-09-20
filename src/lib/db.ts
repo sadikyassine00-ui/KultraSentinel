@@ -963,7 +963,7 @@ export async function getTenants(filter?: { search?: string; planTier?: string; 
         rows = (await sql`
           SELECT * FROM tenants
           WHERE (LOWER(email) LIKE ${search} OR LOWER(company_name) LIKE ${search} OR LOWER(user_id) LIKE ${search})
-            AND plan_tier = ${planTier}
+            AND LOWER(plan_tier) = LOWER(${planTier})
           ORDER BY created_at DESC;
         `) as unknown as Tenant[];
       } else if (search) {
@@ -975,7 +975,7 @@ export async function getTenants(filter?: { search?: string; planTier?: string; 
       } else if (planTier) {
         rows = (await sql`
           SELECT * FROM tenants
-          WHERE plan_tier = ${planTier}
+          WHERE LOWER(plan_tier) = LOWER(${planTier})
           ORDER BY created_at DESC;
         `) as unknown as Tenant[];
       } else {
@@ -985,7 +985,7 @@ export async function getTenants(filter?: { search?: string; planTier?: string; 
       }
 
       if (status) {
-        rows = rows.filter((r) => r.status === status);
+        rows = rows.filter((r) => r.status?.toLowerCase() === status.toLowerCase());
       }
       return rows;
     } catch (err) {
@@ -998,11 +998,13 @@ export async function getTenants(filter?: { search?: string; planTier?: string; 
     const s = filter.search.toLowerCase();
     result = result.filter((t) => t.email.toLowerCase().includes(s) || t.company_name.toLowerCase().includes(s) || t.user_id.toLowerCase().includes(s));
   }
-  if (filter?.planTier && filter.planTier !== 'all') {
-    result = result.filter((t) => t.plan_tier === filter.planTier);
+  const filterPlanTier = filter?.planTier;
+  if (filterPlanTier && filterPlanTier !== 'all') {
+    result = result.filter((t) => t.plan_tier?.toLowerCase() === filterPlanTier.toLowerCase());
   }
-  if (filter?.status && filter.status !== 'all') {
-    result = result.filter((t) => t.status === filter.status);
+  const filterStatus = filter?.status;
+  if (filterStatus && filterStatus !== 'all') {
+    result = result.filter((t) => t.status?.toLowerCase() === filterStatus.toLowerCase());
   }
   return result;
 }
@@ -1745,6 +1747,16 @@ export async function claimStoreForTenant(params: {
   if (sql) {
     try {
       await ensureSchema();
+
+      // Resolve authentic tenant ID from email if default or missing
+      let targetTenantId = params.tenantId;
+      if (!targetTenantId || targetTenantId === 1) {
+        const tenantLookup = await sql`SELECT id FROM tenants WHERE LOWER(email) = ${cleanEmail} LIMIT 1;`;
+        if (tenantLookup.length > 0 && tenantLookup[0].id) {
+          targetTenantId = tenantLookup[0].id;
+        }
+      }
+
       const existing = await sql`SELECT * FROM stores WHERE gmc_id = ${params.gmcId} LIMIT 1;`;
       if (existing.length > 0) {
         const storeOwnerEmail = existing[0].tenant_email?.toLowerCase().trim();
@@ -1762,6 +1774,7 @@ export async function claimStoreForTenant(params: {
           SET
             store_name = ${params.storeName},
             store_url = ${params.storeUrl},
+            tenant_id = COALESCE(${targetTenantId}, tenant_id),
             encrypted_refresh_token = COALESCE(${params.encryptedRefreshToken || null}, encrypted_refresh_token),
             last_message_at = NOW(),
             status = 'active'
@@ -1796,7 +1809,7 @@ export async function claimStoreForTenant(params: {
           encrypted_refresh_token, alert_status, webhook_verified, pubsub_topic,
           last_message_at, open_disapprovals, total_caught, status, created_at
         ) VALUES (
-          ${params.gmcId}, ${params.tenantId}, ${cleanEmail}, ${params.accountType || 'Standalone Merchant'},
+          ${params.gmcId}, ${targetTenantId}, ${cleanEmail}, ${params.accountType || 'Standalone Merchant'},
           ${params.storeUrl}, ${params.storeName}, ${params.encryptedRefreshToken || null},
           'active', FALSE, ${`projects/kultra-sentinel/topics/gmc-${params.gmcId}`},
           NOW(), 0, 0, 'active', NOW()

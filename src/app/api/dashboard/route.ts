@@ -37,6 +37,17 @@ export async function GET(request: Request) {
     // 1. Fetch stores strictly scoped to authenticated tenant
     const stores = await getStoresForTenant(tenantEmail);
 
+    if (stores.length > 0 && tenant && !tenant.trial_ends_at) {
+      try {
+        const { activateTrialOnFirstStoreConnect } = await import('@/lib/subscription');
+        await activateTrialOnFirstStoreConnect(tenantEmail);
+        tenant.trial_ends_at = new Date(Date.now() + 14 * 86400000).toISOString();
+        tenant.subscription_status = 'active trial';
+      } catch (err) {
+        console.warn('[Dashboard API] Failed to auto-activate trial for connected store:', err);
+      }
+    }
+
     const billing = evaluateSubscription(tenant, {
       storeCount: stores.length,
       slackCount: stores.some((s) => s.webhook_url || s.slack_webhook_url) ? 1 : 0,
