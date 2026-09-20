@@ -28,6 +28,32 @@ export async function POST(request: Request) {
     const urlObj = new URL(request.url);
     const origin = urlObj.origin;
 
+    // 1. Create live Paddle Checkout transaction via Paddle API if configured
+    const paddleApiKey = process.env.PADDLE_API_KEY?.trim();
+    if (paddleApiKey) {
+      try {
+        const { getPaddleInstance } = await import('@/lib/paddle/server');
+        const { getPaddlePriceId } = await import('@/lib/paddle/config');
+        const paddle = getPaddleInstance();
+        const priceId = getPaddlePriceId(requestedPlan);
+
+        const transaction = await paddle.transactions.create({
+          items: [{ priceId, quantity: 1 }],
+          customData: {
+            tenantEmail: email,
+            accountPlan: requestedPlan,
+          },
+        });
+
+        const checkoutUrl = transaction.checkout?.url;
+        if (checkoutUrl) {
+          return NextResponse.json({ url: checkoutUrl, plan: requestedPlan });
+        }
+      } catch (paddleErr) {
+        console.warn('[Paddle Server Checkout Fallback Notice]:', paddleErr);
+      }
+    }
+
     const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 
     if (stripeSecretKey) {

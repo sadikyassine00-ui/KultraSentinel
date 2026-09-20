@@ -466,3 +466,10 @@ If a component you're building matches one of these patterns, don't ask "does th
 NO OVERUSE OF BADGES AND DOTS, CUT THAT SHIT OUT
 
 after finishing coding always push changes!
+
+## Paddle Integration Rules
+- Use the official Node SDK: `@paddle/paddle-node-sdk`.
+- Default strictly to the sandbox environment during development.
+- For webhooks in Next.js App Router, always verify signatures via `paddle.webhooks.unmarshal()`.
+- Sandbox client-side tokens begin with `test_`.
+- Never hardcode API keys or webhook secrets into application files.

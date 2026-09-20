@@ -15,6 +15,7 @@ import {
   ArrowRight,
   ShieldAlert,
 } from 'lucide-react';
+import { usePaddleCheckout } from '@/components/billing/PaddleCheckoutOverlay';
 
 interface BillingState {
   status: 'active trial' | 'paid active' | 'expired' | 'canceled';
@@ -56,10 +57,16 @@ export default function SettingsClientView({
   );
   const [loading, setLoading] = useState(true);
   const [billing, setBilling] = useState<BillingState | null>(null);
+  const [userEmail, setUserEmail] = useState<string>('');
   const [stores, setStores] = useState<Array<{ id: number | string; name: string; gmcId: string }>>([]);
   const [processingCheckout, setProcessingCheckout] = useState<'solo' | 'agency' | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [showSuccessBanner, setShowSuccessBanner] = useState(checkoutSuccess);
+
+  const { openCheckout: openPaddleOverlay } = usePaddleCheckout({
+    userEmail,
+    onError: (err) => setCheckoutError(err),
+  });
 
   const fetchBillingData = useCallback(async () => {
     try {
@@ -67,6 +74,9 @@ export default function SettingsClientView({
       const res = await fetch('/api/dashboard', { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
+        if (data.userEmail) {
+          setUserEmail(data.userEmail);
+        }
         if (data.billing) {
           setBilling(data.billing);
         }
@@ -96,6 +106,14 @@ export default function SettingsClientView({
       setProcessingCheckout(plan);
       setCheckoutError(null);
 
+      // 1. Launch client-side Paddle.js overlay checkout
+      const launched = await openPaddleOverlay(plan);
+      if (launched) {
+        setProcessingCheckout(null);
+        return;
+      }
+
+      // 2. Server-side redirect fallback if Paddle.js overlay is unavailable
       const res = await fetch('/api/billing/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

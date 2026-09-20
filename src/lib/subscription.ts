@@ -20,6 +20,8 @@ export interface SubscriptionEvaluation {
   upgradeUrl: string;
   hasTrialStarted: boolean;
   isSuperAdmin: boolean;
+  isPastDue?: boolean;
+  scheduledCancellationDate?: string | null;
   planTier: 'Solo' | 'Agency' | 'Superadmin';
   planName: string;
   monthlyPrice: number;
@@ -89,6 +91,8 @@ export function evaluateSubscription(
       isLocked: false,
       hasTrialStarted: true,
       isSuperAdmin: true,
+      isPastDue: false,
+      scheduledCancellationDate: null,
       upgradeUrl: '',
       planTier: 'Superadmin',
       planName: 'Lifetime Admin',
@@ -117,6 +121,8 @@ export function evaluateSubscription(
       isLocked: false,
       hasTrialStarted: false,
       isSuperAdmin: false,
+      isPastDue: false,
+      scheduledCancellationDate: null,
       upgradeUrl,
       planTier: 'Solo',
       planName: 'Free Trial',
@@ -142,6 +148,17 @@ export function evaluateSubscription(
   const storeCount = extra?.storeCount ?? (tenant.connected_stores || 0);
   const slackCount = extra?.slackCount ?? 0;
 
+  // Scheduled cancellation check
+  const scheduledCancellationAt = tenant.scheduled_cancellation_at
+    ? new Date(tenant.scheduled_cancellation_at)
+    : null;
+  const isScheduledCancellationFuture =
+    scheduledCancellationAt && !isNaN(scheduledCancellationAt.getTime()) && scheduledCancellationAt.getTime() > Date.now();
+  const isScheduledCancellationElapsed =
+    scheduledCancellationAt && !isNaN(scheduledCancellationAt.getTime()) && scheduledCancellationAt.getTime() <= Date.now();
+
+  const isPastDue = Boolean(tenant.is_past_due);
+
   const rawStatus =
     tenant.subscription_status ||
     (tenant.plan_tier === 'Active Pro' || tenant.plan_tier === 'Agency Pilot'
@@ -150,8 +167,67 @@ export function evaluateSubscription(
 
   const normalized = normalizeSubscriptionStatus(rawStatus);
 
-  // Paid active plans are never locked
-  if (normalized === 'paid active') {
+  // If cancellation was scheduled and has elapsed, lock the account
+  if (isScheduledCancellationElapsed) {
+    const formattedCanceled = scheduledCancellationAt!.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+    return {
+      effectiveStatus: 'canceled',
+      rawStatus: 'canceled',
+      trialEndsAt: '',
+      formattedTrialEnd: 'Subscription Canceled',
+      daysRemaining: 0,
+      isLocked: true,
+      hasTrialStarted: true,
+      isSuperAdmin: false,
+      isPastDue: false,
+      scheduledCancellationDate: tenant.scheduled_cancellation_at,
+      upgradeUrl,
+      planTier,
+      planName: 'Canceled Plan',
+      monthlyPrice,
+      formattedPrice,
+      renewalOrExpirationDate: tenant.scheduled_cancellation_at || '',
+      formattedRenewalOrExpiration: `Canceled on ${formattedCanceled}`,
+      isUrgent: true,
+      quotas: {
+        gmcAccountsConnected: storeCount,
+        gmcAccountsLimit,
+        slackDestinationsActive: slackCount,
+        pubsubMonitoringStatus: 'Paused',
+      },
+    };
+  }
+
+  // If subscription is paid active, or within active scheduled cancellation period, or in past-due grace period
+  if (normalized === 'paid active' || isScheduledCancellationFuture || isPastDue) {
+    let renewalOrExpirationDate = tenant.current_period_ends_at || tenant.trial_ends_at || '';
+    let formattedRenewalOrExpiration = 'Auto-renews monthly';
+
+    if (isScheduledCancellationFuture && scheduledCancellationAt) {
+      const formattedDate = scheduledCancellationAt.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+      formattedRenewalOrExpiration = `Cancels on ${formattedDate}`;
+      renewalOrExpirationDate = tenant.scheduled_cancellation_at || '';
+    } else if (isPastDue) {
+      formattedRenewalOrExpiration = 'Payment Past Due (Grace Period)';
+    } else if (tenant.current_period_ends_at) {
+      const periodEnd = new Date(tenant.current_period_ends_at);
+      if (!isNaN(periodEnd.getTime())) {
+        formattedRenewalOrExpiration = `Renews on ${periodEnd.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        })}`;
+      }
+    }
+
     return {
       effectiveStatus: 'paid active',
       rawStatus: String(tenant.subscription_status || 'paid active'),
@@ -161,14 +237,16 @@ export function evaluateSubscription(
       isLocked: false,
       hasTrialStarted: true,
       isSuperAdmin: false,
+      isPastDue,
+      scheduledCancellationDate: tenant.scheduled_cancellation_at || null,
       upgradeUrl,
       planTier,
       planName: isAgency ? 'Agency Plan' : 'Solo Plan',
       monthlyPrice,
       formattedPrice,
-      renewalOrExpirationDate: tenant.trial_ends_at || '',
-      formattedRenewalOrExpiration: 'Auto-renews monthly',
-      isUrgent: false,
+      renewalOrExpirationDate,
+      formattedRenewalOrExpiration,
+      isUrgent: isPastDue,
       quotas: {
         gmcAccountsConnected: storeCount,
         gmcAccountsLimit,
@@ -189,6 +267,8 @@ export function evaluateSubscription(
       isLocked: false,
       hasTrialStarted: false,
       isSuperAdmin: false,
+      isPastDue: false,
+      scheduledCancellationDate: null,
       upgradeUrl,
       planTier,
       planName: 'Free Trial',
@@ -238,6 +318,8 @@ export function evaluateSubscription(
     isLocked,
     hasTrialStarted: true,
     isSuperAdmin: false,
+    isPastDue: false,
+    scheduledCancellationDate: null,
     upgradeUrl,
     planTier,
     planName: effectiveStatus === 'expired' ? 'Trial Expired' : 'Free Trial',

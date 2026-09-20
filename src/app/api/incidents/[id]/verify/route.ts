@@ -28,12 +28,34 @@ export async function POST(
       );
     }
 
-    const { id } = await params;
-    if (!id) {
-      return NextResponse.json({ error: 'Incident identifier is required' }, { status: 400 });
+    const { id: paramId } = await params;
+
+    // Enforce inspection of request payload for unique incident identifier
+    let body: Record<string, unknown> = {};
+    try {
+      body = await request.json();
+    } catch {
+      // Body may be empty if called without explicit payload
     }
 
-    const result = await dismissOrAcknowledgeIncident(id, session.email);
+    const payloadIncidentId = body?.incidentId ?? body?.id;
+    const targetId = payloadIncidentId ? String(payloadIncidentId).trim() : (paramId ? String(paramId).trim() : '');
+
+    if (!targetId || targetId === 'undefined' || targetId === 'null') {
+      return NextResponse.json(
+        { error: 'A valid unique incident identifier is required in the request' },
+        { status: 400 }
+      );
+    }
+
+    if (payloadIncidentId && paramId && String(payloadIncidentId).trim() !== String(paramId).trim()) {
+      return NextResponse.json(
+        { error: 'Mismatched incident identifier between route parameter and payload' },
+        { status: 400 }
+      );
+    }
+
+    const result = await dismissOrAcknowledgeIncident(targetId, session.email);
     if (!result.success) {
       return NextResponse.json(
         { error: result.error || 'Incident not found or unauthorized' },
@@ -43,6 +65,7 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
+      incidentId: targetId,
       isSimulated: result.isSimulated,
       dismissed: result.dismissed,
       status: result.status,

@@ -47,6 +47,14 @@ interface BillingSummary {
   upgradeUrl: string;
   hasTrialStarted?: boolean;
   isSuperAdmin?: boolean;
+  isPastDue?: boolean;
+  scheduledCancellationDate?: string | null;
+  planTier?: string;
+  planName?: string;
+  monthlyPrice?: number;
+  formattedPrice?: string;
+  renewalOrExpirationDate?: string;
+  formattedRenewalOrExpiration?: string;
 }
 
 interface TranslatedIssue {
@@ -306,14 +314,17 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
 
         setData((prev) => {
           if (!prev) return prev;
-          const remaining = prev.incidents.filter((i) => i.sku !== demoIncident.sku);
+          const remaining = prev.incidents.filter((i) => String(i.id) !== String(demoIncident.id));
+          const isAlreadyPresent = prev.incidents.some((i) => String(i.id) === String(demoIncident.id));
+          const nextActiveCount = prev.metrics.activeDisapprovals + (isAlreadyPresent ? 0 : 1);
           return {
             ...prev,
             incidents: [demoIncident, ...remaining],
             criticalIncident: demoIncident,
             metrics: {
               ...prev.metrics,
-              activeDisapprovals: prev.metrics.activeDisapprovals + (prev.incidents.some((i) => i.sku === demoIncident.sku) ? 0 : 1),
+              activeDisapprovals: nextActiveCount,
+              approvedProducts: Math.max(0, (prev.metrics.monitoredProducts || 0) - nextActiveCount),
             },
           };
         });
@@ -419,6 +430,9 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
 
   const handleDismissIncident = async (inc: IncidentItem) => {
     const incidentId = inc.id;
+    const targetIdStr = String(incidentId ?? '').trim();
+    if (!targetIdStr) return;
+
     const isSimulated = Boolean(
       inc.sku === 'DEMO-RUNNER-402' ||
       inc.title?.includes('(Demo Item)') ||
@@ -432,11 +446,13 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
       if (!prev) return prev;
       let nextIncidents: IncidentItem[];
       if (isSimulated) {
-        nextIncidents = prev.incidents.filter((i) => String(i.id) !== String(incidentId));
+        // Strictly filter out ONLY the clicked incident matching targetIdStr
+        nextIncidents = prev.incidents.filter((i) => String(i.id) !== targetIdStr);
       } else {
+        // Strictly update ONLY the clicked incident matching targetIdStr
         nextIncidents = prev.incidents.map((i) =>
-          String(i.id) === String(incidentId)
-            ? { ...i, status: 'acknowledged', resolved_at: new Date().toISOString() }
+          String(i.id) === targetIdStr
+            ? { ...i, status: 'acknowledged' as const, resolved_at: new Date().toISOString() }
             : i
         );
       }
@@ -445,12 +461,13 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
         ...prev,
         incidents: nextIncidents,
         criticalIncident:
-          prev.criticalIncident && String(prev.criticalIncident.id) === String(incidentId)
+          prev.criticalIncident && String(prev.criticalIncident.id) === targetIdStr
             ? (nextUnresolved[0] || null)
             : prev.criticalIncident,
         metrics: {
           ...prev.metrics,
           activeDisapprovals: nextUnresolved.length,
+          approvedProducts: Math.max(0, (prev.metrics.monitoredProducts || 0) - nextUnresolved.length),
         },
       };
     });
@@ -460,8 +477,14 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
     setTimeout(() => setInlineFeedback(null), 3500);
 
     try {
-      const res = await fetch(`/api/incidents/${incidentId}/verify`, {
+      // Outbound mutation payload explicitly sends unique incident identifier
+      const res = await fetch(`/api/incidents/${encodeURIComponent(targetIdStr)}/verify`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          incidentId: inc.id,
+          id: inc.id,
+        }),
       });
       const resJson = await res.json();
       if (!res.ok || !resJson.success) {
@@ -476,8 +499,29 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
       const e = err as Error;
       console.error('Failed to dismiss incident:', e);
       setInlineFeedback(`Error: ${e.message || 'Failed to dismiss'}. Reverting...`);
-      // Revert optimistic state by re-fetching
-      fetchDashboardData(data?.activeStore?.id ? String(data.activeStore.id) : null);
+      // Revert only this specific incident without wiping out neighboring cards
+      setData((prev) => {
+        if (!prev) return prev;
+        const restored = prev.incidents.map((i) =>
+          String(i.id) === targetIdStr
+            ? { ...i, status: 'unresolved' as const, resolved_at: null }
+            : i
+        );
+        const restoredUnresolved = restored.filter((i) => i.status === 'unresolved');
+        return {
+          ...prev,
+          incidents: restored,
+          criticalIncident:
+            !prev.criticalIncident || String(prev.criticalIncident.id) === targetIdStr
+              ? (restoredUnresolved[0] || null)
+              : prev.criticalIncident,
+          metrics: {
+            ...prev.metrics,
+            activeDisapprovals: restoredUnresolved.length,
+            approvedProducts: Math.max(0, (prev.metrics.monitoredProducts || 0) - restoredUnresolved.length),
+          },
+        };
+      });
     } finally {
       setVerifyingIncidentId(null);
     }
@@ -597,6 +641,86 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
     );
   };
 
+  const renderPastDueBanner = () => {
+    if (!data?.billing?.isPastDue || data?.billing?.isSuperAdmin) return null;
+
+    return (
+      <div
+        id="past-due-grace-banner"
+        className="mb-6 p-4 sm:p-5 rounded-[var(--radius-md)] bg-[var(--bg-surface-2)] border border-[var(--signal-dim)] text-left transition-all relative"
+        role="alert"
+      >
+        <div className="flex items-start gap-3.5">
+          <div className="w-8 h-8 rounded-full bg-[var(--signal-wash)] border border-[var(--signal-dim)] flex items-center justify-center shrink-0 mt-0.5">
+            <AlertTriangle className="w-4 h-4 text-[var(--signal)]" strokeWidth={2} />
+          </div>
+
+          <div className="space-y-1.5 flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="tag-pill tag-signal text-[10.5px] py-0.5 font-medium">
+                PAYMENT PAST DUE (GRACE PERIOD ACTIVE)
+              </span>
+            </div>
+            <h3 className="text-[14.5px] font-semibold text-[var(--ink-primary)] leading-snug">
+              Subscription Renewal Past Due
+            </h3>
+            <p className="text-[13px] text-[var(--ink-secondary)] leading-relaxed max-w-2xl">
+              Your recent subscription payment did not go through. Critical Google Merchant Center monitoring and Slack alerts remain live during your grace period. Update your payment method in billing to avoid monitoring interruption.
+            </p>
+
+            <div className="pt-2">
+              <Link
+                href="/dashboard/settings?tab=billing"
+                className="btn-primary py-1.5 px-4 text-[12.5px] font-semibold !rounded-[3px] inline-flex items-center gap-1.5"
+              >
+                <span>Update Payment Method</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderScheduledCancellationBanner = () => {
+    if (!data?.billing?.scheduledCancellationDate || data?.billing?.isLocked || data?.billing?.isSuperAdmin) return null;
+
+    const cancelDate = new Date(data.billing.scheduledCancellationDate);
+    if (isNaN(cancelDate.getTime()) || cancelDate.getTime() <= Date.now()) return null;
+
+    const formattedDate = cancelDate.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+
+    return (
+      <div
+        id="scheduled-cancellation-banner"
+        className="mb-6 p-4 sm:p-5 rounded-[var(--radius-md)] bg-[var(--bg-surface)] border border-[var(--hairline-strong)] text-left"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="space-y-1">
+            <span className="tag-pill tag-ghost text-[10.5px] py-0.5 font-medium">
+              CANCELLATION SCHEDULED
+            </span>
+            <p className="text-[13px] text-[var(--ink-secondary)]">
+              Your subscription is scheduled to cancel on <strong className="text-[var(--ink-primary)]">{formattedDate}</strong>. Full monitoring and alerts remain active until that time.
+            </p>
+          </div>
+          <Link
+            href="/dashboard/settings?tab=billing"
+            className="btn-secondary py-1.5 px-3 text-[12px] !rounded-[3px] shrink-0 inline-flex items-center gap-1"
+          >
+            <span>Manage Subscription</span>
+            <ExternalLink className="w-3 h-3" />
+          </Link>
+        </div>
+      </div>
+    );
+  };
+
   // Loading: static skeleton blocks per §11
   if (loading) {
     return (
@@ -620,6 +744,8 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
     return (
       <div className="max-w-2xl mx-auto py-12 px-4">
         {renderErrorBanner()}
+        {renderPastDueBanner()}
+        {renderScheduledCancellationBanner()}
 
         <div className="bg-[var(--bg-surface)] border border-[var(--hairline)] rounded-[var(--radius-md)] p-8 sm:p-10 text-center">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[var(--bg-surface-2)] border border-[var(--hairline)] mb-5">
@@ -700,6 +826,8 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {renderErrorBanner()}
+      {renderPastDueBanner()}
+      {renderScheduledCancellationBanner()}
 
       {/* Operational Action Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 py-2 border-b border-[var(--hairline)]">
@@ -1269,10 +1397,10 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                         <button
                           type="button"
                           onClick={() => handleDismissIncident(inc)}
-                          disabled={verifyingIncidentId === inc.id}
+                          disabled={verifyingIncidentId !== null && String(verifyingIncidentId) === String(inc.id)}
                           className="btn-secondary text-[12px] py-1.5 px-3 !rounded-[3px] text-[var(--ghost-text)] hover:text-[var(--ink-primary)] hover:border-[var(--signal-dim)] transition-colors disabled:opacity-50"
                         >
-                          {verifyingIncidentId === inc.id ? 'Updating...' : 'Dismiss or Mark as Acknowledged'}
+                          {verifyingIncidentId !== null && String(verifyingIncidentId) === String(inc.id) ? 'Updating...' : 'Dismiss or Mark as Acknowledged'}
                         </button>
                       </div>
                     </div>

@@ -45,6 +45,7 @@ export async function GET(request: Request) {
 
     if (stores.length === 0) {
       return NextResponse.json({
+        userEmail: tenantEmail,
         zeroStore: true,
         stores: [],
         activeStore: null,
@@ -57,6 +58,8 @@ export async function GET(request: Request) {
           upgradeUrl: billing.upgradeUrl,
           hasTrialStarted: billing.hasTrialStarted,
           isSuperAdmin: billing.isSuperAdmin,
+          isPastDue: Boolean(billing.isPastDue),
+          scheduledCancellationDate: billing.scheduledCancellationDate || null,
           planTier: billing.planTier,
           planName: billing.planName,
           monthlyPrice: billing.monthlyPrice,
@@ -263,6 +266,8 @@ export async function GET(request: Request) {
         upgradeUrl: billing.upgradeUrl,
         hasTrialStarted: billing.hasTrialStarted,
         isSuperAdmin: billing.isSuperAdmin,
+        isPastDue: Boolean(billing.isPastDue),
+        scheduledCancellationDate: billing.scheduledCancellationDate || null,
         planTier: billing.planTier,
         planName: billing.planName,
         monthlyPrice: billing.monthlyPrice,
@@ -309,6 +314,7 @@ export async function GET(request: Request) {
                       : `https://merchants.google.com/mc/products/diagnostics?account=${activeStore.gmc_id || activeStore.merchant_id}`)),
           }
         : null,
+      userEmail: tenantEmail,
       incidents: formattedIncidents,
       activityFeed,
     });

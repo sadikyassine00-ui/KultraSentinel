@@ -53,6 +53,11 @@ export interface Tenant {
   trial_ends_at?: string | null;
   stripe_customer_id?: string | null;
   stripe_subscription_id?: string | null;
+  paddle_customer_id?: string | null;
+  paddle_subscription_id?: string | null;
+  current_period_ends_at?: string | null;
+  scheduled_cancellation_at?: string | null;
+  is_past_due?: boolean;
   created_at: string;
 }
 
@@ -176,6 +181,7 @@ export interface UserSession {
 // -----------------------------------------------------------------------------
 
 const inMemorySessions = new Map<string, UserSession>();
+const inMemoryProcessedPaddleEvents = new Map<string, { eventType: string; processedAt: number }>();
 
 const inMemoryTenants: Tenant[] = [
   {
@@ -563,6 +569,18 @@ export async function ensureSchema(): Promise<boolean> {
     await sql`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS account_plan TEXT DEFAULT 'solo';`;
     await sql`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT;`;
     await sql`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT;`;
+    await sql`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS paddle_customer_id TEXT;`;
+    await sql`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS paddle_subscription_id TEXT;`;
+    await sql`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS current_period_ends_at TIMESTAMPTZ;`;
+    await sql`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS scheduled_cancellation_at TIMESTAMPTZ;`;
+    await sql`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS is_past_due BOOLEAN DEFAULT FALSE;`;
+    await sql`
+      CREATE TABLE IF NOT EXISTS processed_paddle_events (
+        event_id TEXT PRIMARY KEY,
+        event_type TEXT NOT NULL,
+        processed_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `;
     await sql`ALTER TABLE admins ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';`;
 
     // 5. Stores Registry Table
@@ -1063,7 +1081,12 @@ export async function updateTenant(id: number, updates: Partial<Tenant>): Promis
           subscription_status = COALESCE(${updates.subscription_status || null}, subscription_status),
           trial_ends_at = COALESCE(${updates.trial_ends_at || null}, trial_ends_at),
           stripe_customer_id = COALESCE(${updates.stripe_customer_id || null}, stripe_customer_id),
-          stripe_subscription_id = COALESCE(${updates.stripe_subscription_id || null}, stripe_subscription_id)
+          stripe_subscription_id = COALESCE(${updates.stripe_subscription_id || null}, stripe_subscription_id),
+          paddle_customer_id = COALESCE(${updates.paddle_customer_id || null}, paddle_customer_id),
+          paddle_subscription_id = COALESCE(${updates.paddle_subscription_id || null}, paddle_subscription_id),
+          current_period_ends_at = COALESCE(${updates.current_period_ends_at || null}, current_period_ends_at),
+          scheduled_cancellation_at = ${updates.scheduled_cancellation_at !== undefined ? updates.scheduled_cancellation_at : sql`scheduled_cancellation_at`},
+          is_past_due = ${updates.is_past_due !== undefined ? updates.is_past_due : sql`is_past_due`}
         WHERE id = ${id}
         RETURNING *;
       `;
@@ -1079,6 +1102,183 @@ export async function updateTenant(id: number, updates: Partial<Tenant>): Promis
     return tenant;
   }
   return null;
+}
+
+export async function updateTenantByEmail(
+  email: string,
+  updates: Partial<Tenant>
+): Promise<Tenant | null> {
+  const cleanEmail = email.toLowerCase().trim();
+  const sql = getDb();
+  if (sql) {
+    try {
+      await ensureSchema();
+      const rows = await sql`
+        UPDATE tenants
+        SET 
+          status = COALESCE(${updates.status || null}, status),
+          plan_tier = COALESCE(${updates.plan_tier || null}, plan_tier),
+          account_plan = COALESCE(${updates.account_plan || null}, account_plan),
+          oauth_status = COALESCE(${updates.oauth_status || null}, oauth_status),
+          subscription_status = COALESCE(${updates.subscription_status || null}, subscription_status),
+          trial_ends_at = COALESCE(${updates.trial_ends_at || null}, trial_ends_at),
+          stripe_customer_id = COALESCE(${updates.stripe_customer_id || null}, stripe_customer_id),
+          stripe_subscription_id = COALESCE(${updates.stripe_subscription_id || null}, stripe_subscription_id),
+          paddle_customer_id = COALESCE(${updates.paddle_customer_id || null}, paddle_customer_id),
+          paddle_subscription_id = COALESCE(${updates.paddle_subscription_id || null}, paddle_subscription_id),
+          current_period_ends_at = COALESCE(${updates.current_period_ends_at || null}, current_period_ends_at),
+          scheduled_cancellation_at = ${updates.scheduled_cancellation_at !== undefined ? updates.scheduled_cancellation_at : sql`scheduled_cancellation_at`},
+          is_past_due = ${updates.is_past_due !== undefined ? updates.is_past_due : sql`is_past_due`},
+          last_active = NOW()
+        WHERE LOWER(email) = ${cleanEmail}
+        RETURNING *;
+      `;
+      if (rows.length > 0) return rows[0] as unknown as Tenant;
+    } catch (err) {
+      console.warn('[Neon DB] Error updating tenant by email:', err);
+    }
+  }
+
+  const tenant = inMemoryTenants.find((t) => t.email.toLowerCase().trim() === cleanEmail);
+  if (tenant) {
+    Object.assign(tenant, updates);
+    return tenant;
+  }
+  return null;
+}
+
+export async function setTenantStoreAlertStatus(
+  tenantEmail: string,
+  alertStatus: 'active' | 'degraded'
+): Promise<void> {
+  const cleanEmail = tenantEmail.toLowerCase().trim();
+  if (isSuperAdminEmail(cleanEmail)) {
+    return;
+  }
+
+  const sql = getDb();
+  if (sql) {
+    try {
+      await ensureSchema();
+      await sql`
+        UPDATE stores
+        SET alert_status = ${alertStatus}
+        WHERE LOWER(tenant_email) = ${cleanEmail};
+      `;
+    } catch (err) {
+      console.warn('[Neon DB] Error setting store alert status for tenant:', err);
+    }
+  }
+
+  for (const store of inMemoryStores) {
+    if (store.tenant_email.toLowerCase().trim() === cleanEmail) {
+      store.alert_status = alertStatus;
+    }
+  }
+}
+
+export async function findTenantByIdOrUserId(idOrUserId: string | number): Promise<Tenant | null> {
+  if (!idOrUserId) return null;
+  const str = String(idOrUserId).trim();
+  const numId = Number(str);
+  const sql = getDb();
+  if (sql) {
+    try {
+      await ensureSchema();
+      if (!isNaN(numId) && Number.isInteger(numId) && numId > 0) {
+        const rows = await sql`
+          SELECT * FROM tenants WHERE id = ${numId} OR user_id = ${str} LIMIT 1;
+        `;
+        if (rows.length > 0) return rows[0] as unknown as Tenant;
+      } else {
+        const rows = await sql`
+          SELECT * FROM tenants WHERE user_id = ${str} LIMIT 1;
+        `;
+        if (rows.length > 0) return rows[0] as unknown as Tenant;
+      }
+    } catch (err) {
+      console.warn('[Neon DB] Error finding tenant by ID or UserID:', err);
+    }
+  }
+
+  return inMemoryTenants.find((t) => String(t.id) === str || t.user_id === str) || null;
+}
+
+export async function findTenantByPaddleCustomer(customerId: string): Promise<Tenant | null> {
+  if (!customerId) return null;
+  const cleanId = customerId.trim();
+  const sql = getDb();
+  if (sql) {
+    try {
+      await ensureSchema();
+      const rows = await sql`
+        SELECT * FROM tenants WHERE paddle_customer_id = ${cleanId} LIMIT 1;
+      `;
+      if (rows.length > 0) return rows[0] as unknown as Tenant;
+    } catch (err) {
+      console.warn('[Neon DB] Error finding tenant by paddle customer:', err);
+    }
+  }
+  return inMemoryTenants.find((t) => t.paddle_customer_id === cleanId) || null;
+}
+
+export async function findTenantByPaddleSubscription(subscriptionId: string): Promise<Tenant | null> {
+  if (!subscriptionId) return null;
+  const cleanId = subscriptionId.trim();
+  const sql = getDb();
+  if (sql) {
+    try {
+      await ensureSchema();
+      const rows = await sql`
+        SELECT * FROM tenants WHERE paddle_subscription_id = ${cleanId} LIMIT 1;
+      `;
+      if (rows.length > 0) return rows[0] as unknown as Tenant;
+    } catch (err) {
+      console.warn('[Neon DB] Error finding tenant by paddle subscription:', err);
+    }
+  }
+  return inMemoryTenants.find((t) => t.paddle_subscription_id === cleanId) || null;
+}
+
+export async function isPaddleEventProcessed(eventId: string): Promise<boolean> {
+  if (!eventId) return false;
+  if (inMemoryProcessedPaddleEvents.has(eventId)) return true;
+
+  const sql = getDb();
+  if (sql) {
+    try {
+      await ensureSchema();
+      const rows = await sql`
+        SELECT event_id FROM processed_paddle_events WHERE event_id = ${eventId} LIMIT 1;
+      `;
+      if (rows.length > 0) {
+        inMemoryProcessedPaddleEvents.set(eventId, { eventType: 'cached', processedAt: Date.now() });
+        return true;
+      }
+    } catch (err) {
+      console.warn('[Neon DB] Error checking processed paddle event:', err);
+    }
+  }
+  return false;
+}
+
+export async function markPaddleEventProcessed(eventId: string, eventType: string): Promise<void> {
+  if (!eventId) return;
+  inMemoryProcessedPaddleEvents.set(eventId, { eventType, processedAt: Date.now() });
+
+  const sql = getDb();
+  if (sql) {
+    try {
+      await ensureSchema();
+      await sql`
+        INSERT INTO processed_paddle_events (event_id, event_type, processed_at)
+        VALUES (${eventId}, ${eventType}, NOW())
+        ON CONFLICT (event_id) DO NOTHING;
+      `;
+    } catch (err) {
+      console.warn('[Neon DB] Error marking paddle event processed:', err);
+    }
+  }
 }
 
 export async function getTenantById(id: number): Promise<Tenant | null> {
@@ -1811,8 +2011,10 @@ export async function upsertIncident(data: {
   } else {
     isNew = true;
     const now = new Date().toISOString();
+    const maxExistingId = inMemoryIncidents.reduce((max, inc) => Math.max(max, Number(inc.id) || 0), 0);
+    const generatedId = maxExistingId > 0 ? maxExistingId + 1 : 1;
     const newIncident: Incident = {
-      id: inMemoryIncidents.length + 1,
+      id: generatedId,
       store_id: data.storeId,
       gmc_id: data.gmcId,
       tenant_email: data.tenant_email,
@@ -1853,7 +2055,7 @@ export async function upsertIncident(data: {
           WHERE store_id = ${String(data.storeId)} AND sku = ${data.sku} AND issue_code = ${data.issueCode} AND status = 'unresolved';
         `;
       } else {
-        await sql`
+        const insertedRows = await sql`
           INSERT INTO incidents (
             store_id, gmc_id, tenant_email, sku, offer_id, title, product_title, issue_code, severity, status,
             is_simulated, first_detected_at, last_detected_at, detected_at, details
@@ -1861,8 +2063,17 @@ export async function upsertIncident(data: {
             ${String(data.storeId)}, ${data.gmcId}, ${data.tenant_email || null}, ${data.sku}, ${data.sku},
             ${data.title}, ${data.title}, ${data.issueCode},
             ${data.severity}, 'unresolved', ${Boolean(data.is_simulated)}, NOW(), NOW(), NOW(), ${JSON.stringify(data.details || {})}
-          );
+          )
+          RETURNING *;
         `;
+        if (insertedRows.length > 0) {
+          resultIncident = insertedRows[0] as unknown as Incident;
+          // Synchronize in-memory mirror ID with generated database serial primary key
+          const memRecord = inMemoryIncidents.find((i) => i === resultIncident || (i.sku === data.sku && String(i.store_id) === String(data.storeId)));
+          if (memRecord) {
+            memRecord.id = resultIncident.id;
+          }
+        }
         await sql`
           UPDATE stores
           SET open_disapprovals = open_disapprovals + 1, total_caught = total_caught + 1, last_message_at = NOW()
@@ -2510,6 +2721,11 @@ export async function dismissOrAcknowledgeIncident(
   message?: string;
   error?: string;
 }> {
+  const cleanId = String(incidentId ?? '').trim();
+  if (!cleanId || cleanId === 'undefined' || cleanId === 'null') {
+    return { success: false, error: 'A valid unique incident identifier is required' };
+  }
+
   const cleanEmail = tenantEmail.toLowerCase().trim();
   const sql = getDb();
   if (sql) {
@@ -2519,7 +2735,7 @@ export async function dismissOrAcknowledgeIncident(
       const existing = await sql`
         SELECT i.* FROM incidents i
         JOIN stores s ON s.id::text = i.store_id::text
-        WHERE i.id::text = ${String(incidentId)}
+        WHERE i.id::text = ${cleanId}
           AND LOWER(s.tenant_email) = ${cleanEmail}
         LIMIT 1;
       `;
@@ -2530,19 +2746,19 @@ export async function dismissOrAcknowledgeIncident(
       const isSimulated = Boolean(inc.is_simulated || inc.sku === 'DEMO-RUNNER-402');
 
       if (isSimulated) {
-        // Test drill incident: delete permanently from DB (§3)
+        // Test drill incident: delete strictly this single record by unique primary key
         await sql`
           DELETE FROM incidents
-          WHERE id::text = ${String(incidentId)};
+          WHERE id::text = ${cleanId};
         `;
-        // Decrement open_disapprovals on store
+        // Decrement open_disapprovals on store by exactly 1
         await sql`
           UPDATE stores
           SET open_disapprovals = GREATEST(0, open_disapprovals - 1)
           WHERE id::text = ${String(inc.store_id)};
         `;
         // Clean in-memory mirror if present
-        const memIdx = inMemoryIncidents.findIndex((i) => String(i.id) === String(incidentId));
+        const memIdx = inMemoryIncidents.findIndex((i) => String(i.id) === cleanId);
         if (memIdx !== -1) inMemoryIncidents.splice(memIdx, 1);
         const memStore = inMemoryStores.find((s) => String(s.id) === String(inc.store_id));
         if (memStore) memStore.open_disapprovals = Math.max(0, memStore.open_disapprovals - 1);
@@ -2554,21 +2770,21 @@ export async function dismissOrAcknowledgeIncident(
           message: 'Test incident cleared.',
         };
       } else {
-        // Real Google disapproval: mark as acknowledged (§3)
+        // Real Google disapproval: mark strictly this single record as acknowledged
         const updated = await sql`
           UPDATE incidents
           SET status = 'acknowledged', resolved_at = NOW(), last_detected_at = NOW()
-          WHERE id::text = ${String(incidentId)}
+          WHERE id::text = ${cleanId}
           RETURNING *;
         `;
-        // Decrement open_disapprovals on store
+        // Decrement open_disapprovals on store by exactly 1
         await sql`
           UPDATE stores
           SET open_disapprovals = GREATEST(0, open_disapprovals - 1)
           WHERE id::text = ${String(inc.store_id)};
         `;
         // Clean in-memory mirror if present
-        const memInc = inMemoryIncidents.find((i) => String(i.id) === String(incidentId));
+        const memInc = inMemoryIncidents.find((i) => String(i.id) === cleanId);
         if (memInc) {
           memInc.status = 'acknowledged';
           memInc.resolved_at = new Date().toISOString();
@@ -2589,8 +2805,8 @@ export async function dismissOrAcknowledgeIncident(
     }
   }
 
-  // In-memory fallback
-  const incidentIdx = inMemoryIncidents.findIndex((i) => String(i.id) === String(incidentId));
+  // In-memory fallback: strictly target unique record by id
+  const incidentIdx = inMemoryIncidents.findIndex((i) => String(i.id) === cleanId);
   if (incidentIdx !== -1) {
     const inc = inMemoryIncidents[incidentIdx];
     const store = inMemoryStores.find(
