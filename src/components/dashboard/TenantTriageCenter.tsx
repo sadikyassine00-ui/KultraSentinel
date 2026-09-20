@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import {
   ShieldCheck,
@@ -1761,14 +1762,15 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
       {/* --------------------------------------------------------------------- */}
       {/* Alert Configuration Modal (Slack Incoming Webhook)                    */}
       {/* --------------------------------------------------------------------- */}
-      {modalOpen && (
+      {modalOpen && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-[2px] p-4"
+          className="fixed inset-0 top-0 left-0 right-0 bottom-0 w-screen h-screen min-h-[100dvh] z-[99999] bg-[#0a0b0d]/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto"
+          style={{ margin: 0, top: 0, left: 0, right: 0, bottom: 0 }}
           onClick={(e) => {
             if (e.target === e.currentTarget) closeModal();
           }}
         >
-          <div className="bg-[var(--bg-surface)] border border-[var(--hairline-strong)] rounded-[var(--radius-md)] max-w-lg w-full p-6 sm:p-7 space-y-5 shadow-[0_16px_40px_rgba(0,0,0,0.5)] relative">
+          <div className="bg-[var(--bg-surface)] border border-[var(--hairline-strong)] rounded-[var(--radius-md)] max-w-lg w-full max-w-[calc(100vw-24px)] sm:max-w-lg p-6 sm:p-7 space-y-5 shadow-[0_16px_40px_rgba(0,0,0,0.5)] relative my-auto box-border">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full bg-[var(--signal-wash)] border border-[var(--signal-dim)] flex items-center justify-center shrink-0">
@@ -1786,7 +1788,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
               <button
                 type="button"
                 onClick={closeModal}
-                className="text-[var(--ghost-text)] hover:text-[var(--ink-primary)] p-1 rounded-[var(--radius-sm)] transition-colors"
+                className="text-[var(--ghost-text)] hover:text-[var(--ink-primary)] p-1 rounded-[var(--radius-sm)] transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center"
                 aria-label="Close modal"
               >
                 ✕
@@ -1909,7 +1911,8 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

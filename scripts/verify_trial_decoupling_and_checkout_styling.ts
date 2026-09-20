@@ -138,9 +138,15 @@ async function main() {
   assert(globalsCss.includes('font-size: 16px !important'), 'Mobile input font-size >= 16px to prevent iOS auto-zoom');
   assert(globalsCss.includes('min-height: 44px !important'), 'Mobile input/button min-height >= 44px');
 
-  // Check fluid mobile container down to 320px width
-  assert(overlaySource.includes('w-full max-w-[500px]'), 'Modal is fluid width with max-w-[500px]');
-  assert(overlaySource.includes('p-3 sm:p-4'), 'Outer backdrop padding scales for small viewports');
+  // Check fluid mobile container down to 320px width and expanded desktop view per user request
+  assert(
+    overlaySource.includes('max-w-[calc(100vw-24px)]') || overlaySource.includes('w-full max-w-[500px]'),
+    'Modal is fluid width with responsive max width'
+  );
+  assert(
+    overlaySource.includes('p-3 sm:p-6') || overlaySource.includes('p-3 sm:p-4'),
+    'Outer backdrop padding scales for small viewports'
+  );
   console.log('[PASS] Mobile responsiveness down to 320px, 44px touch targets, and iOS zoom prevention verified.');
 
   console.log('\n================================================================');

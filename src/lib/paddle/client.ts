@@ -66,16 +66,32 @@ export async function openPaddleOverlayCheckout(options: OpenCheckoutOptions): P
     return false;
   }
 
-  const isInline = Boolean(options.frameTarget);
+  const isInlineRequested = Boolean(options.frameTarget);
+  let effectiveDisplayMode: 'inline' | 'overlay' = isInlineRequested ? 'inline' : 'overlay';
+  let verifiedFrameTarget: string | undefined = undefined;
+
+  if (isInlineRequested && options.frameTarget && typeof document !== 'undefined') {
+    const targetEl =
+      document.getElementsByClassName(options.frameTarget)[0] ||
+      document.getElementById(options.frameTarget);
+
+    if (targetEl) {
+      verifiedFrameTarget = options.frameTarget;
+    } else {
+      console.warn(`[Paddle.js] Target element for inline frame '${options.frameTarget}' not found. Falling back to overlay mode.`);
+      effectiveDisplayMode = 'overlay';
+    }
+  }
+
   const settings = {
     variant: 'one-page' as const,
     theme: 'dark' as const,
-    displayMode: (isInline ? 'inline' : 'overlay') as 'inline' | 'overlay',
-    ...(isInline
+    displayMode: effectiveDisplayMode,
+    ...(effectiveDisplayMode === 'inline' && verifiedFrameTarget
       ? {
-          frameTarget: options.frameTarget,
-          frameInitialHeight: 450,
-          frameStyle: 'width: 100%; min-height: 450px; background-color: transparent; border: none;',
+          frameTarget: verifiedFrameTarget,
+          frameInitialHeight: 480,
+          frameStyle: 'width: 100%; max-width: 100%; min-height: 480px; background-color: transparent; border: none;',
         }
       : {}),
     ...(options.successUrl ? { successUrl: options.successUrl } : {}),

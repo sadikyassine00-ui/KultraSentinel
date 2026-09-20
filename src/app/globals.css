@@ -60,12 +60,23 @@
   --network-node-signal: rgba(242, 169, 59, 0.4);
 }
 
-/* Typography assignment */
+/* Typography & Viewport Box-Sizing Reset */
+html,
 body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  position: relative;
+  box-sizing: border-box;
   background-color: var(--bg-canvas);
   color: var(--ink-primary);
   font-family: var(--font-body);
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 h1, h2, h3, .font-display {
@@ -291,23 +302,34 @@ h1 {
 }
 
 /* Paddle.js Checkout Frame & Modal Styling (§2, §3, GEMINI.md) */
-.paddle-checkout-frame {
-  width: 100%;
-  min-height: 440px;
-  background: transparent;
+.paddle-checkout-frame,
+.paddle-modal-checkout-frame {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-height: 480px !important;
+  background: transparent !important;
+  box-sizing: border-box !important;
+  overflow-x: hidden !important;
 }
 
 .paddle-checkout-frame iframe,
+.paddle-modal-checkout-frame iframe,
 iframe[name="paddle-checkout-frame"] {
   width: 100% !important;
-  min-height: 440px !important;
+  max-width: 100% !important;
+  min-height: 480px !important;
   border: none !important;
   background: transparent !important;
   color-scheme: dark !important;
+  box-sizing: border-box !important;
 }
 
 /* Touch & Mobile Optimization for Checkout Form Inputs (§3) */
 @media screen and (max-width: 767px) {
+  .paddle-checkout-frame,
+  .paddle-modal-checkout-frame {
+    min-height: 440px !important;
+  }
   .paddle-checkout-frame input,
   .paddle-checkout-frame select,
   .paddle-checkout-frame button,
