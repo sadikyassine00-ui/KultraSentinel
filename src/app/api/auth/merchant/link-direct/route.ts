@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { COOKIE_NAME, verifySessionToken } from '@/lib/token';
 import { claimStoreForTenant, findTenantByEmail, getStoresForTenant, upsertIncident } from '@/lib/db';
 import { decryptToken } from '@/lib/security';
-import { activateTrialOnFirstStoreConnect } from '@/lib/subscription';
+import { activateTrialOnFirstStoreConnect, canTenantConnectStore } from '@/lib/subscription';
 import {
   registerMerchantNotificationSubscription,
   auditExistingDisapprovals,
@@ -137,6 +137,25 @@ export async function POST(request: Request) {
 
     const tenant = await findTenantByEmail(session.email);
     const tenantId = tenant ? tenant.id : 1;
+
+    // Strict Account Entitlement Check: Prevent over-provisioning beyond plan quota
+    const existingStores = await getStoresForTenant(session.email);
+    const alreadyClaimed = existingStores.some((s) => String(s.gmc_id) === String(gmcId));
+    if (!alreadyClaimed) {
+      const quotaCheck = canTenantConnectStore(tenant, existingStores.length);
+      if (!quotaCheck.allowed) {
+        return NextResponse.json(
+          {
+            error: quotaCheck.reason,
+            quotaReached: true,
+            planTier: quotaCheck.planTier,
+            limit: quotaCheck.limit,
+            current: quotaCheck.current,
+          },
+          { status: 403 }
+        );
+      }
+    }
 
     // Persist the store record in database
     const claimResult = await claimStoreForTenant({

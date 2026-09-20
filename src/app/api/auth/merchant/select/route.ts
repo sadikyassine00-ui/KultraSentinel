@@ -1,9 +1,10 @@
 import { NextResponse, after } from 'next/server';
 import { cookies } from 'next/headers';
 import { COOKIE_NAME, verifySessionToken } from '@/lib/token';
-import { claimStoreForTenant, findTenantByEmail, upsertIncident } from '@/lib/db';
+import { claimStoreForTenant, findTenantByEmail, getStoresForTenant, upsertIncident } from '@/lib/db';
 import { registerMerchantNotificationSubscription, auditExistingDisapprovals, DiscoveredGmcAccount } from '@/lib/merchant_api';
 import { dispatchInitialAuditSlackNotification } from '@/lib/slack';
+import { canTenantConnectStore } from '@/lib/subscription';
 
 interface SelectCookieData {
   email: string;
@@ -65,6 +66,25 @@ export async function POST(request: Request) {
     const tenantId = tenant ? tenant.id : 1;
     const storeUrl = chosenAcct.websiteUrl || `https://merchants.google.com/mc/overview?account=${chosenAcct.merchantId}`;
     const accountType = chosenAcct.isAggregator ? 'MCA Child' : 'Standalone Merchant';
+
+    // Strict Account Entitlement Check: Prevent over-provisioning beyond plan quota
+    const currentStores = await getStoresForTenant(session.email);
+    const alreadyClaimed = currentStores.some((s) => String(s.gmc_id) === String(chosenAcct.merchantId));
+    if (!alreadyClaimed) {
+      const quotaCheck = canTenantConnectStore(tenant, currentStores.length);
+      if (!quotaCheck.allowed) {
+        return NextResponse.json(
+          {
+            error: quotaCheck.reason,
+            quotaReached: true,
+            planTier: quotaCheck.planTier,
+            limit: quotaCheck.limit,
+            current: quotaCheck.current,
+          },
+          { status: 403 }
+        );
+      }
+    }
 
     const claimResult = await claimStoreForTenant({
       gmcId: chosenAcct.merchantId,

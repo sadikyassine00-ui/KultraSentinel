@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { LogOut, Shield, ChevronDown, ShieldCheck, LayoutDashboard, CreditCard } from 'lucide-react';
+import { FleetLimitModal } from '@/components/dashboard/FleetLimitModal';
 
 interface AuthUser {
   email: string;
@@ -58,6 +59,7 @@ export default function TenantDashboardClientLayout({
   const [billing, setBilling] = useState<BillingState | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [storeDropdownOpen, setStoreDropdownOpen] = useState(false);
+  const [isFleetModalOpen, setIsFleetModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const storeDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -222,10 +224,15 @@ export default function TenantDashboardClientLayout({
                         <ChevronDown className={`w-3.5 h-3.5 text-[#6b7078] shrink-0 transition-transform duration-150 ${storeDropdownOpen ? 'rotate-180 text-[#f2a93b]' : ''}`} />
                       </button>
 
-                      {storeDropdownOpen && (
+                      {storeDropdownOpen && (() => {
+                        const isSuperAdminUser = Boolean(user?.isAdmin || billing?.isSuperAdmin);
+                        const isAgencyUser = billing?.planTier === 'Agency' || billing?.planName?.includes('Agency');
+                        const maxStoresLabel = isSuperAdminUser ? 'Unlimited' : isAgencyUser ? '5' : '1';
+
+                        return (
                         <div className="absolute top-full left-0 mt-1.5 w-72 sm:w-80 bg-[#0e0f11] border border-[rgba(255,255,255,0.14)] rounded-[4px] shadow-[0_16px_40px_rgba(0,0,0,0.5)] z-50 py-1.5">
                           <div className="px-3 py-1.5 text-[10px] font-mono text-[#6b7078] tracking-wider uppercase border-b border-[rgba(255,255,255,0.06)] flex items-center justify-between">
-                            <span>Connected Stores ({stores.length})</span>
+                            <span>GMC Accounts ({stores.length} of {maxStoresLabel})</span>
                             <span className="text-[10px] text-[#45484f]">Switch active view</span>
                           </div>
 
@@ -275,16 +282,32 @@ export default function TenantDashboardClientLayout({
                           </div>
 
                           <div className="border-t border-[rgba(255,255,255,0.08)] pt-1 mt-1 px-1">
-                            <a
-                              href="/api/auth/merchant/connect"
-                              onClick={() => setStoreDropdownOpen(false)}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setStoreDropdownOpen(false);
+                                if (isSuperAdminUser) {
+                                  window.location.href = '/api/auth/merchant/connect';
+                                  return;
+                                }
+                                if (isAgencyUser && stores.length >= 5) {
+                                  setIsFleetModalOpen(true);
+                                  return;
+                                }
+                                if (!isAgencyUser && stores.length >= 1) {
+                                  window.location.href = '/dashboard/settings?tab=billing&quota_exceeded=solo';
+                                  return;
+                                }
+                                window.location.href = '/api/auth/merchant/connect';
+                              }}
                               className="w-full text-left px-2.5 py-1.5 rounded-[3px] text-[12px] text-[#f2a93b] hover:bg-[#131418] flex items-center gap-1.5 transition-colors font-medium"
                             >
                               <span>+ Connect another GMC...</span>
-                            </a>
+                            </button>
                           </div>
                         </div>
-                      )}
+                        );
+                      })()}
                     </div>
                   ) : (
                     <div className="flex items-center gap-2 shrink-0">
@@ -509,6 +532,14 @@ export default function TenantDashboardClientLayout({
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {children}
       </main>
+
+      {/* Fleet Limit Interceptor Modal */}
+      <FleetLimitModal
+        isOpen={isFleetModalOpen}
+        onClose={() => setIsFleetModalOpen(false)}
+        userEmail={user?.email || ''}
+        storeCount={stores.length}
+      />
     </div>
   );
 }

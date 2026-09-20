@@ -10,6 +10,7 @@ interface PageProps {
     tab?: string;
     checkout_success?: string;
     plan?: string;
+    quota_exceeded?: string;
   }>;
 }
 
@@ -34,6 +35,7 @@ export default async function SettingsPage({ searchParams }: PageProps) {
   const initialTab = resolvedParams.tab || 'billing';
   const checkoutSuccess = resolvedParams.checkout_success === 'true';
   const upgradedPlan = resolvedParams.plan || null;
+  const quotaExceeded = resolvedParams.quota_exceeded || null;
 
   return (
     <Suspense fallback={<div className="p-8 text-[var(--ghost-text)] font-mono text-[13px]">Loading settings...</div>}>
@@ -41,6 +43,7 @@ export default async function SettingsPage({ searchParams }: PageProps) {
         initialTab={initialTab}
         checkoutSuccess={checkoutSuccess}
         upgradedPlan={upgradedPlan}
+        quotaExceeded={quotaExceeded}
       />
     </Suspense>
   );

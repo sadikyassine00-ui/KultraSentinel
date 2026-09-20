@@ -1,10 +1,11 @@
 import { NextResponse, after } from 'next/server';
 import { cookies } from 'next/headers';
 import { COOKIE_NAME, verifySessionToken } from '@/lib/token';
-import { claimStoreForTenant, findTenantByEmail, upsertIncident } from '@/lib/db';
+import { claimStoreForTenant, findTenantByEmail, getStoresForTenant, upsertIncident } from '@/lib/db';
 import { encryptToken, verifyOAuthState, OAUTH_STATE_COOKIE_NAME } from '@/lib/security';
 import { registerMerchantNotificationSubscription, auditExistingDisapprovals, discoverMerchantAccounts } from '@/lib/merchant_api';
 import { dispatchInitialAuditSlackNotification } from '@/lib/slack';
+import { canTenantConnectStore } from '@/lib/subscription';
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -214,9 +215,23 @@ export async function GET(request: Request) {
     const storeUrl = selectedAcct.websiteUrl || `https://merchants.google.com/mc/overview?account=${gmcId}`;
     const accountType = selectedAcct.isAggregator ? 'MCA Child' : 'Standalone Merchant';
 
-    // 5. Tenant Isolation & Collision Protection
+    // 5. Tenant Isolation, Quota Enforcement & Collision Protection
     const tenant = await findTenantByEmail(session.email);
     const tenantId = tenant ? tenant.id : 1;
+
+    // Strict Account Entitlement Check: Prevent over-provisioning beyond plan quota
+    const currentStores = await getStoresForTenant(session.email);
+    const alreadyClaimed = currentStores.some((s) => String(s.gmc_id) === String(gmcId));
+    if (!alreadyClaimed) {
+      const quotaCheck = canTenantConnectStore(tenant, currentStores.length);
+      if (!quotaCheck.allowed) {
+        const quotaParam = quotaCheck.planTier === 'Agency' ? 'fleet_quota_reached' : 'solo_quota_reached';
+        fallbackDashboardUrl.searchParams.set('error', quotaParam);
+        const res = NextResponse.redirect(fallbackDashboardUrl);
+        res.cookies.delete(OAUTH_STATE_COOKIE_NAME);
+        return res;
+      }
+    }
 
     const claimResult = await claimStoreForTenant({
       gmcId,

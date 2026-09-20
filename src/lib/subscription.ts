@@ -1,6 +1,8 @@
 import { Tenant, findTenantByEmail, getDb, ensureSchema } from './db';
 import { isSuperAdminEmail } from './token';
 
+export type { Tenant };
+
 export type SubscriptionStatus = 'active trial' | 'paid active' | 'expired' | 'canceled';
 
 export interface PlanQuotas {
@@ -140,11 +142,17 @@ export function evaluateSubscription(
     };
   }
 
-  const isAgency = tenant.plan_tier === 'Agency Pilot' || tenant.account_plan === 'agency';
+  const rawPlanTier = (tenant.plan_tier as string | undefined)?.toLowerCase();
+  const isAgency =
+    rawPlanTier === 'agency' ||
+    rawPlanTier === 'agency fleet' ||
+    rawPlanTier === 'agency pilot' ||
+    tenant.account_plan === 'agency' ||
+    Boolean(rawPlanTier?.includes('agency'));
   const planTier: 'Solo' | 'Agency' = isAgency ? 'Agency' : 'Solo';
   const monthlyPrice = isAgency ? 49 : 19;
   const formattedPrice = isAgency ? '$49/mo' : '$19/mo';
-  const gmcAccountsLimit = isAgency ? 'unlimited' : 1;
+  const gmcAccountsLimit = isAgency ? 5 : 1;
   const storeCount = extra?.storeCount ?? (tenant.connected_stores || 0);
   const slackCount = extra?.slackCount ?? 0;
 
@@ -423,3 +431,81 @@ export async function getTenantSubscription(email: string): Promise<Subscription
 
   return evaluation;
 }
+
+/**
+ * Returns the maximum allowed store count for a given tenant.
+ * - Superadmin: 'unlimited'
+ * - Agency Fleet ($49/mo): 5
+ * - Solo ($19/mo) / Trial: 1
+ */
+export function getStoreLimitForTenant(tenant?: Partial<Tenant> | null): number | 'unlimited' {
+  const email = tenant?.email?.toLowerCase().trim();
+  if (isSuperAdminEmail(email)) {
+    return 'unlimited';
+  }
+  const rawPlanTier = (tenant?.plan_tier as string | undefined)?.toLowerCase();
+  const isAgency =
+    rawPlanTier === 'agency' ||
+    rawPlanTier === 'agency fleet' ||
+    rawPlanTier === 'agency pilot' ||
+    tenant?.account_plan === 'agency' ||
+    Boolean(rawPlanTier?.includes('agency'));
+  return isAgency ? 5 : 1;
+}
+
+export interface StoreConnectionQuotaCheck {
+  allowed: boolean;
+  limit: number | 'unlimited';
+  current: number;
+  planTier: 'Solo' | 'Agency' | 'Superadmin';
+  reason?: string;
+}
+
+/**
+ * Validates whether a tenant is permitted to connect an additional GMC store.
+ * Rejects with a descriptive reason if the quota has been met or exceeded.
+ */
+export function canTenantConnectStore(
+  tenant?: Partial<Tenant> | null,
+  currentStoreCount = 0
+): StoreConnectionQuotaCheck {
+  const email = tenant?.email?.toLowerCase().trim();
+  if (isSuperAdminEmail(email)) {
+    return {
+      allowed: true,
+      limit: 'unlimited',
+      current: currentStoreCount,
+      planTier: 'Superadmin',
+    };
+  }
+
+  const rawPlanTier = (tenant?.plan_tier as string | undefined)?.toLowerCase();
+  const isAgency =
+    rawPlanTier === 'agency' ||
+    rawPlanTier === 'agency fleet' ||
+    rawPlanTier === 'agency pilot' ||
+    tenant?.account_plan === 'agency' ||
+    Boolean(rawPlanTier?.includes('agency'));
+  const planTier: 'Solo' | 'Agency' = isAgency ? 'Agency' : 'Solo';
+  const limit = isAgency ? 5 : 1;
+
+  if (currentStoreCount >= limit) {
+    return {
+      allowed: false,
+      limit,
+      current: currentStoreCount,
+      planTier,
+      reason: isAgency
+        ? 'Agency Fleet quota reached: Maximum 5 connected Google Merchant Center stores allowed.'
+        : 'Solo Plan quota reached: Maximum 1 connected Google Merchant Center store allowed. Upgrade to Agency Fleet to connect up to 5 stores.',
+    };
+  }
+
+  return {
+    allowed: true,
+    limit,
+    current: currentStoreCount,
+    planTier,
+  };
+}
+

@@ -143,7 +143,7 @@ export function PricingMatrix({ onSelectPlan }: PricingMatrixProps) {
                   <span className="font-mono text-[2.5rem] font-medium text-[var(--signal)] leading-none">
                     $49
                   </span>
-                  <span className="font-mono text-[12px] text-[var(--ghost-text)]">/ month ($5/mo per extra account)</span>
+                  <span className="font-mono text-[12px] text-[var(--ghost-text)]">/ month flat</span>
                 </div>
                 <div className="font-mono text-[12px] text-[var(--signal)] mt-1.5">
                   Free for 14 days, then $49/mo
@@ -154,7 +154,11 @@ export function PricingMatrix({ onSelectPlan }: PricingMatrixProps) {
               <ul className="space-y-3 text-[13px] text-[var(--ink-secondary)]">
                 <li className="flex items-start gap-2.5">
                   <Check className="w-4 h-4 text-[var(--signal)] shrink-0 mt-0.5" strokeWidth={1.5} />
-                  <span><strong className="text-[var(--ink-primary)] font-medium">Up to 15 GMC Accounts</strong> included</span>
+                  <span><strong className="text-[var(--ink-primary)] font-medium">Up to 5 GMC Accounts</strong> connected</span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <Check className="w-4 h-4 text-[var(--signal)] shrink-0 mt-0.5" strokeWidth={1.5} />
+                  <span>Expandable fleet capacity for high-volume portfolios</span>
                 </li>
                 <li className="flex items-start gap-2.5">
                   <Check className="w-4 h-4 text-[var(--signal)] shrink-0 mt-0.5" strokeWidth={1.5} />

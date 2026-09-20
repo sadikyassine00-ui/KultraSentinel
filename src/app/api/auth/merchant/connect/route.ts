@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { COOKIE_NAME, verifySessionToken } from '@/lib/token';
 import { createOAuthState, OAUTH_STATE_COOKIE_NAME } from '@/lib/security';
+import { findTenantByEmail, getStoresForTenant } from '@/lib/db';
+import { canTenantConnectStore } from '@/lib/subscription';
 
 export async function GET(request: Request) {
   try {
@@ -30,12 +32,44 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Invalid or expired session' }, { status: 401 });
     }
 
+    const url = new URL(request.url);
+
+    // Strict Account Entitlement & Quota Enforcement
+    const tenant = await findTenantByEmail(session.email);
+    const currentStores = await getStoresForTenant(session.email);
+    const quotaCheck = canTenantConnectStore(tenant, currentStores.length);
+    if (!quotaCheck.allowed) {
+      const isJsonOrFetch =
+        url.searchParams.get('format') === 'json' ||
+        request.headers.get('sec-fetch-mode') === 'cors' ||
+        request.headers.get('accept')?.includes('application/json') ||
+        url.searchParams.has('_rsc') ||
+        request.headers.has('rsc');
+
+      if (isJsonOrFetch) {
+        return NextResponse.json(
+          {
+            error: quotaCheck.reason,
+            quotaReached: true,
+            planTier: quotaCheck.planTier,
+            limit: quotaCheck.limit,
+            current: quotaCheck.current,
+          },
+          { status: 403 }
+        );
+      }
+
+      const quotaParam = quotaCheck.planTier === 'Agency' ? 'agency' : 'solo';
+      const redirectTab = quotaCheck.planTier === 'Agency' ? 'general' : 'billing';
+      const redirectUrl = new URL(`/dashboard/settings?tab=${redirectTab}&quota_exceeded=${quotaParam}`, url.origin);
+      return NextResponse.redirect(redirectUrl);
+    }
+
     const googleClientId = process.env.GOOGLE_CLIENT_ID;
     if (!googleClientId) {
       return NextResponse.json({ error: 'Google Client ID is not configured' }, { status: 500 });
     }
 
-    const url = new URL(request.url);
     const redirectUri = `${url.origin}/api/auth/merchant/callback`;
 
     // Generate cryptographically random state and encrypted 10-minute HTTP-only cookie

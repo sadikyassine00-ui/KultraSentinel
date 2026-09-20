@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { openPaddleOverlayCheckout } from '@/lib/paddle/client';
 import { PaddleCheckoutModal } from '@/components/billing/PaddleCheckoutOverlay';
+import { FleetLimitModal } from '@/components/dashboard/FleetLimitModal';
 
 interface BillingState {
   status: 'active trial' | 'paid active' | 'expired' | 'canceled';
@@ -46,12 +47,14 @@ interface Props {
   initialTab?: string;
   checkoutSuccess?: boolean;
   upgradedPlan?: string | null;
+  quotaExceeded?: string | null;
 }
 
 export default function SettingsClientView({
   initialTab = 'billing',
   checkoutSuccess = false,
   upgradedPlan = null,
+  quotaExceeded = null,
 }: Props) {
   const [activeTab, setActiveTab] = useState<'billing' | 'general'>(
     initialTab === 'general' ? 'general' : 'billing'
@@ -64,6 +67,17 @@ export default function SettingsClientView({
   const [checkoutModalPlan, setCheckoutModalPlan] = useState<'solo' | 'agency' | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [showSuccessBanner, setShowSuccessBanner] = useState(checkoutSuccess);
+  const [isFleetModalOpen, setIsFleetModalOpen] = useState(false);
+  const [quotaWarning, setQuotaWarning] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (quotaExceeded === 'agency') {
+      setIsFleetModalOpen(true);
+    } else if (quotaExceeded === 'solo') {
+      setQuotaWarning('Solo Plan quota reached: Maximum 1 connected Google Merchant Center store allowed. Upgrade to Agency Fleet to connect up to 5 stores.');
+      setActiveTab('billing');
+    }
+  }, [quotaExceeded]);
 
   const fetchBillingData = useCallback(async () => {
     try {
@@ -332,14 +346,18 @@ export default function SettingsClientView({
                       GMC ACCOUNTS
                     </span>
                     <span className="font-mono text-[11px] text-[var(--ink-primary)] font-medium">
-                      {isAgency || isSuperAdmin
+                      {isSuperAdmin
                         ? `${stores.length} of Unlimited`
+                        : isAgency
+                        ? `${stores.length} of 5`
                         : `${Math.min(stores.length, 1)} of 1`}
                     </span>
                   </div>
                   <div className="text-[12px] text-[var(--ghost-text)] mt-1">
-                    {isAgency || isSuperAdmin
-                      ? 'Multi-store & MCA child accounts enabled.'
+                    {isSuperAdmin
+                      ? 'Unlimited stores enabled for Superadmin.'
+                      : isAgency
+                      ? 'Up to 5 stores & MCA child accounts enabled.'
                       : 'Single Google Merchant Center account.'}
                   </div>
                 </div>
@@ -491,7 +509,11 @@ export default function SettingsClientView({
                       <ul className="space-y-2.5 text-[12.5px] text-[var(--ink-secondary)]">
                         <li className="flex items-start gap-2">
                           <Check className="w-4 h-4 text-[var(--signal)] shrink-0 mt-0.5" />
-                          <span><strong className="text-[var(--ink-primary)]">Unlimited GMC Accounts</strong> connected</span>
+                          <span><strong className="text-[var(--ink-primary)]">Up to 5 GMC Accounts</strong> connected</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <Check className="w-4 h-4 text-[var(--signal)] shrink-0 mt-0.5" />
+                          <span>Expandable fleet capacity for high-volume portfolios</span>
                         </li>
                         <li className="flex items-start gap-2">
                           <Check className="w-4 h-4 text-[var(--signal)] shrink-0 mt-0.5" />
@@ -549,7 +571,7 @@ export default function SettingsClientView({
                         Upgrade to Agency Fleet ($49/mo)
                       </h4>
                       <p className="text-[13px] text-[var(--ink-secondary)] leading-[1.55]">
-                        Need to monitor additional Google Merchant Center accounts? Upgrade to Agency to connect unlimited GMC accounts, monitor MCA child stores, and add team seats.
+                        Need to monitor additional Google Merchant Center accounts? Upgrade to Agency to connect up to 5 GMC accounts, monitor MCA child stores, and add team seats.
                       </p>
                     </div>
 
@@ -589,7 +611,7 @@ export default function SettingsClientView({
                         Agency Fleet Tier Active
                       </h4>
                       <p className="text-[12.5px] text-[var(--ghost-text)] mt-0.5">
-                        You have unlocked unlimited Google Merchant Center connections and MCA fleet routing. Need custom enterprise volume or dedicated account support? Contact{' '}
+                        You have unlocked up to 5 Google Merchant Center connections and MCA fleet routing. Need custom enterprise volume or dedicated account support? Contact{' '}
                         <a href="mailto:support@usekultra.com" className="text-[var(--signal)] hover:underline">
                           support@usekultra.com
                         </a>.
@@ -623,14 +645,38 @@ export default function SettingsClientView({
       ) : (
         /* Tab 2: General & Store Management */
         <div className="bg-[var(--bg-surface)] border border-[var(--hairline)] rounded-[var(--radius-md)] p-6 space-y-6">
-          <div>
-            <h3 className="text-[16px] font-semibold text-[var(--ink-primary)]">
-              Connected Google Merchant Center Stores
-            </h3>
-            <p className="text-[13px] text-[var(--ghost-text)] mt-0.5">
-              Review active store connections and alert endpoints.
-            </p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--hairline)]">
+            <div>
+              <h3 className="text-[16px] font-semibold text-[var(--ink-primary)]">
+                Connected Google Merchant Center Stores
+              </h3>
+              <p className="text-[13px] text-[var(--ghost-text)] mt-0.5">
+                Review active store connections and alert endpoints.
+              </p>
+            </div>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius-pill)] border border-[var(--signal-dim)] bg-[var(--signal-wash)]">
+              <Layers className="w-3.5 h-3.5 text-[var(--signal)]" />
+              <span className="font-mono text-[11.5px] text-[var(--signal)] font-medium">
+                GMC Accounts: {stores.length} of {isSuperAdmin ? 'Unlimited' : isAgency ? '5' : '1'}
+              </span>
+            </div>
           </div>
+
+          {quotaWarning && (
+            <div className="p-3.5 bg-[var(--signal-wash)] border border-[var(--signal-dim)] rounded-[var(--radius-sm)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-[12.5px] text-[var(--ink-primary)]">
+                <ShieldAlert className="w-4 h-4 text-[var(--signal)] shrink-0" />
+                <span>{quotaWarning}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab('billing')}
+                className="btn-primary text-[11.5px] py-1 px-3 !rounded-[3px] shrink-0 self-start sm:self-auto"
+              >
+                Upgrade to Agency ($49/mo)
+              </button>
+            </div>
+          )}
 
           <div className="space-y-3">
             {stores.map((s) => (
@@ -656,12 +702,28 @@ export default function SettingsClientView({
             ))}
 
             <div className="pt-3">
-              <a
-                href="/api/auth/merchant/connect"
+              <button
+                type="button"
+                onClick={() => {
+                  if (isSuperAdmin) {
+                    window.location.href = '/api/auth/merchant/connect';
+                    return;
+                  }
+                  if (isAgency && stores.length >= 5) {
+                    setIsFleetModalOpen(true);
+                    return;
+                  }
+                  if (!isAgency && stores.length >= 1) {
+                    setQuotaWarning('Solo Plan quota reached: Maximum 1 connected Google Merchant Center store allowed. Upgrade to Agency Fleet to connect up to 5 stores.');
+                    setActiveTab('billing');
+                    return;
+                  }
+                  window.location.href = '/api/auth/merchant/connect';
+                }}
                 className="btn-secondary text-[12.5px] py-2 px-4 !rounded-[3px] inline-flex items-center gap-2"
               >
                 <span>+ Connect another Google Merchant Center</span>
-              </a>
+              </button>
             </div>
           </div>
         </div>
@@ -673,6 +735,14 @@ export default function SettingsClientView({
         plan={checkoutModalPlan || 'solo'}
         userEmail={userEmail}
         onClose={() => setCheckoutModalPlan(null)}
+      />
+
+      {/* Fleet Limit Concierge Modal */}
+      <FleetLimitModal
+        isOpen={isFleetModalOpen}
+        onClose={() => setIsFleetModalOpen(false)}
+        userEmail={userEmail}
+        storeCount={stores.length}
       />
     </div>
   );

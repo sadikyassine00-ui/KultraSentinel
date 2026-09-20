@@ -231,7 +231,7 @@ export function PaddleCheckoutModal({
                 IMMEDIATE BILLING
               </span>
               <span className="tag-pill tag-signal text-[10.5px] py-0.5 px-2.5">
-                {plan === 'agency' ? 'Unlimited GMC' : 'Single Store'}
+                {plan === 'agency' ? 'Up to 5 Stores' : 'Single Store'}
               </span>
             </div>
             <h3 id="checkout-modal-title" className="font-serif text-[24px] sm:text-[28px] font-semibold text-[var(--ink-primary)] leading-tight">
