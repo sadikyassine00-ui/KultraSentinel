@@ -41,7 +41,7 @@ export default function AccountSelectorClient({ accounts, email }: Props) {
   };
 
   return (
-    <div className="max-w-2xl w-full bg-[var(--bg-surface)] border border-[var(--hairline-strong)] rounded-[var(--radius-md)] p-7 sm:p-9 space-y-6 shadow-[0_16px_40px_rgba(0,0,0,0.5)]">
+    <div className="max-w-2xl w-full bg-[var(--bg-surface)] border border-[var(--hairline-strong)] rounded-[var(--radius-md)] p-5 sm:p-9 space-y-6 shadow-[0_16px_40px_rgba(0,0,0,0.5)]">
       {/* Header */}
       <div className="space-y-2">
         <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-[var(--radius-pill)] border border-[var(--signal-dim)] bg-[var(--signal-wash)] text-[var(--signal)] text-[11px] font-mono font-medium">

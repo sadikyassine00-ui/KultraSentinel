@@ -478,19 +478,19 @@ export default function AdminDashboardPage() {
   return (
     <div className="flex-1 w-full bg-[#0a0b0d] text-[#f4f1ea] font-sans antialiased selection:bg-[#7a5a26] selection:text-[#f4f1ea] flex flex-col lg:flex-row">
       {/* Mobile Sub-Navigation Bar */}
-      <div className="lg:hidden h-12 border-b border-[rgba(255,255,255,0.08)] bg-[#0a0b0d] px-4 flex items-center justify-between sticky top-[60px] z-30">
+      <div className="lg:hidden h-12 border-b border-[rgba(255,255,255,0.08)] bg-[#0a0b0d] px-3 sm:px-4 flex items-center justify-between sticky top-[60px] z-30 gap-2">
         <button
           onClick={() => setMobileMenuOpen(true)}
-          className="flex items-center gap-2 px-2.5 py-1.5 rounded-[3px] border border-[rgba(255,255,255,0.14)] bg-transparent text-[#f4f1ea] hover:bg-[#131418] text-xs font-semibold transition-colors"
+          className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-1.5 rounded-[3px] border border-[rgba(255,255,255,0.14)] bg-transparent text-[#f4f1ea] hover:bg-[#131418] text-xs font-semibold transition-colors min-w-0 max-w-[170px] xs:max-w-[220px]"
           aria-label="Open dashboard navigation"
         >
-          <Menu className="w-4 h-4 text-[#f2a93b]" />
-          <span>{navGroups.flatMap((g) => g.items).find((n) => n.id === activeTab)?.label}</span>
+          <Menu className="w-4 h-4 text-[#f2a93b] shrink-0" />
+          <span className="truncate">{navGroups.flatMap((g) => g.items).find((n) => n.id === activeTab)?.label}</span>
         </button>
 
-        <div className="inline-flex items-center gap-1.5 text-[11px] font-mono tracking-[0.02em] text-[#f2a93b] bg-[rgba(242,169,59,0.06)] px-2.5 py-1 rounded-[100px] border border-[#7a5a26]">
+        <div className="inline-flex items-center gap-1.5 text-[10.5px] sm:text-[11px] font-mono tracking-[0.02em] text-[#f2a93b] bg-[rgba(242,169,59,0.06)] px-2 sm:px-2.5 py-1 rounded-[100px] border border-[#7a5a26] shrink-0">
           <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" aria-hidden="true" />
-          <span>Pub/Sub QoS 1 active</span>
+          <span><span className="hidden xs:inline">Pub/Sub </span>QoS 1 active</span>
         </div>
       </div>
 
@@ -747,19 +747,19 @@ export default function AdminDashboardPage() {
 
         {/* Impersonation Banner */}
         {impersonatingTenant && (
-          <div className="bg-[#131418] border-b border-[#7a5a26] px-4 sm:px-6 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-3">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[100px] border border-[#7a5a26] bg-[rgba(242,169,59,0.06)] text-[#f2a93b] font-mono text-[11px] font-medium shrink-0">
+          <div className="bg-[#131418] border-b border-[#7a5a26] px-3 sm:px-6 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 text-xs">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[100px] border border-[#7a5a26] bg-[rgba(242,169,59,0.06)] text-[#f2a93b] font-mono text-[10.5px] sm:text-[11px] font-medium shrink-0">
                 <Eye className="w-3.5 h-3.5" />
                 Impersonation active
               </span>
-              <span className="text-[#b9b3a5]">
+              <span className="text-[#b9b3a5] truncate">
                 Viewing live tenant dashboard for <strong className="text-[#f4f1ea]">{impersonatingTenant.email}</strong> ({impersonatingTenant.company_name})
               </span>
             </div>
             <button
               onClick={() => setImpersonatingTenant(null)}
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-1 bg-transparent border border-[rgba(255,255,255,0.14)] hover:border-[#7a5a26] text-[#f4f1ea] font-medium rounded-[3px] text-xs transition-colors self-start sm:self-auto"
+              className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1 bg-transparent border border-[rgba(255,255,255,0.14)] hover:border-[#7a5a26] text-[#f4f1ea] font-medium rounded-[3px] text-xs transition-colors self-start sm:self-auto shrink-0"
             >
               <EyeOff className="w-3.5 h-3.5" />
               <span>Exit impersonation</span>
@@ -767,7 +767,7 @@ export default function AdminDashboardPage() {
           </div>
         )}
 
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-6 min-w-0 max-w-full overflow-x-hidden">
           {/* Feedback Notification Banner */}
           {feedback && (
             <div

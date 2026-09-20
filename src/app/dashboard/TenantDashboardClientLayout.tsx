@@ -179,9 +179,9 @@ export default function TenantDashboardClientLayout({
     <div className="min-h-screen bg-[#0a0b0d] text-[#f4f1ea] flex flex-col font-sans selection:bg-[#7a5a26] selection:text-[#f4f1ea]">
       {/* Merchant Clean Navigation Bar */}
       <header className="sticky top-0 z-40 h-14 bg-[#0a0b0d] border-b border-[rgba(255,255,255,0.08)] flex items-center">
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-3 sm:gap-4">
+        <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 flex items-center justify-between gap-2 sm:gap-4">
           {/* Brand & Left Operational Cluster */}
-          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
             <Link
               href="/"
               className="flex items-center gap-2.5 outline-none focus-visible:ring-2 focus-visible:ring-[#f2a93b] rounded-[3px] shrink-0"
@@ -192,7 +192,7 @@ export default function TenantDashboardClientLayout({
                 alt="Kultra"
                 width={140}
                 height={36}
-                className="h-[26px] sm:h-[28px] w-auto object-contain brightness-110"
+                className="h-[22px] xs:h-[26px] sm:h-[28px] w-auto object-contain brightness-110"
                 priority
               />
             </Link>
@@ -213,22 +213,22 @@ export default function TenantDashboardClientLayout({
                     <button
                       type="button"
                       onClick={() => setStoreDropdownOpen((prev) => !prev)}
-                      className="bg-[#131418] border border-[rgba(255,255,255,0.14)] hover:border-[#7a5a26] text-[#f4f1ea] rounded-[3px] py-1 px-2.5 flex items-center gap-2 text-left focus:outline-none focus:border-[#f2a93b] transition-colors"
+                      className="bg-[#131418] border border-[rgba(255,255,255,0.14)] hover:border-[#7a5a26] text-[#f4f1ea] rounded-[3px] py-1 px-2 sm:px-2.5 flex items-center gap-1.5 sm:gap-2 text-left focus:outline-none focus:border-[#f2a93b] transition-colors"
                       aria-haspopup="listbox"
                       aria-expanded={storeDropdownOpen}
                       aria-label="Switch active store or view store quota"
                     >
-                      <div className="flex flex-col min-w-0 max-w-[140px] sm:max-w-[200px]">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <span className="text-[12.5px] font-semibold text-[#f4f1ea] truncate leading-tight">
+                      <div className="flex flex-col min-w-0 max-w-[95px] xs:max-w-[130px] sm:max-w-[200px]">
+                        <div className="flex items-center gap-1 min-w-0">
+                          <span className="text-[12px] sm:text-[12.5px] font-semibold text-[#f4f1ea] truncate leading-tight">
                             {activeStore?.name}
                           </span>
-                          <span className="font-mono text-[10.5px] text-[#b9b3a5] shrink-0 font-medium">
+                          <span className="font-mono text-[10px] sm:text-[10.5px] text-[#b9b3a5] shrink-0 font-medium">
                             ({quotaLabel})
                           </span>
                         </div>
                         {activeStore?.domain && (
-                          <span className="text-[10.5px] text-[#6b7078] truncate leading-tight">
+                          <span className="text-[10px] sm:text-[10.5px] text-[#6b7078] truncate leading-tight">
                             {activeStore.domain}
                           </span>
                         )}
@@ -237,7 +237,7 @@ export default function TenantDashboardClientLayout({
                     </button>
 
                     {storeDropdownOpen && (
-                      <div className="absolute top-full left-0 mt-1.5 w-72 sm:w-80 bg-[#0e0f11] border border-[rgba(255,255,255,0.14)] rounded-[4px] shadow-[0_16px_40px_rgba(0,0,0,0.5)] z-50 py-1.5">
+                      <div className="absolute top-full left-0 mt-1.5 w-72 sm:w-80 max-w-[calc(100vw-24px)] bg-[#0e0f11] border border-[rgba(255,255,255,0.14)] rounded-[4px] shadow-[0_16px_40px_rgba(0,0,0,0.5)] z-50 py-1.5">
                         <div className="px-3 py-1.5 text-[10px] font-mono text-[#6b7078] tracking-wider uppercase border-b border-[rgba(255,255,255,0.06)] flex items-center justify-between">
                           <span>GMC Accounts ({quotaLabel})</span>
                           <span className="text-[10px] text-[#45484f]">Switch active view</span>
@@ -317,15 +317,15 @@ export default function TenantDashboardClientLayout({
           </div>
 
           {/* Right Controls: Unified Status Trigger & User Profile Menu */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             {/* 1. Superadmin: "Lifetime Admin" */}
             {isSuperAdminUser ? (
               <div
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-sm)] border border-[var(--signal-dim)] bg-[var(--signal-wash)] text-[var(--signal)] text-[12px] font-mono shrink-0 font-medium"
+                className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-[var(--radius-sm)] border border-[var(--signal-dim)] bg-[var(--signal-wash)] text-[var(--signal)] text-[11px] sm:text-[12px] font-mono shrink-0 font-medium"
                 title="Superadmin Lifetime Access: Zero billing restrictions or quotas"
               >
                 <ShieldCheck className="w-3.5 h-3.5 text-[var(--signal)]" strokeWidth={1.5} />
-                <span>Lifetime Admin</span>
+                <span><span className="hidden sm:inline">Lifetime </span>Admin</span>
               </div>
             ) : billing && (
               <>
@@ -333,11 +333,11 @@ export default function TenantDashboardClientLayout({
                 {!billing.hasTrialStarted ? (
                   <a
                     href="/api/auth/merchant/connect"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] border border-[var(--signal-dim)] bg-[var(--signal-wash)] text-[var(--signal)] hover:border-[var(--signal)] text-[12px] font-mono transition-colors shrink-0 font-medium"
+                    className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-[var(--radius-sm)] border border-[var(--signal-dim)] bg-[var(--signal-wash)] text-[var(--signal)] hover:border-[var(--signal)] text-[11px] sm:text-[12px] font-mono transition-colors shrink-0 font-medium"
                     title="Connect your Google Merchant Center account to start your 14-day free trial."
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)]" aria-hidden="true" />
-                    <span>Connect GMC to Start Trial</span>
+                    <span><span className="hidden sm:inline">Connect GMC to </span>Start Trial</span>
                   </a>
                 ) : billing.status === 'active trial' ? (
                   /* 3. Unified Trial Countdown & Upgrade Button: Direct Modal Checkout */
@@ -347,11 +347,11 @@ export default function TenantDashboardClientLayout({
                       setCheckoutPlan('solo');
                       setIsCheckoutOpen(true);
                     }}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] border ${
+                    className={`inline-flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-[var(--radius-sm)] border ${
                       billing.daysRemaining <= 3
                         ? 'border-[var(--danger)] bg-[var(--danger-wash)] text-[var(--danger)] hover:bg-[rgba(214,69,69,0.18)]'
                         : 'border-[var(--signal)] bg-[var(--signal)] text-[#1a1305] hover:bg-[#f6b855]'
-                    } text-[12px] font-semibold transition-colors shrink-0 cursor-pointer`}
+                    } text-[11px] sm:text-[12px] font-semibold transition-colors shrink-0 cursor-pointer`}
                     title={`14-Day Free Trial: ${billing.daysRemaining} days remaining. Click to upgrade.`}
                     aria-label="Upgrade subscription"
                   >
@@ -361,27 +361,36 @@ export default function TenantDashboardClientLayout({
                       }`}
                       aria-hidden="true"
                     />
-                    <span>{billing.daysRemaining} {billing.daysRemaining === 1 ? 'Day' : 'Days'} Left · Upgrade</span>
+                    <span>
+                      <span className="hidden sm:inline">{billing.daysRemaining} {billing.daysRemaining === 1 ? 'Day' : 'Days'} Left · Upgrade</span>
+                      <span className="sm:hidden">{billing.daysRemaining}d Left · Upgrade</span>
+                    </span>
                   </button>
                 ) : billing.status === 'paid active' && (billing.planTier === 'Solo' || billing.planName?.includes('Solo')) ? (
                   /* 4. Solo Plan Indicator */
                   <Link
                     href="/dashboard/settings?tab=billing"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] border border-[var(--hairline-strong)] bg-[var(--bg-surface-2)] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:border-[var(--signal-dim)] text-[12px] font-mono transition-colors shrink-0 font-medium"
+                    className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-[var(--radius-sm)] border border-[var(--hairline-strong)] bg-[var(--bg-surface-2)] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:border-[var(--signal-dim)] text-[11px] sm:text-[12px] font-mono transition-colors shrink-0 font-medium"
                     title="Solo Plan ($19/mo) — Click to view billing and store limits"
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)]" aria-hidden="true" />
-                    <span>Solo Plan · {stores.length}/1 Stores</span>
+                    <span>
+                      <span className="hidden sm:inline">Solo Plan · {stores.length}/1 Stores</span>
+                      <span className="sm:hidden">Solo · {stores.length}/1</span>
+                    </span>
                   </Link>
                 ) : billing.status === 'paid active' && (billing.planTier === 'Agency' || billing.planName?.includes('Agency')) ? (
                   /* 5. Agency Fleet Indicator */
                   <Link
                     href="/dashboard/settings?tab=billing"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] border border-[var(--signal-dim)] bg-[var(--signal-wash)] text-[var(--signal)] hover:border-[var(--signal)] text-[12px] font-mono transition-colors shrink-0 font-medium"
+                    className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-[var(--radius-sm)] border border-[var(--signal-dim)] bg-[var(--signal-wash)] text-[var(--signal)] hover:border-[var(--signal)] text-[11px] sm:text-[12px] font-mono transition-colors shrink-0 font-medium"
                     title="Agency Plan ($49/mo) — Click to manage multi-store fleet"
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)]" aria-hidden="true" />
-                    <span>Agency Fleet · {stores.length}/5 Stores</span>
+                    <span>
+                      <span className="hidden sm:inline">Agency Fleet · {stores.length}/5 Stores</span>
+                      <span className="sm:hidden">Fleet · {stores.length}/5</span>
+                    </span>
                   </Link>
                 ) : (billing.isLocked || billing.status === 'expired') ? (
                   /* 6. Expired Trial Unified Button */
@@ -391,12 +400,12 @@ export default function TenantDashboardClientLayout({
                       setCheckoutPlan('solo');
                       setIsCheckoutOpen(true);
                     }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] border border-[var(--danger)] bg-[var(--danger-wash)] text-[var(--danger)] hover:bg-[rgba(214,69,69,0.18)] text-[12px] font-semibold transition-colors shrink-0 cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-[var(--radius-sm)] border border-[var(--danger)] bg-[var(--danger-wash)] text-[var(--danger)] hover:bg-[rgba(214,69,69,0.18)] text-[11px] sm:text-[12px] font-semibold transition-colors shrink-0 cursor-pointer"
                     title="Trial expired. Click to choose plan and restore monitoring."
                     aria-label="Trial expired, upgrade now"
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-[var(--danger)]" aria-hidden="true" />
-                    <span>Trial Expired · Upgrade</span>
+                    <span><span className="hidden sm:inline">Trial </span>Expired · Upgrade</span>
                   </button>
                 ) : null}
               </>
@@ -417,7 +426,7 @@ export default function TenantDashboardClientLayout({
               <button
                 type="button"
                 onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="flex items-center gap-2 px-1.5 sm:px-2 py-1 rounded-[3px] hover:bg-[#131418] border border-transparent hover:border-[rgba(255,255,255,0.08)] transition-colors focus-visible:ring-2 focus-visible:ring-[#f2a93b] outline-none shrink-0"
+                className="flex items-center gap-1.5 sm:gap-2 px-1.5 sm:px-2 py-1 rounded-[3px] hover:bg-[#131418] border border-transparent hover:border-[rgba(255,255,255,0.08)] transition-colors focus-visible:ring-2 focus-visible:ring-[#f2a93b] outline-none shrink-0"
                 aria-expanded={dropdownOpen}
                 aria-haspopup="true"
               >
@@ -436,7 +445,7 @@ export default function TenantDashboardClientLayout({
               </button>
 
               {dropdownOpen && (
-                <div className="absolute right-0 mt-2 w-64 rounded-[4px] bg-[#0e0f11] border border-[rgba(255,255,255,0.14)] p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.5)] z-50 animate-in fade-in-50 duration-120">
+                <div className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-24px)] rounded-[4px] bg-[#0e0f11] border border-[rgba(255,255,255,0.14)] p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.5)] z-50 animate-in fade-in-50 duration-120">
                   <div className="p-2.5 border-b border-[rgba(255,255,255,0.08)]">
                     <div className="text-[13px] font-medium text-[#f4f1ea] truncate">
                       {user?.name || user?.email}
@@ -500,7 +509,7 @@ export default function TenantDashboardClientLayout({
       </header>
 
       {/* Main Merchant Content View */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 min-w-0 max-w-full overflow-x-hidden">
         {children}
       </main>
 

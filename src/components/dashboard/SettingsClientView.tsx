@@ -147,7 +147,7 @@ export default function SettingsClientView({
   }
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto py-2">
+    <div className="space-y-6 max-w-5xl mx-auto py-2 w-full min-w-0 max-w-full">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--hairline)]">
         <div>
@@ -168,7 +168,7 @@ export default function SettingsClientView({
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-[var(--hairline)] pb-px">
+      <div className="flex items-center gap-2 border-b border-[var(--hairline)] pb-px overflow-x-auto w-full">
         <button
           type="button"
           onClick={() => setActiveTab('billing')}

@@ -1104,7 +1104,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
   );
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto w-full min-w-0 max-w-full">
       {renderErrorBanner()}
       {renderPastDueBanner()}
       {renderScheduledCancellationBanner()}
@@ -1150,7 +1150,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
       <div className="flex flex-wrap items-center justify-between gap-3 py-2.5 border-b border-[var(--hairline)]">
         {/* Left: Proof-of-work Heartbeat Telemetry */}
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="flex items-center gap-2 font-mono text-[12px]">
+          <div className="flex items-center gap-2 font-mono text-[11px] sm:text-[12px] flex-wrap">
             <span className="w-2 h-2 rounded-full bg-[var(--signal)] shrink-0" aria-hidden="true" />
             <span className="font-semibold text-[var(--ink-primary)]">Surveillance Active</span>
             <span className="text-[var(--ghost-line)]">/</span>
@@ -1167,7 +1167,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
         </div>
 
         {/* Right: Relocated Secondary Utility Controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center flex-wrap gap-2">
           {inlineFeedback && (
             <span className="font-mono text-[11px] text-[var(--signal)] font-medium mr-1">{inlineFeedback}</span>
           )}
@@ -1677,18 +1677,18 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                     } rounded-[var(--radius-md)] p-5 space-y-4 transition-colors`}
                   >
                     {/* Card Header Row */}
-                    <div className="flex items-center justify-between gap-3 text-[11px] font-mono border-b border-[var(--hairline)] pb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="tag-pill tag-danger text-[10px] py-0.5 font-medium">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono border-b border-[var(--hairline)] pb-3">
+                      <div className="flex items-center gap-2 flex-wrap min-w-0">
+                        <span className="tag-pill tag-danger text-[10px] py-0.5 font-medium shrink-0">
                           {isItemAccountLevel ? 'STORE-WIDE SUSPENSION' : inc.severity}
                         </span>
-                        <span className="text-[var(--ghost-text-dim)] flex items-center gap-1">
+                        <span className="text-[var(--ghost-text-dim)] flex items-center gap-1 shrink-0">
                           <Clock className="w-3 h-3" />
                           Detected {new Date(inc.first_detected_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
 
-                      <div className="text-[var(--ghost-text)] font-medium">
+                      <div className="text-[var(--ghost-text)] font-medium truncate max-w-[150px] sm:max-w-none">
                         SKU: <span className="text-[var(--ink-primary)]">{inc.sku}</span>
                       </div>
                     </div>
@@ -1917,8 +1917,8 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
         </div>
 
         {/* Audit Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-[12.5px]">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-left border-collapse text-[12.5px] min-w-[580px]">
             <thead>
               <tr className="border-b border-[var(--hairline)] bg-[var(--bg-canvas)] font-mono text-[10.5px] uppercase tracking-wider text-[var(--ghost-text-dim)]">
                 <th scope="col" className="py-2.5 px-4 font-semibold w-40">Timestamp</th>
@@ -2030,7 +2030,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
             if (e.target === e.currentTarget) closeModal();
           }}
         >
-          <div className="bg-[var(--bg-surface)] border border-[var(--hairline-strong)] rounded-[var(--radius-md)] max-w-lg w-full max-w-[calc(100vw-24px)] sm:max-w-lg p-6 sm:p-7 space-y-5 shadow-[0_16px_40px_rgba(0,0,0,0.5)] relative my-auto box-border">
+          <div className="bg-[var(--bg-surface)] border border-[var(--hairline-strong)] rounded-[var(--radius-md)] w-full max-w-[calc(100vw-24px)] sm:max-w-lg p-5 sm:p-7 space-y-5 shadow-[0_16px_40px_rgba(0,0,0,0.5)] relative my-auto box-border">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full bg-[var(--signal-wash)] border border-[var(--signal-dim)] flex items-center justify-center shrink-0">

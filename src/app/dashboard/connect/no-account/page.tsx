@@ -15,7 +15,7 @@ export default async function NoGmcAccountPage({ searchParams }: Props) {
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center p-4 sm:p-6">
-      <div className="max-w-lg w-full bg-[var(--bg-surface)] border border-[var(--hairline-strong)] rounded-[var(--radius-md)] p-7 sm:p-9 space-y-6 shadow-[0_16px_40px_rgba(0,0,0,0.5)]">
+      <div className="max-w-lg w-full bg-[var(--bg-surface)] border border-[var(--hairline-strong)] rounded-[var(--radius-md)] p-5 sm:p-9 space-y-6 shadow-[0_16px_40px_rgba(0,0,0,0.5)]">
         {/* Status Indicator */}
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[var(--radius-pill)] border border-[var(--danger)] bg-[var(--danger-wash)] text-[var(--danger)] text-[11px] font-mono font-medium">

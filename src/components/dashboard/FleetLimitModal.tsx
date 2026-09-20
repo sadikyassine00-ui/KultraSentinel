@@ -69,7 +69,7 @@ export function FleetLimitModal({
       aria-labelledby="fleet-limit-title"
       className="fixed inset-0 top-0 left-0 right-0 bottom-0 min-h-[100dvh] w-screen z-[99999] bg-[#0a0b0d]/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto"
     >
-      <div className="relative w-full max-w-lg bg-[#0e0f11] border border-[#f2a93b]/30 rounded p-6 sm:p-8 shadow-2xl text-[#f4f1ea] my-auto">
+      <div className="relative w-full max-w-lg max-w-[calc(100vw-24px)] bg-[#0e0f11] border border-[#f2a93b]/30 rounded p-5 sm:p-8 shadow-2xl text-[#f4f1ea] my-auto box-border">
         <button
           onClick={onClose}
           aria-label="Close modal"
@@ -104,9 +104,9 @@ export function FleetLimitModal({
             : 'Your Agency Fleet tier covers up to 5 monitored stores. Need to protect a larger agency portfolio or multi-client MCA? We provide custom fleet provisioning, dedicated Slack routing, and priority Pub/Sub pipelines.'}
         </p>
 
-        <div className="p-3 bg-[#131418] border border-white/5 rounded mb-6 flex items-center gap-3">
+        <div className="p-3 bg-[#131418] border border-white/5 rounded mb-6 flex flex-wrap items-center gap-2 sm:gap-3">
           <Layers className="w-4 h-4 text-[#f2a93b] shrink-0" />
-          <div className="font-mono text-xs text-[#b9b3a5]">
+          <div className="font-mono text-xs text-[#b9b3a5] truncate">
             Account: <span className="text-[#f4f1ea] font-medium">{userEmail || 'Active Tenant'}</span>
             <span className="mx-2 text-[#45484f]">|</span>
             Active Stores: <span className="text-[#f2a93b] font-medium">{storeCount} of {isSolo ? 1 : maxStores}</span>
