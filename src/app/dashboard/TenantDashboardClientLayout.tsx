@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { LogOut, Shield, ChevronDown, ShieldCheck, LayoutDashboard, CreditCard } from 'lucide-react';
 import { FleetLimitModal } from '@/components/dashboard/FleetLimitModal';
 import { PaddleCheckoutModal } from '@/components/billing/PaddleCheckoutOverlay';
+import { PlanSelectionModal } from '@/components/billing/PlanSelectionModal';
 
 interface AuthUser {
   email: string;
@@ -62,6 +63,7 @@ export default function TenantDashboardClientLayout({
   const [storeDropdownOpen, setStoreDropdownOpen] = useState(false);
   const [isFleetModalOpen, setIsFleetModalOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [checkoutPlan, setCheckoutPlan] = useState<'solo' | 'agency'>('solo');
   const dropdownRef = useRef<HTMLDivElement>(null);
   const storeDropdownRef = useRef<HTMLDivElement>(null);
@@ -208,22 +210,22 @@ export default function TenantDashboardClientLayout({
               const quotaLabel = isSuperAdminUser ? `${stores.length} of ∞` : `${stores.length} of ${maxStoresLabel}`;
 
               return (
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="relative flex items-center shrink-0" ref={storeDropdownRef}>
+                <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0 shrink">
+                  <div className="relative flex items-center min-w-0 shrink" ref={storeDropdownRef}>
                     <button
                       type="button"
                       onClick={() => setStoreDropdownOpen((prev) => !prev)}
-                      className="bg-[var(--bg-surface-2)] border border-[var(--hairline-strong)] hover:border-[var(--signal-dim)] text-[var(--ink-primary)] rounded-[var(--radius-sm)] py-1 px-2 sm:px-2.5 flex items-center gap-1.5 sm:gap-2 text-left focus:outline-none focus:border-[var(--signal)] focus-visible:ring-2 focus-visible:ring-[var(--signal-glow)] transition-colors min-h-[36px]"
+                      className="bg-[var(--bg-surface-2)] border border-[var(--hairline-strong)] hover:border-[var(--signal-dim)] text-[var(--ink-primary)] rounded-[var(--radius-sm)] py-1 px-1.5 sm:px-2.5 flex items-center gap-1 sm:gap-2 text-left focus:outline-none focus:border-[var(--signal)] focus-visible:ring-2 focus-visible:ring-[var(--signal-glow)] transition-colors min-h-[36px] max-w-[125px] xs:max-w-[170px] sm:max-w-[240px] min-w-0"
                       aria-haspopup="listbox"
                       aria-expanded={storeDropdownOpen}
                       aria-label="Switch active store or view store quota"
                     >
-                      <div className="flex flex-col min-w-0 max-w-[85px] xs:max-w-[125px] sm:max-w-[190px]">
+                      <div className="flex flex-col min-w-0 flex-1">
                         <div className="flex items-center gap-1 min-w-0">
-                          <span className="text-[12px] sm:text-[12.5px] font-semibold text-[var(--ink-primary)] truncate leading-tight">
+                          <span className="text-[11.5px] sm:text-[12.5px] font-semibold text-[var(--ink-primary)] truncate leading-tight">
                             {activeStore?.name}
                           </span>
-                          <span className="font-mono text-[10px] sm:text-[10.5px] text-[var(--ink-secondary)] shrink-0 font-medium whitespace-nowrap">
+                          <span className="font-mono text-[9.5px] sm:text-[10.5px] text-[var(--ink-secondary)] shrink-0 font-medium whitespace-nowrap">
                             ({quotaLabel})
                           </span>
                         </div>
@@ -237,7 +239,7 @@ export default function TenantDashboardClientLayout({
                     </button>
 
                     {storeDropdownOpen && (
-                      <div className="absolute top-full left-0 mt-1.5 w-72 sm:w-80 max-w-[calc(100vw-24px)] bg-[var(--bg-surface)] border border-[var(--hairline-strong)] rounded-[var(--radius-md)] shadow-[0_16px_40px_rgba(0,0,0,0.5)] z-50 py-1.5">
+                      <div className="fixed sm:absolute top-14 sm:top-full left-2 sm:left-0 right-2 sm:right-auto mt-1.5 sm:w-80 max-w-[calc(100vw-16px)] bg-[var(--bg-surface)] border border-[var(--hairline-strong)] rounded-[var(--radius-md)] shadow-[0_16px_40px_rgba(0,0,0,0.5)] z-50 py-1.5">
                         <div className="px-3 py-1.5 text-[10px] font-mono text-[var(--ghost-text)] tracking-wider uppercase border-b border-[var(--hairline)] flex items-center justify-between">
                           <span>GMC Accounts ({quotaLabel})</span>
                           <span className="text-[10px] text-[var(--ghost-text-dim)]">Switch active view</span>
@@ -340,12 +342,11 @@ export default function TenantDashboardClientLayout({
                     <span>Connect GMC to Start Trial</span>
                   </a>
                 ) : billing.status === 'active trial' ? (
-                  /* 3. Unified Trial Countdown & Upgrade Button: Direct Modal Checkout */
+                  /* 3. Unified Trial Countdown & Upgrade Button: Opens Plan Selection Modal */
                   <button
                     type="button"
                     onClick={() => {
-                      setCheckoutPlan('solo');
-                      setIsCheckoutOpen(true);
+                      setIsPlanModalOpen(true);
                     }}
                     className={`inline-flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-[var(--radius-sm)] border ${
                       billing.daysRemaining <= 3
@@ -387,12 +388,11 @@ export default function TenantDashboardClientLayout({
                     <span>Agency Fleet · {stores.length}/5 Stores</span>
                   </Link>
                 ) : (billing.isLocked || billing.status === 'expired') ? (
-                  /* 6. Expired Trial Unified Button */
+                  /* 6. Expired Trial Unified Button: Opens Plan Selection Modal */
                   <button
                     type="button"
                     onClick={() => {
-                      setCheckoutPlan('solo');
-                      setIsCheckoutOpen(true);
+                      setIsPlanModalOpen(true);
                     }}
                     className="inline-flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-[var(--radius-sm)] border border-[var(--danger)] bg-[var(--danger-wash)] text-[var(--danger)] hover:bg-[rgba(214,69,69,0.18)] text-[11px] sm:text-[12px] font-semibold transition-colors shrink-0 cursor-pointer focus-visible:ring-2 focus-visible:ring-[var(--danger)] outline-none min-h-[36px] sm:min-h-0"
                     title="Trial expired. Click to choose plan and restore monitoring."
@@ -469,8 +469,7 @@ export default function TenantDashboardClientLayout({
                             type="button"
                             onClick={() => {
                               setDropdownOpen(false);
-                              setCheckoutPlan('solo');
-                              setIsCheckoutOpen(true);
+                              setIsPlanModalOpen(true);
                             }}
                             className="text-[11px] font-medium text-[var(--signal)] hover:underline cursor-pointer"
                           >
@@ -496,8 +495,7 @@ export default function TenantDashboardClientLayout({
                             type="button"
                             onClick={() => {
                               setDropdownOpen(false);
-                              setCheckoutPlan('solo');
-                              setIsCheckoutOpen(true);
+                              setIsPlanModalOpen(true);
                             }}
                             className="text-[11px] font-medium text-[var(--danger)] hover:underline cursor-pointer"
                           >
@@ -577,6 +575,18 @@ export default function TenantDashboardClientLayout({
           setCheckoutPlan('agency');
           setIsCheckoutOpen(true);
         }}
+      />
+
+      {/* Plan Selection Modal */}
+      <PlanSelectionModal
+        isOpen={isPlanModalOpen}
+        onClose={() => setIsPlanModalOpen(false)}
+        onSelectPlan={(plan) => {
+          setIsPlanModalOpen(false);
+          setCheckoutPlan(plan);
+          setIsCheckoutOpen(true);
+        }}
+        currentStoresCount={stores.length}
       />
 
       {/* Subscription Checkout Modal */}

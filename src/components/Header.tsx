@@ -133,18 +133,18 @@ export function Header({ initialUser = null }: HeaderProps) {
 
   return (
     <header
-      className={`sticky top-0 left-0 w-full z-50 transition-colors duration-150 ${
+      className={`sticky top-0 left-0 w-full max-w-full overflow-x-hidden z-50 transition-colors duration-150 ${
         scrolled || mobileMenuOpen
           ? 'bg-[#0a0b0d]/95 backdrop-blur-md border-b border-[var(--hairline)]'
           : 'bg-[#0a0b0d] border-b border-[var(--hairline)]'
       }`}
     >
-      <div className="max-w-[1400px] h-[60px] mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4 sm:gap-6">
+      <div className="max-w-[1400px] h-[60px] mx-auto px-2.5 sm:px-6 lg:px-8 flex items-center justify-between gap-1.5 sm:gap-6 min-w-0">
         {/* Brand Group */}
-        <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
           <Link
             href="/"
-            className="flex items-center rounded-[var(--radius-sm)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal-glow)]"
+            className="flex items-center rounded-[var(--radius-sm)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal-glow)] shrink-0"
             aria-label="Kultra Home"
           >
             <Image
@@ -152,7 +152,7 @@ export function Header({ initialUser = null }: HeaderProps) {
               alt="Kultra"
               width={140}
               height={36}
-              className="h-[28px] sm:h-[30px] w-auto object-contain brightness-105"
+              className="h-[22px] xs:h-[26px] sm:h-[30px] w-auto object-contain brightness-105 shrink-0"
               priority
             />
           </Link>
@@ -264,19 +264,20 @@ export function Header({ initialUser = null }: HeaderProps) {
             </div>
           ) : (
             /* Visitor Actions: Sign In + Call to Value CTA */
-            <div className="flex items-center gap-3 sm:gap-4">
+            <div className="flex items-center gap-1.5 xs:gap-2 sm:gap-4 shrink-0">
               <Link
                 href="/login"
-                className="text-[13px] font-medium text-[var(--ghost-text)] hover:text-[var(--ink-primary)] px-2 py-1.5 transition-colors duration-120"
+                className="text-[12px] sm:text-[13px] font-medium text-[var(--ghost-text)] hover:text-[var(--ink-primary)] px-1.5 sm:px-2 py-1 transition-colors duration-120 shrink-0"
               >
                 Sign In
               </Link>
               <Link
                 href="/register"
-                className="btn-primary !rounded-[3px] text-[12.5px] sm:text-[13px] py-2 px-3.5 sm:px-4 font-semibold whitespace-nowrap"
+                className="btn-primary !rounded-[var(--radius-sm)] text-[11px] xs:text-[12px] sm:text-[13px] py-1.5 sm:py-2 px-2.5 xs:px-3 sm:px-4 font-semibold whitespace-nowrap shrink-0"
               >
-                <span className="hidden sm:inline">Protect Your Google Shopping Ads</span>
-                <span className="sm:hidden">Protect Shopping Ads</span>
+                <span className="hidden md:inline">Protect Your Google Shopping Ads</span>
+                <span className="hidden xs:inline md:hidden">Start 14-Day Trial</span>
+                <span className="xs:hidden">Start Trial</span>
               </Link>
             </div>
           )}
@@ -285,7 +286,7 @@ export function Header({ initialUser = null }: HeaderProps) {
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 text-[var(--ghost-text)] hover:text-[var(--ink-primary)] transition-colors rounded-[var(--radius-sm)] border border-[var(--hairline)] bg-[var(--bg-surface)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal-glow)]"
+            className="md:hidden p-1.5 xs:p-2 text-[var(--ghost-text)] hover:text-[var(--ink-primary)] transition-colors rounded-[var(--radius-sm)] border border-[var(--hairline)] bg-[var(--bg-surface)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal-glow)] shrink-0"
             aria-label="Toggle navigation menu"
             aria-expanded={mobileMenuOpen}
           >
