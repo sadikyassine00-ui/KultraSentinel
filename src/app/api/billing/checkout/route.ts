@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getAnySession } from '@/lib/auth';
 import { isSuperAdminEmail } from '@/lib/token';
-import { findTenantByEmail, getDb, ensureSchema, updateTenant } from '@/lib/db';
+import { findTenantByEmail } from '@/lib/db';
+import { getPaddleInstance } from '@/lib/paddle/server';
+import { getPaddlePriceId } from '@/lib/paddle/config';
 
 export async function POST(request: Request) {
   try {
@@ -12,7 +14,7 @@ export async function POST(request: Request) {
 
     const email = session.email.toLowerCase().trim();
 
-    // Superadmin bypass: no billing or payment required
+    // Superadmin bypass: permanent lifetime access
     if (isSuperAdminEmail(email)) {
       return NextResponse.json({
         url: '/dashboard/settings?tab=billing',
@@ -22,104 +24,120 @@ export async function POST(request: Request) {
 
     const body = await request.json().catch(() => ({}));
     const requestedPlan = body.plan === 'agency' ? 'agency' : 'solo';
-    const planName = requestedPlan === 'agency' ? 'Agency Fleet' : 'Solo Merchant';
-    const priceInCents = requestedPlan === 'agency' ? 4900 : 1900;
+    const priceId = getPaddlePriceId(requestedPlan);
 
-    const urlObj = new URL(request.url);
-    const origin = urlObj.origin;
+    if (!priceId) {
+      return NextResponse.json(
+        { error: `No active price configured for plan: ${requestedPlan}` },
+        { status: 400 }
+      );
+    }
 
-    // 1. Create live Paddle Checkout transaction via Paddle API if configured
-    const paddleApiKey = process.env.PADDLE_API_KEY?.trim();
-    if (paddleApiKey) {
-      try {
-        const { getPaddleInstance } = await import('@/lib/paddle/server');
-        const { getPaddlePriceId } = await import('@/lib/paddle/config');
-        const paddle = getPaddleInstance();
-        const priceId = getPaddlePriceId(requestedPlan);
+    const tenant = await findTenantByEmail(email);
 
-        const transaction = await paddle.transactions.create({
-          items: [{ priceId, quantity: 1 }],
+    // Call Paddle API (sandbox or production) to create an authentic checkout transaction session
+    try {
+      const paddle = getPaddleInstance();
+      const transaction = await paddle.transactions.create({
+        items: [{ priceId, quantity: 1 }],
+        customData: {
+          tenantEmail: email,
+          accountPlan: requestedPlan,
+          userId: tenant ? String(tenant.id) : undefined,
+          tenantId: tenant ? String(tenant.id) : undefined,
+        },
+      });
+
+      const checkoutUrl = transaction.checkout?.url;
+      const transactionId = transaction.id;
+
+      if (!checkoutUrl && !transactionId) {
+        throw new Error('Paddle transaction did not return a checkout URL or transaction ID.');
+      }
+
+      return NextResponse.json({
+        url: checkoutUrl,
+        transactionId,
+        priceId,
+        plan: requestedPlan,
+        customData: {
+          tenantEmail: email,
+          accountPlan: requestedPlan,
+          userId: tenant ? String(tenant.id) : undefined,
+          tenantId: tenant ? String(tenant.id) : undefined,
+        },
+      });
+    } catch (paddleErr: unknown) {
+      const err = paddleErr as { message?: string; code?: string };
+      console.warn('[Paddle Server Transaction Notice]:', err?.message || err);
+
+      // If Paddle account has no default payment link configured yet in dashboard,
+      // return the verified priceId and authenticated metadata for Paddle.js native client overlay initiation.
+      // NOTE: ZERO direct DB mutation occurs! Account remains in trial until signed webhook arrives.
+      if (err?.code === 'transaction_default_checkout_url_not_set') {
+        return NextResponse.json({
+          priceId,
+          plan: requestedPlan,
+          clientInit: true,
+          customerEmail: email,
           customData: {
             tenantEmail: email,
             accountPlan: requestedPlan,
+            userId: tenant ? String(tenant.id) : undefined,
+            tenantId: tenant ? String(tenant.id) : undefined,
           },
         });
+      }
 
-        const checkoutUrl = transaction.checkout?.url;
-        if (checkoutUrl) {
-          return NextResponse.json({ url: checkoutUrl, plan: requestedPlan });
+      // Check Stripe fallback only if STRIPE_SECRET_KEY is configured
+      const stripeSecretKey = process.env.STRIPE_SECRET_KEY?.trim();
+      if (stripeSecretKey) {
+        const origin = new URL(request.url).origin;
+        const planName = requestedPlan === 'agency' ? 'Agency Fleet' : 'Solo Merchant';
+        const priceInCents = requestedPlan === 'agency' ? 4900 : 1900;
+
+        const params = new URLSearchParams();
+        params.append('mode', 'subscription');
+        params.append('customer_email', email);
+        params.append('client_reference_id', email);
+        params.append('success_url', `${origin}/dashboard/settings?tab=billing&checkout_success=true&plan=${requestedPlan}`);
+        params.append('cancel_url', `${origin}/dashboard/settings?tab=billing`);
+        params.append('line_items[0][price_data][currency]', 'usd');
+        params.append('line_items[0][price_data][product_data][name]', `Kultra Sentinel - ${planName}`);
+        params.append('line_items[0][price_data][product_data][description]', requestedPlan === 'agency' ? 'Unlimited GMC Stores, MCA Architecture & Priority Dispatch' : 'Single GMC Store 24/7 Monitoring & Disapproval Shield');
+        params.append('line_items[0][price_data][recurring][interval]', 'month');
+        params.append('line_items[0][price_data][unit_amount]', String(priceInCents));
+        params.append('line_items[0][quantity]', '1');
+        params.append('metadata[tenantEmail]', email);
+        params.append('metadata[accountPlan]', requestedPlan);
+        if (tenant?.id) {
+          params.append('metadata[userId]', String(tenant.id));
+          params.append('metadata[tenantId]', String(tenant.id));
         }
-      } catch (paddleErr) {
-        console.warn('[Paddle Server Checkout Fallback Notice]:', paddleErr);
-      }
-    }
 
-    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+        const stripeRes = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${stripeSecretKey}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: params.toString(),
+        });
 
-    if (stripeSecretKey) {
-      // 1. Create live Stripe Checkout Session via Stripe API
-      const params = new URLSearchParams();
-      params.append('mode', 'subscription');
-      params.append('customer_email', email);
-      params.append('client_reference_id', email);
-      params.append('success_url', `${origin}/dashboard/settings?tab=billing&checkout_success=true&plan=${requestedPlan}`);
-      params.append('cancel_url', `${origin}/dashboard/settings?tab=billing`);
-      params.append('line_items[0][price_data][currency]', 'usd');
-      params.append('line_items[0][price_data][product_data][name]', `Kultra Sentinel — ${planName}`);
-      params.append('line_items[0][price_data][product_data][description]', requestedPlan === 'agency' ? 'Unlimited GMC Stores, MCA Architecture & Priority Dispatch' : 'Single GMC Store 24/7 Monitoring & Disapproval Shield');
-      params.append('line_items[0][price_data][recurring][interval]', 'month');
-      params.append('line_items[0][price_data][unit_amount]', String(priceInCents));
-      params.append('line_items[0][quantity]', '1');
-      params.append('metadata[tenantEmail]', email);
-      params.append('metadata[accountPlan]', requestedPlan);
-
-      const stripeRes = await fetch('https://api.stripe.com/v1/checkout/sessions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${stripeSecretKey}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: params.toString(),
-      });
-
-      if (stripeRes.ok) {
-        const stripeSession = await stripeRes.json();
-        return NextResponse.json({ url: stripeSession.url });
+        if (stripeRes.ok) {
+          const stripeSession = await stripeRes.json();
+          return NextResponse.json({ url: stripeSession.url, plan: requestedPlan });
+        }
       }
 
-      console.error('[Stripe Checkout Error]', await stripeRes.text());
+      // CRITICAL: ZERO mock DB elevation! Never mutate database subscription status or plan tier directly.
+      // Subscriptions must strictly be initiated through a live payment checkout session,
+      // and paid tier status must only activate upon receiving a cryptographically verified webhook.
+      return NextResponse.json(
+        { error: 'Failed to initiate payment checkout session with payment provider. Please try again.' },
+        { status: 502 }
+      );
     }
-
-    // 2. Database-backed live upgrade fallback (for development/staging or direct activation)
-    // Ensures state changes commit immediately to DB with zero mock states.
-    const tenant = await findTenantByEmail(email);
-    const planTier = requestedPlan === 'agency' ? 'Agency Pilot' : 'Active Pro';
-
-    if (tenant) {
-      await updateTenant(tenant.id, {
-        plan_tier: planTier,
-        account_plan: requestedPlan,
-        subscription_status: 'paid active',
-      });
-    } else {
-      const sql = getDb();
-      if (sql) {
-        await ensureSchema();
-        await sql`
-          UPDATE tenants
-          SET plan_tier = ${planTier},
-              account_plan = ${requestedPlan},
-              subscription_status = 'paid active'
-          WHERE LOWER(email) = ${email};
-        `;
-      }
-    }
-
-    return NextResponse.json({
-      url: `/dashboard/settings?tab=billing&checkout_success=true&plan=${requestedPlan}`,
-      upgraded: true,
-      plan: requestedPlan,
-    });
   } catch (error) {
     console.error('[Billing Checkout API Error]', error);
     return NextResponse.json({ error: 'Failed to initiate checkout session' }, { status: 500 });

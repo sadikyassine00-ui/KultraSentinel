@@ -50,7 +50,8 @@ export async function getClientPaddleInstance(): Promise<Paddle | null> {
 }
 
 export interface OpenCheckoutOptions {
-  priceId: string;
+  transactionId?: string;
+  priceId?: string;
   customerEmail?: string;
   customerId?: string;
   successUrl?: string;
@@ -64,18 +65,31 @@ export async function openPaddleOverlayCheckout(options: OpenCheckoutOptions): P
     return false;
   }
 
-  paddle.Checkout.open({
-    items: [{ priceId: options.priceId, quantity: 1 }],
-    ...(options.customerEmail ? { customer: { email: options.customerEmail } } : {}),
-    ...(options.customerId ? { customer: { id: options.customerId } } : {}),
-    ...(options.customData ? { customData: options.customData } : {}),
-    settings: {
-      variant: 'one-page',
-      theme: 'dark',
-      displayMode: 'overlay',
-      ...(options.successUrl ? { successUrl: options.successUrl } : {}),
-    },
-  });
+  const settings = {
+    variant: 'one-page' as const,
+    theme: 'dark' as const,
+    displayMode: 'overlay' as const,
+    ...(options.successUrl ? { successUrl: options.successUrl } : {}),
+  };
 
-  return true;
+  if (options.transactionId) {
+    paddle.Checkout.open({
+      transactionId: options.transactionId,
+      settings,
+    });
+    return true;
+  }
+
+  if (options.priceId) {
+    paddle.Checkout.open({
+      items: [{ priceId: options.priceId, quantity: 1 }],
+      ...(options.customerEmail ? { customer: { email: options.customerEmail } } : {}),
+      ...(options.customerId ? { customer: { id: options.customerId } } : {}),
+      ...(options.customData ? { customData: options.customData } : {}),
+      settings,
+    });
+    return true;
+  }
+
+  return false;
 }

@@ -15,7 +15,7 @@ import {
   ArrowRight,
   ShieldAlert,
 } from 'lucide-react';
-import { usePaddleCheckout } from '@/components/billing/PaddleCheckoutOverlay';
+import { openPaddleOverlayCheckout } from '@/lib/paddle/client';
 
 interface BillingState {
   status: 'active trial' | 'paid active' | 'expired' | 'canceled';
@@ -63,11 +63,6 @@ export default function SettingsClientView({
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [showSuccessBanner, setShowSuccessBanner] = useState(checkoutSuccess);
 
-  const { openCheckout: openPaddleOverlay } = usePaddleCheckout({
-    userEmail,
-    onError: (err) => setCheckoutError(err),
-  });
-
   const fetchBillingData = useCallback(async () => {
     try {
       setLoading(true);
@@ -101,19 +96,32 @@ export default function SettingsClientView({
     fetchBillingData();
   }, [fetchBillingData]);
 
+  const isSuperAdmin = Boolean(billing?.isSuperAdmin);
+  const isTrial = billing?.status === 'active trial';
+  const isPaidActive = billing?.status === 'paid active';
+  const isSolo = isPaidActive && (billing?.planTier === 'Solo' || billing?.planName?.includes('Solo'));
+  const isAgency = isPaidActive && (billing?.planTier === 'Agency' || billing?.planName?.includes('Agency'));
+  const isExpired = Boolean(billing?.isLocked || billing?.status === 'expired');
+
+  useEffect(() => {
+    if (checkoutSuccess && !isPaidActive && !isSuperAdmin) {
+      const interval = setInterval(() => {
+        fetchBillingData();
+      }, 2500);
+      const timer = setTimeout(() => clearInterval(interval), 15000);
+      return () => {
+        clearInterval(interval);
+        clearTimeout(timer);
+      };
+    }
+  }, [checkoutSuccess, isPaidActive, isSuperAdmin, fetchBillingData]);
+
   const handleCheckout = async (plan: 'solo' | 'agency') => {
     try {
       setProcessingCheckout(plan);
       setCheckoutError(null);
 
-      // 1. Launch client-side Paddle.js overlay checkout
-      const launched = await openPaddleOverlay(plan);
-      if (launched) {
-        setProcessingCheckout(null);
-        return;
-      }
-
-      // 2. Server-side redirect fallback if Paddle.js overlay is unavailable
+      // 1. Request authentic checkout session from the backend
       const res = await fetch('/api/billing/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -122,13 +130,48 @@ export default function SettingsClientView({
 
       const data = await res.json();
 
-      if (res.ok && data.url) {
-        window.location.href = data.url;
-      } else {
-        setCheckoutError(data.error || 'Failed to initiate checkout. Please try again.');
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to initiate checkout session. Please try again.');
       }
-    } catch {
-      setCheckoutError('Network error communicating with billing service.');
+
+      const successUrl = `${window.location.origin}/dashboard/settings?tab=billing&checkout_success=true&plan=${plan}`;
+
+      // 2. Open provider native checkout overlay directly on the page if transactionId returned
+      if (data.transactionId) {
+        const opened = await openPaddleOverlayCheckout({
+          transactionId: data.transactionId,
+          successUrl,
+        });
+        if (opened) {
+          setProcessingCheckout(null);
+          return;
+        }
+      }
+
+      // 3. Fallback: clean redirect to hosted checkout URL
+      if (data.url) {
+        window.location.href = data.url;
+        return;
+      }
+
+      // 4. Open provider native checkout overlay directly with verified priceId and metadata
+      if (data.priceId) {
+        const opened = await openPaddleOverlayCheckout({
+          priceId: data.priceId,
+          customerEmail: data.customerEmail,
+          customData: data.customData,
+          successUrl,
+        });
+        if (opened) {
+          setProcessingCheckout(null);
+          return;
+        }
+      }
+
+      throw new Error('No checkout URL or transaction ID returned by payment provider.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Network error communicating with billing service.';
+      setCheckoutError(message);
     } finally {
       setProcessingCheckout(null);
     }
@@ -143,12 +186,6 @@ export default function SettingsClientView({
       </div>
     );
   }
-
-  const isSuperAdmin = Boolean(billing?.isSuperAdmin);
-  const isTrial = billing?.status === 'active trial';
-  const isSolo = billing?.status === 'paid active' && (billing.planTier === 'Solo' || billing.planName?.includes('Solo'));
-  const isAgency = billing?.status === 'paid active' && (billing.planTier === 'Agency' || billing.planName?.includes('Agency'));
-  const isExpired = Boolean(billing?.isLocked || billing?.status === 'expired');
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto py-2">
@@ -200,8 +237,8 @@ export default function SettingsClientView({
         </button>
       </div>
 
-      {/* Success Notification Banner */}
-      {showSuccessBanner && (
+      {/* Success Notification Banner: only shown when subscription is authentically confirmed in database */}
+      {showSuccessBanner && isPaidActive && (
         <div className="p-4 rounded-[var(--radius-md)] bg-[var(--signal-wash)] border border-[var(--signal-dim)] flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
             <Check className="w-5 h-5 text-[var(--signal)] shrink-0" />
@@ -210,7 +247,31 @@ export default function SettingsClientView({
                 Subscription Confirmed
               </div>
               <div className="text-[12.5px] text-[var(--ink-secondary)] mt-0.5">
-                Your account is now activated on the {upgradedPlan === 'agency' ? 'Agency Fleet ($49/mo)' : 'Solo Merchant ($19/mo)'} tier. 24/7 disapproval surveillance is armed.
+                Your account is now activated on the {billing?.planTier === 'Agency' ? 'Agency Fleet ($49/mo)' : 'Solo Merchant ($19/mo)'} tier. 24/7 disapproval surveillance is armed.
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowSuccessBanner(false)}
+            className="text-[var(--ghost-text)] hover:text-[var(--ink-primary)] text-[12px] font-mono p-1"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Awaiting Webhook Confirmation Banner: shown when returning from checkout before webhook has completed */}
+      {showSuccessBanner && !isPaidActive && !isSuperAdmin && (
+        <div className="p-4 rounded-[var(--radius-md)] bg-[var(--bg-surface-2)] border border-[var(--signal-dim)] flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <RefreshCw className="w-5 h-5 text-[var(--signal)] shrink-0 animate-spin" />
+            <div>
+              <div className="text-[13.5px] font-semibold text-[var(--ink-primary)]">
+                Payment Submitted - Awaiting Webhook Confirmation
+              </div>
+              <div className="text-[12.5px] text-[var(--ink-secondary)] mt-0.5">
+                Your payment is being processed by Paddle. Your paid tier will activate automatically as soon as the cryptographically signed webhook is confirmed.
               </div>
             </div>
           </div>

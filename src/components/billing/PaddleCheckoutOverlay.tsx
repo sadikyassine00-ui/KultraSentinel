@@ -27,54 +27,54 @@ export function usePaddleCheckout(options?: UsePaddleCheckoutOptions) {
       setIsInitializing(true);
 
       try {
-        const priceId = getPaddlePriceId(plan);
-        if (!priceId) {
-          const err = `No Paddle Price ID configured for plan ${plan}. Check environment variables.`;
-          setError(err);
-          options?.onError?.(err);
-          setIsInitializing(false);
-          return false;
+        const res = await fetch('/api/billing/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plan }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Failed to initiate checkout session.');
         }
 
         const successUrl = typeof window !== 'undefined'
           ? `${window.location.origin}/dashboard/settings?tab=billing&checkout_success=true&plan=${plan}`
           : undefined;
 
-        const success = await openPaddleOverlayCheckout({
-          priceId,
-          customerEmail: options?.userEmail,
-          customData: {
-            accountPlan: plan,
-            tenantEmail: options?.userEmail,
-          },
-          successUrl,
-        });
-
-        if (!success) {
-          // If Paddle.js could not be initialized (e.g. missing client token), fall back to server redirect
-          const fallbackRes = await fetch('/api/billing/checkout', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ plan }),
+        // 1. Try opening native Paddle checkout overlay with server-generated transaction ID
+        if (data.transactionId) {
+          const opened = await openPaddleOverlayCheckout({
+            transactionId: data.transactionId,
+            successUrl,
           });
-
-          if (fallbackRes.ok) {
-            const data = await fallbackRes.json();
-            if (data.url) {
-              window.location.href = data.url;
-              return true;
-            }
+          if (opened) {
+            setIsCheckoutOpen(true);
+            return true;
           }
-
-          const err = 'Failed to launch Paddle checkout. Verify client token or connection.';
-          setError(err);
-          options?.onError?.(err);
-          return false;
         }
 
-        setIsCheckoutOpen(true);
-        options?.onSuccess?.(plan);
-        return true;
+        // 2. Fallback: redirect cleanly to hosted checkout URL
+        if (data.url) {
+          window.location.href = data.url;
+          return true;
+        }
+
+        // 3. Open native Paddle overlay directly with verified priceId and metadata
+        if (data.priceId) {
+          const opened = await openPaddleOverlayCheckout({
+            priceId: data.priceId,
+            customerEmail: data.customerEmail || options?.userEmail,
+            customData: data.customData,
+            successUrl,
+          });
+          if (opened) {
+            setIsCheckoutOpen(true);
+            return true;
+          }
+        }
+
+        throw new Error('No checkout URL or transaction ID returned by payment provider.');
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Error initiating Paddle checkout';
         setError(message);
