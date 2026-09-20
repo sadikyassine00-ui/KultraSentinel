@@ -103,7 +103,7 @@ async function runTests() {
       id: 'sub_test_001',
       customerId: 'ctm_test_001',
       status: 'active',
-      priceId: 'pri_01m2zs530hep63n941x430mzv9', // Solo
+      priceId: 'pri_01m2zzky40faxjvts1jke4rtm5', // Solo
       productId: 'pro_01m2zs52qf4gccrjm7g4dtypzt',
       plan: 'solo',
       tenantEmail: testEmail,

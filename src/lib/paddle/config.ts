@@ -27,7 +27,7 @@ export const PADDLE_PLANS: Record<'solo' | 'agency', PaddlePlanConfig> = {
     billingFrequency: 1,
     taxCategory: 'saas',
     priceIdEnvVar: 'NEXT_PUBLIC_PADDLE_SOLO_PRICE_ID',
-    defaultPriceId: 'pri_01m2zs530hep63n941x430mzv9',
+    defaultPriceId: 'pri_01m2zzky40faxjvts1jke4rtm5',
     description: 'Single GMC Store 24/7 Monitoring and Disapproval Shield',
   },
   agency: {

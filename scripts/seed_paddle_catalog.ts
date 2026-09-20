@@ -118,12 +118,11 @@ async function seedCatalog() {
   } else {
     soloPrice = await paddle.prices.create({
       productId: soloProduct.id,
-      description: 'Kultra Solo Monthly USD ($19/mo)',
+      description: 'Kultra Solo Monthly USD ($19/mo) - Immediate Billing',
       unitPrice: { amount: PADDLE_PLANS.solo.unitAmount, currencyCode: PADDLE_PLANS.solo.currencyCode as CurrencyCode },
       billingCycle: { interval: PADDLE_PLANS.solo.billingInterval, frequency: PADDLE_PLANS.solo.billingFrequency },
-      trialPeriod: { interval: 'day', frequency: 14 },
     });
-    console.log(`   Price Created: ${soloPrice.id} ($19/mo USD with 14-day trial)`);
+    console.log(`   Price Created: ${soloPrice.id} ($19/mo USD immediate billing)`);
   }
 
   // 2. Agency Product & Price
