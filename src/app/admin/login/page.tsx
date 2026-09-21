@@ -202,7 +202,7 @@ export default function AdminLoginPage() {
       </main>
 
       <footer className="w-full py-4 border-t border-[var(--hairline)] bg-[var(--bg-canvas)] text-center font-mono text-[11px] text-[var(--ghost-text-dim)]">
-        &copy; {new Date().getFullYear()} Kultra Sentinel. Dedicated Google Merchant Center Watchdog.
+        &copy; {new Date().getFullYear()} Kultra (usekultra.com). Dedicated Google Merchant Center Watchdog.
       </footer>
     </div>
   );

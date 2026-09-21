@@ -372,7 +372,7 @@ export default function TenantDashboardClientLayout({
                   <Link
                     href="/dashboard/settings?tab=billing"
                     className="hidden sm:inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-[var(--radius-sm)] border border-[var(--hairline-strong)] bg-[var(--bg-surface-2)] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:border-[var(--signal-dim)] text-[11px] sm:text-[12px] font-mono transition-colors shrink-0 font-medium"
-                    title="Solo Plan ($19/mo) — Click to view billing and store limits"
+                    title="Solo Plan ($19/mo): Click to view billing and store limits"
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)]" aria-hidden="true" />
                     <span>Solo Plan · {stores.length}/1 Stores</span>
@@ -382,7 +382,7 @@ export default function TenantDashboardClientLayout({
                   <Link
                     href="/dashboard/settings?tab=billing"
                     className="hidden sm:inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-[var(--radius-sm)] border border-[var(--signal-dim)] bg-[var(--signal-wash)] text-[var(--signal)] hover:border-[var(--signal)] text-[11px] sm:text-[12px] font-mono transition-colors shrink-0 font-medium"
-                    title="Agency Plan ($49/mo) — Click to manage multi-store fleet"
+                    title="Agency Plan ($49/mo): Click to manage multi-store fleet"
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)]" aria-hidden="true" />
                     <span>Agency Fleet · {stores.length}/5 Stores</span>

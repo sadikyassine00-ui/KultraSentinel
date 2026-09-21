@@ -24,7 +24,7 @@ const config: Config = {
           heading: "#cfcdc8",
         },
 
-        // Signal (active / live / "after") — THE accent
+        // Signal (active / live / "after"): THE accent
         signal: {
           DEFAULT: "#f2a93b",
           dim: "#7a5a26",

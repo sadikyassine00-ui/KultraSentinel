@@ -216,7 +216,7 @@ export function DashboardIllustration() {
 
           {/* Slack App Identity */}
           <div className="flex items-center gap-3 pt-3">
-            {/* Kultra Sentinel Avatar */}
+            {/* Kultra Alerts Avatar */}
             <div className="w-9 h-9 rounded-[6px] bg-[#0e0f11] flex items-center justify-center shrink-0">
               <svg className="w-5 h-5" viewBox="0 0 48 48" fill="none">
                 <g transform="translate(24, 24) scale(1.05) translate(-21.55, -19.25)">
@@ -235,7 +235,7 @@ export function DashboardIllustration() {
 
             {/* App Name & Meta */}
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-bold text-[14.5px] text-[#1d1c1d]">Kultra Sentinel</span>
+              <span className="font-bold text-[14.5px] text-[#1d1c1d]">Kultra Alerts</span>
               <span className="bg-[#f2f2f2] text-[#616061] text-[10px] font-bold px-1.5 py-0.5 rounded-[3px]">
                 APP
               </span>

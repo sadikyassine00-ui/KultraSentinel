@@ -1,5 +1,5 @@
 /**
- * Test Driven Development (TDD) Suite for Kultra Sentinel
+ * Test Driven Development (TDD) Suite for Kultra
  * Tests: Form Submissions, Neon DB Data Access, Admin Auth, Protected APIs, Status Updates
  * Run with: node scripts/test_admin_suite.js
  */
@@ -48,7 +48,7 @@ function assert(condition, message) {
 
 async function runSuite() {
   console.log('=============================================================================');
-  console.log('       KULTRA SENTINEL - ADMIN & NEON DB TDD VERIFICATION SUITE              ');
+  console.log('       KULTRA - ADMIN & NEON DB TDD VERIFICATION SUITE              ');
   console.log('=============================================================================\n');
 
   let passed = 0;

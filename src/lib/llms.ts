@@ -8,7 +8,7 @@ export function generateLlmsDocumentation(): string {
 > Real-time Google Merchant Center disapproval monitoring micro-SaaS providing sub-30s Slack alerts via Google Content API and Cloud Pub/Sub.
 
 ## Overview & Core Value
-Kultra is a real-time Google Merchant Center disapproval monitoring micro-SaaS. When policy changes or feed issues silently suspend bestselling Google Shopping ads, Kultra detects the changes in real time via Google Content API and Cloud Pub/Sub and dispatches actionable Slack alerts in under 30 seconds—preventing wasted ad spend and silent revenue loss.
+Kultra is a real-time Google Merchant Center disapproval monitoring micro-SaaS. When policy changes or feed issues silently suspend bestselling Google Shopping ads, Kultra detects the changes in real time via Google Content API and Cloud Pub/Sub and dispatches actionable Slack alerts in under 30 seconds, preventing wasted ad spend and silent revenue loss.
 
 ## Operational Capabilities
 - **Sub-30s Disapproval Detection**: Near real-time event ingestion powered by Google Content API for Shopping and Cloud Pub/Sub push notification architecture.
@@ -27,19 +27,19 @@ Kultra is a real-time Google Merchant Center disapproval monitoring micro-SaaS. 
 
 ## Trial Architecture
 - **14-Day Free Trial**: Complete access to real-time monitoring and diagnostic alerting.
-- **Connection-Based Activation**: The 14-day evaluation clock activates strictly upon successful Google Merchant Center connection—not upon initial account registration—ensuring merchants receive a full 14 days of live monitoring.
+- **Connection-Based Activation**: The 14-day evaluation clock activates strictly upon successful Google Merchant Center connection (not upon initial account registration), ensuring merchants receive a full 14 days of live monitoring.
 - **Alert Silencer & Paywall Lockout**: Upon trial expiration without an active paid subscription, an automated alert silencer halts webhook and push notifications, and a paywall lockout screen engages while safely preserving store configurations until an upgrade is completed.
 
 ## Canonical Links
-- Homepage: https://usekultra.com
-- Privacy Policy: https://usekultra.com/privacy
-- Terms of Service: https://usekultra.com/terms
-- Refund Policy: https://usekultra.com/refund
+- Homepage: https://www.usekultra.com
+- Privacy Policy: https://www.usekultra.com/privacy
+- Terms of Service: https://www.usekultra.com/terms
+- Refund Policy: https://www.usekultra.com/refund
 - Support: mailto:support@usekultra.com
 
 ## Optional Documentation Links
-- [Privacy Policy](https://usekultra.com/privacy): Detailed data usage, Limited Use compliance, encryption, and data protection disclosures.
-- [Terms of Service](https://usekultra.com/terms): Terms governing SaaS catalog monitoring, 14-day evaluation, and subscription billing.
-- [Refund and Cancellation Policy](https://usekultra.com/refund): Transparent refund policy, trial terms, and self-serve cancellation.
+- [Privacy Policy](https://www.usekultra.com/privacy): Detailed data usage, Limited Use compliance, encryption, and data protection disclosures.
+- [Terms of Service](https://www.usekultra.com/terms): Terms governing SaaS catalog monitoring, 14-day evaluation, and subscription billing.
+- [Refund and Cancellation Policy](https://www.usekultra.com/refund): Transparent refund policy, trial terms, and self-serve cancellation.
 `;
 }

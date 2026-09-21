@@ -44,14 +44,14 @@ export function FleetLimitModal({
   );
   const mailtoBody = encodeURIComponent(
     isSolo
-      ? `Hello Kultra Sentinel Concierge Team,\n\n` +
+      ? `Hello Kultra Concierge Team,\n\n` +
         `I have reached the 1-store quota on my Solo plan and would like to expand multi-store monitoring.\n\n` +
         `Account Email: ${userEmail || 'N/A'}\n` +
         `Current Store Count: ${storeCount}\n\n` +
         `Please assist with upgrading to Agency Fleet or custom fleet provisioning.\n\n` +
         `Best regards,\n` +
         `${userEmail || 'Store Owner'}`
-      : `Hello Kultra Sentinel Concierge Team,\n\n` +
+      : `Hello Kultra Concierge Team,\n\n` +
         `I have reached the 5-store fleet quota on my Agency Fleet plan and require expanded multi-store volume.\n\n` +
         `Account Email: ${userEmail || 'N/A'}\n` +
         `Currently Monitored Stores: ${storeCount}\n` +

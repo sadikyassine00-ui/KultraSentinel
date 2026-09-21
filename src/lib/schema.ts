@@ -1,5 +1,5 @@
 /**
- * Unified Entity Schema (JSON-LD) for Kultra (https://usekultra.com)
+ * Unified Entity Schema (JSON-LD) for Kultra (https://www.usekultra.com)
  * Interconnects the SoftwareApplication, Organization, and Creator (Person)
  * into a single cohesive Schema.org Graph with persistent fragment identifiers.
  */
@@ -9,62 +9,62 @@ export const homepageStructuredData = {
   '@graph': [
     {
       '@type': 'Organization',
-      '@id': 'https://usekultra.com/#organization',
+      '@id': 'https://www.usekultra.com/#organization',
       name: 'Kultra',
-      url: 'https://usekultra.com',
+      url: 'https://www.usekultra.com',
       logo: {
         '@type': 'ImageObject',
-        '@id': 'https://usekultra.com/#logo',
-        url: 'https://usekultra.com/assets/logos/kultra-logo-horizontal.svg',
-        contentUrl: 'https://usekultra.com/assets/logos/kultra-logo-horizontal.svg',
+        '@id': 'https://www.usekultra.com/#logo',
+        url: 'https://www.usekultra.com/assets/logos/kultra-logo-horizontal.svg',
+        contentUrl: 'https://www.usekultra.com/assets/logos/kultra-logo-horizontal.svg',
         caption: 'Kultra',
       },
-      image: 'https://usekultra.com/og-image.png',
+      image: 'https://www.usekultra.com/og-image.png',
       founder: {
-        '@id': 'https://usekultra.com/#creator',
+        '@id': 'https://www.usekultra.com/#creator',
       },
       contactPoint: [
         {
           '@type': 'ContactPoint',
           contactType: 'customer support',
           email: 'support@usekultra.com',
-          url: 'https://usekultra.com',
+          url: 'https://www.usekultra.com',
           availableLanguage: ['English'],
         },
       ],
     },
     {
       '@type': 'Person',
-      '@id': 'https://usekultra.com/#creator',
+      '@id': 'https://www.usekultra.com/#creator',
       name: 'Yassine Sadik',
       jobTitle: 'Founder & Creator',
-      url: 'https://usekultra.com',
+      url: 'https://www.usekultra.com',
       worksFor: {
-        '@id': 'https://usekultra.com/#organization',
+        '@id': 'https://www.usekultra.com/#organization',
       },
     },
     {
       '@type': 'SoftwareApplication',
-      '@id': 'https://usekultra.com/#software',
+      '@id': 'https://www.usekultra.com/#software',
       name: 'Kultra',
-      url: 'https://usekultra.com',
+      url: 'https://www.usekultra.com',
       description:
         'Real-time Google Merchant Center disapproval monitoring micro-SaaS with sub-30s Slack alerts via Google Content API and Cloud Pub/Sub.',
       applicationCategory: 'BusinessApplication',
       operatingSystem: 'Web, Cloud',
       publisher: {
-        '@id': 'https://usekultra.com/#organization',
+        '@id': 'https://www.usekultra.com/#organization',
       },
       author: {
-        '@id': 'https://usekultra.com/#creator',
+        '@id': 'https://www.usekultra.com/#creator',
       },
       creator: {
-        '@id': 'https://usekultra.com/#creator',
+        '@id': 'https://www.usekultra.com/#creator',
       },
       offers: [
         {
           '@type': 'Offer',
-          '@id': 'https://usekultra.com/#plan-solo',
+          '@id': 'https://www.usekultra.com/#plan-solo',
           name: 'Solo Plan',
           price: '19.00',
           priceCurrency: 'USD',
@@ -76,14 +76,14 @@ export const homepageStructuredData = {
           },
           description:
             'Solo tier at $19 per month for single store monitoring. Includes a 14-day free trial activated upon Google Merchant Center account connection.',
-          url: 'https://usekultra.com/register?plan=solo',
+          url: 'https://www.usekultra.com/register?plan=solo',
           seller: {
-            '@id': 'https://usekultra.com/#organization',
+            '@id': 'https://www.usekultra.com/#organization',
           },
         },
         {
           '@type': 'Offer',
-          '@id': 'https://usekultra.com/#plan-agency',
+          '@id': 'https://www.usekultra.com/#plan-agency',
           name: 'Agency Fleet',
           price: '49.00',
           priceCurrency: 'USD',
@@ -95,29 +95,29 @@ export const homepageStructuredData = {
           },
           description:
             'Agency tier at $49 per month for unlimited accounts and team notifications. Includes a 14-day free trial activated upon Google Merchant Center account connection.',
-          url: 'https://usekultra.com/register?plan=agency',
+          url: 'https://www.usekultra.com/register?plan=agency',
           seller: {
-            '@id': 'https://usekultra.com/#organization',
+            '@id': 'https://www.usekultra.com/#organization',
           },
         },
       ],
     },
     {
       '@type': 'WebSite',
-      '@id': 'https://usekultra.com/#website',
-      url: 'https://usekultra.com',
+      '@id': 'https://www.usekultra.com/#website',
+      url: 'https://www.usekultra.com',
       name: 'Kultra',
       description:
         'Real-time Google Merchant Center disapproval monitoring service built on the Google Content API and Cloud Pub/Sub.',
       publisher: {
-        '@id': 'https://usekultra.com/#organization',
+        '@id': 'https://www.usekultra.com/#organization',
       },
     },
     {
       '@type': 'FAQPage',
-      '@id': 'https://usekultra.com/#faq',
+      '@id': 'https://www.usekultra.com/#faq',
       isPartOf: {
-        '@id': 'https://usekultra.com/#website',
+        '@id': 'https://www.usekultra.com/#website',
       },
       mainEntity: [
         {

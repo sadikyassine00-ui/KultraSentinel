@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 
-const LLM_USER_AGENTS = [
+const AI_SEARCH_AGENTS = [
   'GPTBot',
   'ChatGPT-User',
   'OAI-SearchBot',
@@ -32,12 +32,12 @@ export default function robots(): MetadataRoute.Robots {
         allow: ['/', '/llms.txt', '/llms', '/llms-full.txt'],
         disallow: ['/api/', '/dashboard/', '/admin/', '/suspended/'],
       },
-      ...LLM_USER_AGENTS.map((agent) => ({
-        userAgent: agent,
+      {
+        userAgent: AI_SEARCH_AGENTS,
         allow: ['/', '/llms.txt', '/llms', '/llms-full.txt'],
         disallow: ['/api/', '/dashboard/', '/admin/', '/suspended/'],
-      })),
+      },
     ],
-    sitemap: 'https://usekultra.com/sitemap.xml',
+    sitemap: 'https://www.usekultra.com/sitemap.xml',
   };
 }

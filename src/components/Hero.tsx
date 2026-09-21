@@ -8,6 +8,11 @@ export function Hero() {
     <section className="relative w-full pt-16 md:pt-24 pb-16 px-4 sm:px-6 flex flex-col items-center z-10">
       {/* 1. Centered Single Column Content */}
       <div className="max-w-[1040px] w-full mx-auto text-center flex flex-col items-center">
+        {/* Primary Positioning Eyebrow */}
+        <div className="font-mono text-[11px] sm:text-[12px] text-[var(--signal)] tracking-[0.03em] mb-4 font-medium">
+          The real-time Google Merchant Center watchdog
+        </div>
+
         {/* Main Heading in Fraunces (Strictly weight 600 per §2) */}
         <h1
           className="font-display font-semibold text-[2.25rem] sm:text-[3rem] md:text-[3.6rem] text-[var(--ink-primary)] leading-[1.15] tracking-[-0.01em] max-w-[960px] mx-auto text-center"

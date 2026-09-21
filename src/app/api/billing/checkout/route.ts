@@ -108,11 +108,13 @@ export async function POST(request: Request) {
         params.append('success_url', `${origin}/dashboard/settings?tab=billing&checkout_success=true&plan=${requestedPlan}`);
         params.append('cancel_url', `${origin}/dashboard/settings?tab=billing`);
         params.append('line_items[0][price_data][currency]', 'usd');
-        params.append('line_items[0][price_data][product_data][name]', `Kultra Sentinel - ${planName}`);
+        params.append('line_items[0][price_data][product_data][name]', `Kultra - ${planName}`);
         params.append('line_items[0][price_data][product_data][description]', requestedPlan === 'agency' ? 'Unlimited GMC Stores, MCA Architecture & Priority Dispatch' : 'Single GMC Store 24/7 Monitoring & Disapproval Shield');
+        params.append('line_items[0][price_data][product_data][statement_descriptor]', 'KULTRA SAAS');
         params.append('line_items[0][price_data][recurring][interval]', 'month');
         params.append('line_items[0][price_data][unit_amount]', String(priceInCents));
         params.append('line_items[0][quantity]', '1');
+        params.append('subscription_data[description]', 'KULTRA SAAS');
         params.append('metadata[tenantEmail]', email);
         params.append('metadata[accountPlan]', requestedPlan);
         if (tenant?.id) {

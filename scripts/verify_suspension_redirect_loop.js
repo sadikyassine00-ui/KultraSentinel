@@ -61,7 +61,7 @@ function assert(condition, message) {
 
 async function runSuite() {
   console.log('=============================================================================');
-  console.log('   KULTRA SENTINEL - SUSPENSION REDIRECT LOOP RESOLUTION VERIFICATION       ');
+  console.log('   KULTRA - SUSPENSION REDIRECT LOOP RESOLUTION VERIFICATION       ');
   console.log('=============================================================================\n');
 
   // STEP 1: Superadmin Authentication

@@ -130,13 +130,13 @@ export function Footer() {
         {/* Official Trademark & Platform Disclaimer (§3 Directive) */}
         <div className="py-6 border-b border-[var(--hairline)]">
           <p className="text-[12px] text-[var(--ghost-text)] leading-[1.6]">
-            Kultra is an independent monitoring platform and is not affiliated with, sponsored by, or endorsed by Google LLC or Shopify Inc. Google Merchant Center and Shopify are registered trademarks of their respective owners.
+            Kultra (usekultra.com) is an independent monitoring platform and is not affiliated with, sponsored by, or endorsed by Google LLC or Shopify Inc. Google Merchant Center and Shopify are registered trademarks of their respective owners.
           </p>
         </div>
 
         {/* Bottom Metadata Bar */}
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 font-mono text-[11px] text-[var(--ghost-text)]">
-          <p>© 2026 Kultra. All rights reserved.</p>
+          <p>© 2026 Kultra (usekultra.com). All rights reserved.</p>
           <div className="flex items-center gap-4">
             <Link href="/privacy" className="hover:text-[var(--ink-primary)] transition-colors">
               Privacy Policy

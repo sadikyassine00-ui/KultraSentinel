@@ -95,10 +95,10 @@ async function generateOgImage() {
       <!-- Mini Kultra Icon inside avatar -->
       <circle cx="18" cy="18" r="4.5" fill="#f2a93b" />
 
-      <text x="48" y="16" class="font-sans" font-size="15" font-weight="700" fill="#f4f1ea">Kultra Bot</text>
-      <rect x="132" y="5" width="36" height="16" rx="3" fill="#1f2128" stroke="rgba(255,255,255,0.12)" stroke-width="1" />
-      <text x="141" y="17" class="font-mono" font-size="9" font-weight="600" fill="#6b7078">APP</text>
-      <text x="180" y="16" class="font-mono" font-size="12" fill="#6b7078">10:42:18 UTC</text>
+      <text x="48" y="16" class="font-sans" font-size="15" font-weight="700" fill="#f4f1ea">Kultra Alerts</text>
+      <rect x="146" y="5" width="36" height="16" rx="3" fill="#1f2128" stroke="rgba(255,255,255,0.12)" stroke-width="1" />
+      <text x="155" y="17" class="font-mono" font-size="9" font-weight="600" fill="#6b7078">APP</text>
+      <text x="194" y="16" class="font-mono" font-size="12" fill="#6b7078">10:42:18 UTC</text>
 
       <!-- Attached Alert Block with Red Left Accent -->
       <g transform="translate(48, 30)">

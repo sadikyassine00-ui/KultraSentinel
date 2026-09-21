@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   description:
     'Official Privacy Policy for Kultra (usekultra.com). Detailed disclosures on Google Content API data usage, Limited Use compliance, encryption, and data protection.',
   alternates: {
-    canonical: '/privacy',
+    canonical: 'https://www.usekultra.com/privacy',
   },
 };
 
@@ -179,7 +179,7 @@ export default function PrivacyPolicyPage() {
           <div className="p-5 rounded-[4px] bg-[#0e0f11] border border-[#7a5a26] bg-[rgba(242,169,59,0.04)] space-y-2.5">
             <div className="flex items-center gap-2 text-[#f2a93b] font-mono text-xs tracking-wide">
               <Shield className="w-4 h-4" />
-              <span>PASSIVE DIAGNOSTIC MONITOR — NON-MUTATION GUARANTEE</span>
+              <span>PASSIVE DIAGNOSTIC MONITOR: NON-MUTATION GUARANTEE</span>
             </div>
             <p className="text-[14.5px] leading-[1.65] text-[#f4f1ea] font-medium">
               &quot;Kultra functions purely as a passive diagnostic monitor and never writes, alters, creates, updates, or deletes product data, pricing, inventory, listings, feeds, or feed configurations in the merchant&apos;s Google Merchant Center account.&quot;

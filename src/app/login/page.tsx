@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     follow: true,
   },
   alternates: {
-    canonical: '/login',
+    canonical: 'https://www.usekultra.com/login',
   },
 };
 

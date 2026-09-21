@@ -51,7 +51,7 @@ export function QuickReference() {
             </div>
           </div>
 
-          {/* Right Column (The Active Solution: With Kultra Watchdog) */}
+          {/* Right Column (The Active Solution: With Kultra) */}
           <div
             className="py-10 lg:pl-12 flex flex-col justify-between relative"
             style={{
@@ -62,7 +62,7 @@ export function QuickReference() {
             <div>
               <div className="mb-4">
                 <span className="font-mono text-[11px] tracking-[0.03em] uppercase px-2.5 py-1 rounded-[var(--radius-sm)] border border-[var(--signal-dim)] text-[var(--signal)] bg-[var(--signal-wash)] inline-block">
-                  With Kultra Watchdog
+                  With Kultra
                 </span>
               </div>
 

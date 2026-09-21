@@ -9,41 +9,41 @@ import { Footer } from '@/components/Footer';
 import { homepageStructuredData, serializeJsonLd } from '@/lib/schema';
 
 export const metadata: Metadata = {
-  title: 'Kultra: Real-Time Google Merchant Center Disapproval Alerts in Slack',
+  title: 'Kultra | Real-Time Google Merchant Center Slack Alerts',
   description:
     'Real-Time Google Merchant Center Disapproval Alerts in Slack. Sub-30-second Cloud Pub/Sub incident dispatch with direct one-click fix links before ad spend bleeds.',
   alternates: {
-    canonical: '/',
+    canonical: 'https://www.usekultra.com',
   },
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://usekultra.com',
+    url: 'https://www.usekultra.com',
     siteName: 'Kultra',
-    title: 'Kultra: Real-Time Google Merchant Center Disapproval Alerts in Slack',
+    title: 'Kultra | Real-Time Google Merchant Center Slack Alerts',
     description:
       'Real-Time Google Merchant Center Disapproval Alerts in Slack. Sub-30-second Cloud Pub/Sub incident dispatch with direct one-click fix links before ad spend bleeds.',
     images: [
       {
-        url: 'https://usekultra.com/og-image.png',
+        url: 'https://www.usekultra.com/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Kultra: Real-Time Google Merchant Center Disapproval Alerts in Slack',
+        alt: 'Kultra | Real-Time Google Merchant Center Slack Alerts',
         type: 'image/png',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Kultra: Real-Time Google Merchant Center Disapproval Alerts in Slack',
+    title: 'Kultra | Real-Time Google Merchant Center Slack Alerts',
     description:
       'Real-Time Google Merchant Center Disapproval Alerts in Slack. Sub-30-second Cloud Pub/Sub incident dispatch with direct one-click fix links before ad spend bleeds.',
     images: [
       {
-        url: 'https://usekultra.com/og-image.png',
+        url: 'https://www.usekultra.com/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Kultra: Real-Time Google Merchant Center Disapproval Alerts in Slack',
+        alt: 'Kultra | Real-Time Google Merchant Center Slack Alerts',
       },
     ],
   },

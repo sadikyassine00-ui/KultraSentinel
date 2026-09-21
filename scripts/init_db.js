@@ -29,11 +29,11 @@ async function initDb() {
     console.log(`
 =============================================================================
 [Notice] DATABASE_URL is not set in your environment or .env.local file.
-Kultra Sentinel will use its high-performance in-memory persistence layer.
+Kultra will use its high-performance in-memory persistence layer.
 
 To connect your real Neon Postgres database:
 1. Sign up for free at https://neon.tech
-2. Create a project (e.g. 'kultra-sentinel')
+2. Create a project (e.g. 'kultra')
 3. Copy your Pooled Connection String (starts with postgresql://...)
 4. Add it to .env.local:
    DATABASE_URL="postgresql://user:password@ep-xyz.us-east-2.aws.neon.tech/neondb?sslmode=require"

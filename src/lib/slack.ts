@@ -114,7 +114,7 @@ export async function dispatchInitialAuditSlackNotification({
           elements: [
             {
               type: 'mrkdwn',
-              text: `Dispatched by Kultra Sentinel Event Engine at ${new Date().toISOString()}`,
+              text: `Dispatched by Kultra Alerts at ${new Date().toISOString()}`,
             },
           ],
         },
@@ -158,7 +158,7 @@ export async function dispatchInitialAuditSlackNotification({
           elements: [
             {
               type: 'mrkdwn',
-              text: `Kultra Sentinel Monitoring Engine active at ${new Date().toISOString()}`,
+              text: `Kultra Monitoring Engine active at ${new Date().toISOString()}`,
             },
           ],
         },
@@ -343,7 +343,7 @@ export async function dispatchDisapprovalSlackNotification({
           elements: [
             {
               type: 'mrkdwn',
-              text: `Dispatched by Kultra Sentinel Event Engine • Sub-30s Google Pub/Sub Detection${isSimulation ? ' • Auto-purges in 15 minutes.' : ''}`,
+              text: `Dispatched by Kultra Alerts • Sub-30s Google Pub/Sub Detection${isSimulation ? ' • Auto-purges in 15 minutes.' : ''}`,
             },
           ],
         },
@@ -433,7 +433,7 @@ export async function dispatchDisapprovalSlackNotification({
           elements: [
             {
               type: 'mrkdwn',
-              text: `Dispatched by Kultra Sentinel Event Engine • Sub-30s Google Pub/Sub Detection${isSimulation ? ' • Auto-purges in 15 minutes.' : ''}`,
+              text: `Dispatched by Kultra Alerts • Sub-30s Google Pub/Sub Detection${isSimulation ? ' • Auto-purges in 15 minutes.' : ''}`,
             },
           ],
         },
@@ -551,7 +551,7 @@ export async function dispatchSlackWelcomePing({
         elements: [
           {
             type: 'mrkdwn',
-            text: `Kultra Sentinel Monitoring Engine | Real-Time Google Merchant API v1 Pub/Sub QoS-1 Stream`,
+            text: `Kultra Alerts | Real-Time Google Merchant API v1 Pub/Sub QoS-1 Stream`,
           },
         ],
       },

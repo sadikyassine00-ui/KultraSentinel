@@ -81,7 +81,7 @@ export function ArchitectureComparison() {
                 </th>
                 <th className="py-3.5 px-6 w-[36%] font-normal text-[var(--signal)] bg-[var(--signal-wash)] border-l border-[var(--hairline)]">
                   <div className="flex items-center gap-2">
-                    <span className="text-[var(--ink-primary)] font-medium">Kultra Sentinel Engine</span>
+                    <span className="text-[var(--ink-primary)] font-medium">Kultra Engine</span>
                     <span className="tag-pill tag-signal text-[10.5px]">
                       Merchant API v1
                     </span>
@@ -161,7 +161,7 @@ export function ArchitectureComparison() {
                     <Check className="w-3 h-3" strokeWidth={1.5} />
                   </div>
                   <div>
-                    <span className="font-mono text-[10px] text-[var(--signal)] font-medium block">Kultra Sentinel</span>
+                    <span className="font-mono text-[10px] text-[var(--signal)] font-medium block">Kultra</span>
                     <span className="text-[12.5px] font-medium text-[var(--ink-primary)]">{row.kultra}</span>
                   </div>
                 </div>

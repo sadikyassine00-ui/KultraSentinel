@@ -1,5 +1,5 @@
 /**
- * KULTRA SENTINEL - EVENT PROCESSING ENGINE INTEGRATION TEST SUITE
+ * KULTRA - EVENT PROCESSING ENGINE INTEGRATION TEST SUITE
  * Verifies end-to-end workflow stages, security boundaries, and reliability rules from INSTRUCTIONS.md:
  * 
  * - Stage 1: User Onboarding & Account Scoping (Session token, route gate, open-redirect defense)

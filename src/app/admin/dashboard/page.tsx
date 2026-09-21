@@ -546,7 +546,7 @@ export default function AdminDashboardPage() {
                     </div>
                     <div className="min-w-0">
                       <div className="text-xs font-semibold text-[#f4f1ea] tracking-tight truncate">
-                        Kultra Sentinel
+                        Kultra
                       </div>
                       <div className="text-[10.5px] font-mono text-[#6b7078] flex items-center gap-1.5 mt-0.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" />
@@ -1663,7 +1663,7 @@ export default function AdminDashboardPage() {
 
                                   <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">
                                     <span className={log.latency_ms ? 'text-[#f4f1ea]' : 'text-[#6b7078]'}>
-                                      {log.latency_ms != null ? `${log.latency_ms} ms` : '—'}
+                                      {log.latency_ms != null ? `${log.latency_ms} ms` : '-'}
                                     </span>
                                   </td>
 

@@ -44,7 +44,7 @@ function assert(condition, message) {
 
 async function runSuite() {
   console.log('=============================================================================');
-  console.log('     KULTRA SENTINEL - BACKEND ACTIONS & USER SUSPENSION VERIFICATION        ');
+  console.log('     KULTRA - BACKEND ACTIONS & USER SUSPENSION VERIFICATION        ');
   console.log('=============================================================================\n');
 
   // STEP 1: Superadmin Authentication
