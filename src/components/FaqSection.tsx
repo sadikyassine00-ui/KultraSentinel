@@ -49,45 +49,11 @@ export function FaqSection() {
     },
   ];
 
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@graph': [
-      {
-        '@type': 'FAQPage',
-        mainEntity: faqs.map((faq) => ({
-          '@type': 'Question',
-          name: faq.question,
-          acceptedAnswer: {
-            '@type': 'Answer',
-            text: faq.answer,
-          },
-        })),
-      },
-      {
-        '@type': 'SoftwareApplication',
-        name: 'Kultra',
-        operatingSystem: 'Web-based cloud telemetry',
-        applicationCategory: 'BusinessApplication',
-        offers: {
-          '@type': 'Offer',
-          price: '19.00',
-          priceCurrency: 'USD',
-        },
-        description:
-          "Instant alerts before policy changes kill your bestselling Google Merchant ads. Kultra catches Google Merchant Center product disapprovals via real-time Pub/Sub push events.",
-      },
-    ],
-  };
-
   return (
     <section
       id="faq"
       className="relative w-full py-20 px-4 sm:px-6 bg-[var(--bg-canvas)] border-t border-[var(--hairline)]"
     >
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
 
       <div className="relative z-10 max-w-[860px] mx-auto">
         {/* Section Header */}

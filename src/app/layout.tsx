@@ -18,9 +18,9 @@ export const metadata: Metadata = {
     icon: [
       { url: '/favicon.ico', sizes: 'any' },
       { url: '/favicon.svg', type: 'image/svg+xml' },
-      { url: '/favicon-48x48.png', sizes: '48x48', type: 'image/png' },
       { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
       { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-48x48.png', sizes: '48x48', type: 'image/png' },
     ],
     shortcut: '/favicon.ico',
     apple: [
@@ -35,24 +35,36 @@ export const metadata: Metadata = {
   },
   manifest: '/site.webmanifest',
   openGraph: {
-    title: 'Kultra: Google Merchant Center Disapproval Watchdog',
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://usekultra.com',
+    siteName: 'Kultra',
+    title: 'Kultra: Real-Time Google Merchant Center Disapproval Alerts in Slack',
     description:
-      "Google won't text you when policy changes silently kill your bestselling ads. Kultra monitors your feed 24/7 and delivers instant alerts before you waste another dollar of ad spend.",
+      'Real-Time Google Merchant Center Disapproval Alerts in Slack. Sub-30-second Cloud Pub/Sub incident dispatch with direct one-click fix links before ad spend bleeds.',
     images: [
       {
-        url: '/og-image.png',
+        url: 'https://usekultra.com/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Kultra',
+        alt: 'Kultra: Real-Time Google Merchant Center Disapproval Alerts in Slack',
+        type: 'image/png',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Kultra: Google Merchant Center Disapproval Watchdog',
+    title: 'Kultra: Real-Time Google Merchant Center Disapproval Alerts in Slack',
     description:
-      "Google won't text you when policy changes silently kill your bestselling ads. Kultra monitors your feed 24/7 and delivers instant alerts before you waste another dollar of ad spend.",
-    images: ['/og-image.png'],
+      'Real-Time Google Merchant Center Disapproval Alerts in Slack. Sub-30-second Cloud Pub/Sub incident dispatch with direct one-click fix links before ad spend bleeds.',
+    images: [
+      {
+        url: 'https://usekultra.com/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Kultra: Real-Time Google Merchant Center Disapproval Alerts in Slack',
+      },
+    ],
   },
 };
 
