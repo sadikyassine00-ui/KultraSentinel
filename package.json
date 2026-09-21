@@ -9,6 +9,7 @@
     "lint": "next lint",
     "generate-favicons": "node scripts/generate_favicons.js",
     "generate-og": "node scripts/generate_og_image.js",
+    "indexnow:submit": "node scripts/submit_indexnow.js",
     "db:init": "node scripts/init_db.js",
     "test:admin": "node scripts/test_admin_suite.js"
   },
