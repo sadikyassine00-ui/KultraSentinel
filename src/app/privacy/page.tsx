@@ -8,6 +8,9 @@ export const metadata: Metadata = {
   title: 'Privacy Policy | Kultra',
   description:
     'Official Privacy Policy for Kultra (usekultra.com). Detailed disclosures on Google Content API data usage, Limited Use compliance, encryption, and data protection.',
+  alternates: {
+    canonical: '/privacy',
+  },
 };
 
 export default function PrivacyPolicyPage() {

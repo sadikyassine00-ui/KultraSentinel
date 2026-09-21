@@ -1,9 +1,23 @@
 import React, { Suspense } from 'react';
+import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { COOKIE_NAME, verifySessionToken } from '@/lib/token';
 import { isTenantSuspended } from '@/lib/db';
 import LoginForm from './LoginForm';
+
+export const metadata: Metadata = {
+  title: 'Sign In | Kultra',
+  description:
+    'Sign in to your Kultra account to monitor Google Merchant Center product feed disapprovals and receive instant alerts.',
+  robots: {
+    index: false,
+    follow: true,
+  },
+  alternates: {
+    canonical: '/login',
+  },
+};
 
 export default async function CustomerLoginPage() {
   const cookieStore = await cookies();

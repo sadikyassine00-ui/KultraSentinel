@@ -8,6 +8,9 @@ export const metadata: Metadata = {
   title: 'Terms of Service | Kultra',
   description:
     'Terms of Service governing the use of Kultra (usekultra.com) SaaS catalog monitoring, diagnostic telemetry, 14-day evaluation, and alerting services.',
+  alternates: {
+    canonical: '/terms',
+  },
 };
 
 export default function TermsOfServicePage() {

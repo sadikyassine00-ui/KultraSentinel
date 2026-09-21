@@ -7,10 +7,13 @@ import { COOKIE_NAME, verifySessionToken } from '@/lib/token';
 import { isAllowedAdminEmail } from '@/lib/auth';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://www.usekultra.com'),
+  metadataBase: new URL('https://usekultra.com'),
   title: 'Kultra: Google Merchant Center Disapproval Watchdog',
   description:
     "Google won't text you when policy changes silently kill your bestselling ads. Kultra monitors your feed 24/7 and delivers instant alerts before you waste another dollar of ad spend.",
+  alternates: {
+    canonical: '/',
+  },
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: 'any' },

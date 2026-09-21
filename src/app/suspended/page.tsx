@@ -1,4 +1,5 @@
 import React from 'react';
+import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { cookies } from 'next/headers';
@@ -7,6 +8,14 @@ import { ShieldAlert, Mail } from 'lucide-react';
 import { COOKIE_NAME, verifySessionToken } from '@/lib/token';
 import { isTenantSuspended } from '@/lib/db';
 import SuspendedLogoutButton from './SuspendedLogoutButton';
+
+export const metadata: Metadata = {
+  title: 'Account Suspended | Kultra',
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default async function AccountSuspendedPage() {
   const cookieStore = await cookies();

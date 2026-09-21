@@ -1,10 +1,19 @@
 import React from 'react';
+import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { COOKIE_NAME, verifySessionToken } from '@/lib/token';
 import { isTenantSuspended, findTenantByEmail } from '@/lib/db';
 import { isAllowedAdminEmail } from '@/lib/auth';
 import TenantDashboardClientLayout from './TenantDashboardClientLayout';
+
+export const metadata: Metadata = {
+  title: 'Dashboard | Kultra',
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default async function TenantDashboardLayout({
   children,

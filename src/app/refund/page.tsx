@@ -8,6 +8,9 @@ export const metadata: Metadata = {
   title: 'Refund and Cancellation Policy | Kultra',
   description:
     'Transparent, direct, and legally binding Refund and Cancellation Policy for Kultra (usekultra.com). Learn about our 14-day trial, first-payment guarantee, and self-serve cancellation.',
+  alternates: {
+    canonical: '/refund',
+  },
 };
 
 export default function RefundPolicyPage() {
