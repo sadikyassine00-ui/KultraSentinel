@@ -6,25 +6,25 @@ import { Eye, Languages, ExternalLink } from 'lucide-react';
 export function RemediationPipeline() {
   const steps = [
     {
-      title: 'Catch',
+      title: 'Connect Agency Accounts',
       icon: Eye,
-      primary: 'We see the disapproval the second it happens, not hours later.',
+      primary: 'Authenticate via 1-click Google OAuth with read-only permissions.',
       secondary:
-        'Powered by Google Merchant API v1 and Cloud Pub/Sub push, under 30 seconds, zero polling lag.',
+        'Kultra automatically indexes your associated Google Merchant Center IDs, sub-accounts, and multi-client aggregators without requiring developer access or storefront edits.',
     },
     {
-      title: 'Translate',
+      title: 'Route Notifications to Slack',
       icon: Languages,
-      primary: 'No more decoding cryptic Google error codes yourself.',
+      primary: 'Assign dedicated Slack channels per client retainer.',
       secondary:
-        'Our diagnostic engine converts strings like promotional_overlay_image or missing_gtin into a plain-English root cause and next action.',
+        'Route Brand A alerts to #client-brand-a and Brand B alerts to #client-brand-b, keeping client data segregated while giving account leads centralized visibility.',
     },
     {
-      title: 'Resolve',
+      title: 'Instant Diagnostic Triage',
       icon: ExternalLink,
-      primary: 'Fix it in one click, without opening Merchant Center at all.',
+      primary: 'Receive instant alerts with direct links to Google Merchant Center diagnostics.',
       secondary:
-        'A direct 1-click Shopify Admin deep link takes you straight to the field that needs fixing.',
+        'The moment a product is flagged, your channel receives the SKU name, error reason, and a direct link to the item diagnostic panel to fix it in minutes.',
     },
   ];
 
@@ -35,16 +35,13 @@ export function RemediationPipeline() {
     >
       <div id="features" className="absolute -top-20 pointer-events-none" />
       <div className="relative z-10 max-w-[1140px] mx-auto">
-        {/* Section Header */}
+        {/* Section Header without eyebrow tag */}
         <div className="max-w-[760px] mb-12">
-          <span className="font-mono text-[11px] text-[var(--ghost-text-dim)] tracking-[0.02em] block mb-2">
-            Remediation pipeline
-          </span>
           <h2 className="font-display text-[1.85rem] sm:text-[2.25rem] font-semibold text-[var(--ink-primary)] leading-[1.2]">
-            Restore disapproved inventory in three steps
+            Protect Every Client Catalog in Under 2 Minutes.
           </h2>
           <p className="mt-3 text-[14.5px] text-[var(--ink-secondary)] leading-[1.55]">
-            Automated ingestion, intelligent error translation, and direct catalog deep links eliminate Google Merchant Center friction.
+            A frictionless three-step setup built for boutique PPC agencies and media buyers.
           </p>
         </div>
 
@@ -87,7 +84,7 @@ export function RemediationPipeline() {
                 </div>
 
                 <div className="mt-5 pt-3 border-t border-[var(--hairline)] flex items-center gap-1.5 font-mono text-[11px] text-[var(--signal)]">
-                  <span>Automated</span>
+                  <span>Zero Code Setup</span>
                 </div>
               </div>
             );

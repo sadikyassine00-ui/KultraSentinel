@@ -22,8 +22,8 @@ Kultra is a real-time Google Merchant Center disapproval monitoring micro-SaaS. 
 - **Limited Use Compliance**: Catalog telemetry accessed through the Google Content API is strictly utilized for monitoring, diagnostic status reporting, and alert dispatch. It is never sold, transferred, or used for AI model training or advertising.
 
 ## Pricing Structure
-- **Solo Plan**: $19 / month. Tailored for single-store monitoring, independent e-commerce brands, and single-catalog merchants. Includes full sub-30s disapproval monitoring and Slack alerts.
-- **Agency Fleet**: $49 / month. Tailored for PPC agencies, aggregators, and multi-brand merchants. Includes multi-account catalog monitoring, unlimited accounts/stores, team notifications, priority event processing, and multi-tenant management.
+- **Solo Merchant**: $19 / month flat. Tailored for direct-to-consumer brands running independent Google Shopping feeds. Covers 1 Google Merchant Center store with unlimited catalog SKUs, sub-30-second Slack alerts, direct GMC diagnostic links, and zero storefront code.
+- **Agency Fleet**: $49 / month flat. Tailored for boutique PPC agencies protecting multiple e-commerce client retainers. Covers up to 5 client Google Merchant Center accounts (MCA supported), dedicated Slack routing to separate private client channels, centralized multi-store overview, direct GMC diagnostic links, and zero storefront code.
 
 ## Trial Architecture
 - **14-Day Free Trial**: Complete access to real-time monitoring and diagnostic alerting.

@@ -8,16 +8,13 @@ export function QuickReference() {
       className="relative w-full py-16 md:py-24 px-4 sm:px-6 z-10 border-t border-[var(--hairline)] bg-[var(--bg-canvas)]"
     >
       <div className="max-w-[1140px] mx-auto">
-        {/* Section Header & Framing */}
+        {/* Section Header & Framing without eyebrow */}
         <div className="pb-10 border-b border-[var(--hairline)]">
-          <div className="font-mono text-[11px] text-[var(--ghost-text-dim)] tracking-[0.04em] uppercase mb-3">
-            HOW IT PROTECTS YOUR REVENUE
-          </div>
           <h2 className="font-display font-semibold text-[1.75rem] sm:text-[2.25rem] md:text-[2.6rem] text-[var(--ink-primary)] leading-[1.2] max-w-[1040px] mb-4">
             Instant Slack Alerts Before Ad Spend Bleeds.
           </h2>
           <p className="font-body text-[14.5px] sm:text-[15.5px] text-[var(--ink-secondary)] leading-[1.65] max-w-[920px]">
-            Kultra is a real-time Google Merchant Center watchdog built on the Google Content API and Cloud Pub/Sub, engineered to catch silent product disapprovals in under 30 seconds.
+            Kultra is a real-time Google Merchant Center watchdog built to protect agency retainers by catching silent product disapprovals in under 30 seconds.
           </p>
         </div>
 
@@ -46,7 +43,7 @@ export function QuickReference() {
                 Cost of Inaction
               </div>
               <div className="font-mono text-[13.5px] text-[var(--ghost-heading)] leading-[1.5]">
-                Saves e-commerce brands an average of 4 to 12 hours of unnoticed ad spend bleed per incident.
+                Saves agencies an average of 4 to 12 hours of unnoticed ad spend bleed per incident.
               </div>
             </div>
           </div>
@@ -71,7 +68,7 @@ export function QuickReference() {
               </h3>
 
               <p className="font-body text-[14.5px] text-[var(--ink-secondary)] leading-[1.6] mb-6">
-                Event-driven Cloud Pub/Sub push triggers immediately when policy changes or feed errors break a catalog SKU. Triage alerts with direct Shopify Admin fix links arrive before ad efficiency degrades.
+                Immediate event triggers alert your agency the second policy changes or feed errors reject a catalog SKU. Triage alerts with direct links to Google Merchant Center diagnostics arrive before ad spend bleeds.
               </p>
             </div>
 
@@ -80,7 +77,7 @@ export function QuickReference() {
                 Target Audience &amp; Eligibility
               </div>
               <p className="font-body text-[13.5px] text-[var(--ink-primary)] leading-[1.6]">
-                Designed specifically for Shopify and WooCommerce merchants spending $5,000+ per month on Google Shopping, and PPC agencies managing 5 or more client catalogs.
+                Designed specifically for boutique PPC agencies managing e-commerce client catalogs, and high-volume Shopify merchants spending $5,000+ per month on Google Shopping.
               </p>
             </div>
           </div>
@@ -90,15 +87,15 @@ export function QuickReference() {
         <div className="pt-8 grid grid-cols-1 md:grid-cols-3 gap-6 text-[12.5px] font-mono">
           <div>
             <span className="text-[var(--ink-primary)] font-medium block mb-1">
-              Google Content API and Cloud Pub/Sub
+              Real-Time Google API Integration
             </span>
             <span className="text-[var(--ghost-text)] text-[12px] block leading-[1.5]">
-              Real-time event hooks, zero delayed polling.
+              Instant event triggers, zero delayed polling.
             </span>
           </div>
           <div>
             <span className="text-[var(--signal)] font-medium block mb-1">
-              Sub-30s Event Dispatch
+              Sub-30s Slack Alert Dispatch
             </span>
             <span className="text-[var(--ghost-text)] text-[12px] block leading-[1.5]">
               Direct Slack alerts before ad spend degrades.
@@ -106,10 +103,10 @@ export function QuickReference() {
           </div>
           <div>
             <span className="text-[var(--ink-primary)] font-medium block mb-1">
-              Zero Scripts / Out-of-band
+              Zero Storefront Code
             </span>
             <span className="text-[var(--ghost-text)] text-[12px] block leading-[1.5]">
-              100% cloud monitoring, zero storefront footprint or speed impact.
+              100% cloud monitoring, zero client site footprint or speed impact.
             </span>
           </div>
         </div>

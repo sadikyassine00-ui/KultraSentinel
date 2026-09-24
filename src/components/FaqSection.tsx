@@ -13,39 +13,34 @@ export function FaqSection() {
 
   const faqs: FaqItem[] = [
     {
-      question: "Why doesn't Google Merchant Center alert me immediately when products are disapproved?",
+      question: 'Does Kultra ever modify our client product feeds, pricing, or campaign budgets?',
       answer:
-        "Google Merchant Center default notifications are designed for periodic email digests that often send hours or days after a crawl failure occurs. Furthermore, Google does not proactively push real-time alerts to ad managers when individual product variants are disapproved. Unless you maintain a custom Google Cloud Pub/Sub subscription or log in manually every morning, disapprovals remain completely silent while ad spend continues flowing to non-converting variants.",
+        'No. Kultra operates strictly on passive read-only access. Our software cannot edit your product titles, alter prices, adjust Google Ads campaign bids, or modify feed rules. Kultra acts purely as an automated diagnostic watchdog that detects errors and alerts your media buyers in Slack. All remediations are performed directly by your team inside Google Merchant Center or your store admin.',
     },
     {
-      question: 'Does Kultra ever modify my product feed or campaign settings?',
+      question: 'Why do our feed management apps (Simprosys, Feedonomics, DataFeedWatch) fail to catch these disapprovals?',
       answer:
-        "No. Kultra requests Google Merchant API access exclusively for passive health monitoring, diagnostic reporting, and event subscription. Kultra's codebase does not modify, create, update, or delete your product feeds, prices, listings, or campaign settings, full stop. Every fix is executed by you, in one click, directly inside Shopify Admin or Google Merchant Center. Kultra only ever watches and reports.",
+        'Feed management apps are built to sync catalog data into Google Merchant Center, but their job ends once the upload succeeds. Google automated crawlers and machine learning policy filters continuously inspect live product landing pages hours or days after the feed sync. When Google flags an editorial mismatch, promotional phrase violation, or missing identifier on a live URL, your feed tool reports "Feed Synced 100%," while Google has already disapproved the SKU. Kultra watches Google Merchant Center directly to catch the post-crawl rejection your feed tool never sees.',
     },
     {
-      question: 'What happens after my free trial ends?',
+      question: 'What Google permissions does Kultra require, and how is client data protected?',
       answer:
-        'Free for 14 days, no credit card required. After your trial ends, continue for $19/mo (Solo Merchant) or $49/mo (PPC Agency); cancel anytime before then and you will not be charged.',
+        'Initial account login uses basic identity permissions (openid, email, profile) to authenticate your team. When you connect client accounts, Kultra requests access to the Google Content API strictly to read product statuses, disapproval reasons, and account issue notifications. Kultra never accesses your Google Ads bidding data, payment methods, or unrelated Google Workspace documents. Your client data is encrypted at rest using AES-256-GCM and is never sold, shared, or used for AI training.',
     },
     {
-      question: 'How does Kultra link directly to my specific Shopify product admin?',
+      question: 'How does the alert direct media buyers to the exact issue?',
       answer:
-        'Kultra maps your Google Merchant Center product identifier (such as offer_id or channel ID) back to the canonical Shopify product and variant ID. When an incident is flagged, Kultra dynamically constructs a direct deep link (/admin/products/{id}) straight to the product editor in your Shopify Admin, saving media buyers from searching through thousands of catalog SKUs manually.',
+        'When a product attribute violation occurs, Kultra constructs a direct deep link straight to the specific item diagnostic panel inside Google Merchant Center. Your media buyer clicks the link in Slack and opens the exact offending SKU and policy rejection reason in one second, bypassing manual CSV exports or catalog searches.',
     },
     {
-      question: 'Does Kultra require a Shopify app installation or slow down storefront performance?',
+      question: 'Will connecting multiple client accounts slow down alerts or hit Google API rate limits?',
       answer:
-        'No. Kultra operates 100% out-of-band via Google APIs and server-side webhooks. We inject zero JavaScript, tracking pixels, or theme scripts into your Shopify storefront. Your store speed, Core Web Vitals, and checkout performance are completely unaffected.',
+        'No. Kultra is built on Google event-driven push architecture rather than periodic cron polling. Instead of running heavy batch API queries that trigger rate limits, Google automatically pushes notifications to Kultra the moment a product status changes. Whether your agency manages 2 client stores or 5, alert delivery remains consistently under 30 seconds with zero API quota exhaustion.',
     },
     {
-      question: "How does Kultra handle Google's migration from Content API to Merchant API v1?",
+      question: 'When does the 14-day free trial start, and how does cancellation work?',
       answer:
-        'Kultra was built natively on Google Merchant API v1 from day one. As Google sunsets Content API v2.1, Kultra utilizes the new modular Accounts, Products, and Notifications sub-APIs with native Cloud Pub/Sub push architecture, avoiding deprecated endpoints, batch quota limits, and polling throttles.',
-    },
-    {
-      question: 'How quickly can I set up Kultra and begin receiving alerts?',
-      answer:
-        'Setup takes under 2 minutes. Authenticate your Google Merchant Center account with read-only OAuth, paste your Slack incoming webhook URL, and Kultra immediately synchronizes catalog health and streams real-time Pub/Sub push alerts.',
+        'Your 14-day evaluation clock does not begin at email registration. It starts strictly upon the successful connection of your first Google Merchant Center account. If you sign up today and connect your first client account on Friday, your full 14 days start on Friday. No credit card is required to begin. You can cancel anytime with a single click inside your dashboard billing settings without phone calls, cancellation fees, or retention hurdles.',
     },
   ];
 
@@ -54,18 +49,14 @@ export function FaqSection() {
       id="faq"
       className="relative w-full py-20 px-4 sm:px-6 bg-[var(--bg-canvas)] border-t border-[var(--hairline)]"
     >
-
       <div className="relative z-10 max-w-[860px] mx-auto">
-        {/* Section Header */}
+        {/* Section Header without eyebrow tag */}
         <div className="max-w-[760px] mb-12">
-          <span className="font-mono text-[11px] text-[var(--ghost-text)] tracking-[0.02em] block mb-2">
-            Frequently asked questions
-          </span>
           <h2 className="font-display text-[1.85rem] sm:text-[2.25rem] font-semibold text-[var(--ink-primary)] leading-[1.2]">
-            Everything you need to know about zero-downtime feed monitoring
+            Frequently Asked Questions
           </h2>
           <p className="mt-3 text-[14.5px] text-[var(--ink-secondary)] leading-[1.55]">
-            Architectural transparency, integration prerequisites, and instant onboarding workflows.
+            Technical integrity, data privacy guarantees, and agency onboarding details.
           </p>
         </div>
 

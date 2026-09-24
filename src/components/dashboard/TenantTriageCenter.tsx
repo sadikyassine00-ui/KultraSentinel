@@ -1454,7 +1454,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                   href="/dashboard/settings?tab=billing"
                   className="btn-primary px-7 py-2.5 text-[13.5px] font-semibold !rounded-[3px] inline-flex items-center gap-2"
                 >
-                  <span>Upgrade to restore protection</span>
+                  <span>Select a Plan to Restore Protection</span>
                   <ExternalLink className="w-4 h-4" />
                 </Link>
               </div>

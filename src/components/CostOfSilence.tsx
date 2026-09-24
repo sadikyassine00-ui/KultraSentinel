@@ -5,47 +5,47 @@ import React from 'react';
 export function CostOfSilence() {
   const withoutSteps = [
     {
-      time: 'Day 1',
-      title: 'Silent disapproval flagged by crawler',
-      desc: 'Zero notifications dispatched. Paid ads for your top SKU stop serving instantly while campaign budgets continue running.',
+      time: 'Friday 8:00 PM',
+      title: 'Silent disapproval flagged by Google bot',
+      desc: 'Zero notifications sent. Ads for your client\'s top revenue generator stop serving immediately while daily budgets continue running.',
     },
     {
-      time: 'Day 2',
-      title: 'Shopping impressions drop on top SKUs',
-      desc: 'Smart Bidding algorithms reallocate ad spend to low-converting secondary variants with lower ROAS.',
+      time: 'Saturday 10:00 AM',
+      title: 'Blind Smart Bidding budget reallocation',
+      desc: 'Google Smart Bidding quietly diverts ad spend into low-converting secondary variants, bleeding cash and tanking account ROAS.',
     },
     {
-      time: 'Day 4',
-      title: 'Merchant notices drop in Shopify revenue',
-      desc: 'Ecommerce director notices missed sales targets and flags lost conversions to the media team.',
+      time: 'Monday 8:30 AM',
+      title: 'Client notices weekend revenue drop',
+      desc: 'The brand founder discovers cratered sales before your media buyers log on, firing off an urgent email threatening your retainer.',
     },
     {
-      time: 'Day 5',
-      title: 'Manual login to GMC and cryptic error lookup',
-      desc: 'Media buyers comb through CSV exports to decode obscure crawler strings after ad momentum is already lost.',
+      time: 'Monday 10:00 AM',
+      title: 'Manual CSV lookup and diagnostic scans',
+      desc: 'Media buyers waste the entire morning downloading feed spreadsheets to decode cryptic Google rejection strings.',
     },
   ];
 
   const withSteps = [
     {
       time: '0s',
-      title: 'Google crawl flags policy rejection',
-      desc: 'The instant an attribute fails crawler validation, Google Cloud Pub/Sub publishes an event notification.',
+      title: 'Google review flags attribute rejection',
+      desc: 'Google automated systems flag a product attribute violation on your client\'s catalog.',
     },
     {
       time: '18s',
-      title: 'Pub/Sub push event received by Kultra',
-      desc: 'Streaming ingestion engine intercepts the payload, cross-references catalog historical revenue, and calculates urgency.',
+      title: 'Direct event trigger received by Kultra',
+      desc: 'Diagnostic engine identifies the exact client account, SKU identifier, and specific policy reason.',
     },
     {
-      time: '24s',
-      title: 'Slack alert with root cause diagnosis',
-      desc: 'The assigned channel receives SKU details, 30-day revenue at risk, and exact root cause explanation.',
+      time: '28s',
+      title: 'Sub-30-second Slack alert to your team',
+      desc: 'Your designated agency channel receives the SKU name, error code, and a direct link to Google Merchant Center diagnostics.',
     },
     {
       time: '3m',
-      title: 'Shopify fix and catalog re-indexing',
-      desc: 'Merchant opens the direct Shopify Admin deep link, resolves the field, and Kultra pushes the updated catalog immediately.',
+      title: 'Proactive weekend fix completed',
+      desc: 'Media buyer opens the Merchant Center diagnostic panel, resolves the offending attribute, and keeps client revenue intact.',
     },
   ];
 
@@ -55,16 +55,13 @@ export function CostOfSilence() {
       className="relative w-full py-20 sm:py-24 px-4 sm:px-6 bg-[var(--bg-canvas)] border-t border-[var(--hairline)]"
     >
       <div className="relative z-10 max-w-[1140px] mx-auto">
-        {/* Section Header */}
+        {/* Section Header without eyebrow tag */}
         <div className="max-w-[760px] mb-12 sm:mb-14">
-          <span className="font-mono text-[11px] text-[var(--ghost-text)] tracking-[0.02em] block mb-2">
-            The cost of silence
-          </span>
           <h2 className="font-display text-[1.85rem] sm:text-[2.25rem] font-semibold text-[var(--ink-primary)] leading-[1.2]">
-            Silent disapprovals drain ad budgets before your team notices
+            Google Disapprovals Strike on Friday Night. Your Clients Discover Them on Monday Morning.
           </h2>
           <p className="mt-3 text-[14.5px] text-[var(--ink-secondary)] leading-[1.55] max-w-[65ch]">
-            When Google Merchant Center crawler policies reject a top-performing SKU, your shopping ads stop serving immediately while campaigns burn budget on secondary inventory.
+            When an automated Google bot review silently flags a top-selling hero product over the weekend, ad spend does not pause. Google Smart Bidding reallocates daily budget to secondary non-converting variants, bleeding ad spend while your media buyers are off duty.
           </p>
         </div>
 
@@ -84,10 +81,10 @@ export function CostOfSilence() {
               </div>
 
               <h3 className="font-display text-[1.25rem] sm:text-[1.4rem] font-semibold text-[var(--ghost-heading)]">
-                The 5-day silent blindspot
+                The Default Reality: The Weekend Bleed
               </h3>
               <p className="mt-2 text-[13.5px] text-[var(--ghost-text)] leading-[1.5]">
-                When Google rejects a top-selling SKU, zero alerts are sent. Ad spend quietly burns on low-converting inventory.
+                Silent disapprovals take down top SKUs without warning. Media buyers find out Monday morning from an angry client escalation.
               </p>
 
               {/* Minimalist Data Viz: Traffic Plummet (Ghost series per §8) */}
@@ -109,10 +106,10 @@ export function CostOfSilence() {
                   <text x="70" y="12" fill="var(--ghost-text-dim)" fontSize="9" textAnchor="middle" fontFamily="var(--font-mono)">Disapproval</text>
 
                   {/* Axis Labels in mono-sm */}
-                  <text x="20" y="80" fill="var(--ghost-text-dim)" fontSize="10" fontFamily="var(--font-mono)">Day 1</text>
-                  <text x="120" y="80" fill="var(--ghost-text-dim)" fontSize="10" fontFamily="var(--font-mono)">Day 2</text>
-                  <text x="270" y="80" fill="var(--ghost-text-dim)" fontSize="10" fontFamily="var(--font-mono)">Day 4</text>
-                  <text x="420" y="80" fill="var(--ghost-text-dim)" fontSize="10" fontFamily="var(--font-mono)" textAnchor="end">Day 5 (Audit)</text>
+                  <text x="20" y="80" fill="var(--ghost-text-dim)" fontSize="10" fontFamily="var(--font-mono)">Fri 8 PM</text>
+                  <text x="120" y="80" fill="var(--ghost-text-dim)" fontSize="10" fontFamily="var(--font-mono)">Sat 10 AM</text>
+                  <text x="270" y="80" fill="var(--ghost-text-dim)" fontSize="10" fontFamily="var(--font-mono)">Mon 8 AM</text>
+                  <text x="420" y="80" fill="var(--ghost-text-dim)" fontSize="10" fontFamily="var(--font-mono)" textAnchor="end">Mon 10 AM</text>
                 </svg>
               </div>
 
@@ -146,16 +143,16 @@ export function CostOfSilence() {
             {/* Bottom KPI Metric (--text-mono-xl per §16 and A3) */}
             <div className="mt-6 pt-4 border-t border-[var(--hairline)] flex items-end justify-between gap-3">
               <div>
-                <span className="text-[12.5px] font-semibold text-[var(--ghost-text)] block mb-1.5">Average lost revenue per incident</span>
-                <span className="font-mono text-[32px] leading-[1.1] text-[var(--ghost-heading)] font-medium block">$4,800+</span>
+                <span className="text-[12.5px] font-semibold text-[var(--ghost-text)] block mb-1.5">Client retainer at risk</span>
+                <span className="font-mono text-[28px] sm:text-[32px] leading-[1.1] text-[var(--ghost-heading)] font-medium block">$2,500 to $7,500/mo</span>
               </div>
               <span className="tag-pill tag-ghost text-[10px]">
-                Momentum lost
+                Retainer at risk
               </span>
             </div>
           </div>
 
-          {/* Card 2: Signal (Protected / Sub-3-Minute Remediation) */}
+          {/* Card 2: Signal (Protected / Sub-30-Second Detection) */}
           <div className="rounded-[var(--radius-md)] bg-[var(--bg-surface)] border border-[var(--signal-dim)] p-6 sm:p-7 flex flex-col justify-between relative overflow-hidden"
                style={{ background: 'radial-gradient(ellipse at top right, var(--signal-wash) 0%, var(--bg-surface) 65%)' }}>
             <div>
@@ -165,15 +162,15 @@ export function CostOfSilence() {
                   Protected
                 </span>
                 <span className="font-mono text-[11px] text-[var(--signal)]">
-                  Sub-30s SLA
+                  Sub-30s alert
                 </span>
               </div>
 
               <h3 className="font-display text-[1.25rem] sm:text-[1.4rem] font-semibold text-[var(--ink-primary)]">
-                Sub-3-minute incident remediation
+                The Kultra Shield: Instant Retainer Defense
               </h3>
               <p className="mt-2 text-[13.5px] text-[var(--ink-secondary)] leading-[1.5]">
-                Direct Cloud Pub/Sub push alerts and 1-click Shopify deep links restore disapproved items before sales dip.
+                Sub-30-second Slack alerts and direct links to Google Merchant Center diagnostics resolve errors before spend is wasted.
               </p>
 
               {/* Minimalist Data Viz: Continuous Continuity (Signal series per §8) */}
@@ -196,8 +193,8 @@ export function CostOfSilence() {
 
                   {/* Milestone Labels in mono-sm */}
                   <text x="20" y="80" fill="var(--ghost-text-dim)" fontSize="10" fontFamily="var(--font-mono)">0s (Event)</text>
-                  <text x="160" y="80" fill="var(--ghost-text-dim)" fontSize="10" fontFamily="var(--font-mono)">24s (Alert)</text>
-                  <text x="420" y="80" fill="var(--signal)" fontSize="10" fontFamily="var(--font-mono)" textAnchor="end">100% Rank</text>
+                  <text x="160" y="80" fill="var(--ghost-text-dim)" fontSize="10" fontFamily="var(--font-mono)">28s (Alert)</text>
+                  <text x="420" y="80" fill="var(--signal)" fontSize="10" fontFamily="var(--font-mono)" textAnchor="end">100% Protected</text>
                 </svg>
               </div>
 
@@ -231,11 +228,11 @@ export function CostOfSilence() {
             {/* Bottom KPI Metric (--text-mono-xl per §16 and A3) */}
             <div className="mt-6 pt-4 border-t border-[var(--hairline)] flex items-end justify-between gap-3">
               <div>
-                <span className="text-[12.5px] font-semibold text-[var(--ink-secondary)] block mb-1.5">Protected ad spend</span>
-                <span className="font-mono text-[32px] leading-[1.1] text-[var(--signal)] font-medium block">$0.00 downtime</span>
+                <span className="text-[12.5px] font-semibold text-[var(--ink-secondary)] block mb-1.5">Protected client retainers</span>
+                <span className="font-mono text-[28px] sm:text-[32px] leading-[1.1] text-[var(--signal)] font-medium block">100% Retained</span>
               </div>
               <span className="tag-pill tag-signal text-[10px]">
-                Continuous
+                Retainer safe
               </span>
             </div>
           </div>

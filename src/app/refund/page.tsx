@@ -214,7 +214,7 @@ export default function RefundPolicyPage() {
                 Agency Plan: $49 / Month
               </h3>
               <p className="text-xs text-[#b9b3a5] leading-[1.5]">
-                Built for performance marketing agencies. Unlocks up to 15 GMC client accounts, multi-tenant overview capabilities, and client-specific Slack channels.
+                Built for performance marketing agencies. Unlocks up to 5 client GMC accounts (MCA supported), multi-store overview capabilities, and dedicated client Slack channels.
               </p>
             </div>
           </div>

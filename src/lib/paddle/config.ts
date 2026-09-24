@@ -43,7 +43,7 @@ export const PADDLE_PLANS: Record<'solo' | 'agency', PaddlePlanConfig> = {
     taxCategory: 'saas',
     priceIdEnvVar: 'NEXT_PUBLIC_PADDLE_AGENCY_PRICE_ID',
     defaultPriceId: 'pri_01m2zs53ec1e4cjvn2fqc7aav1',
-    description: 'Unlimited GMC Stores, MCA Architecture and Priority Instant Dispatch',
+    description: 'Up to 5 GMC Stores, MCA Architecture, and Dedicated Slack Routing',
   },
 };
 

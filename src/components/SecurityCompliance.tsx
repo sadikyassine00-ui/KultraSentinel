@@ -11,11 +11,8 @@ export function SecurityCompliance() {
       className="relative w-full py-20 sm:py-24 px-4 sm:px-6 bg-[var(--bg-canvas)] border-t border-[var(--hairline)]"
     >
       <div className="relative z-10 max-w-[1140px] mx-auto">
-        {/* Section Header */}
+        {/* Section Header without eyebrow tag */}
         <div className="max-w-[760px] mb-12 sm:mb-14">
-          <span className="font-mono text-[11px] text-[var(--ghost-text)] tracking-[0.02em] block mb-2">
-            Security &amp; compliance
-          </span>
           <h2 className="font-display text-[1.85rem] sm:text-[2.25rem] font-semibold text-[var(--ink-primary)] leading-[1.2]">
             Enterprise-grade data protection, zero catalog mutation
           </h2>
@@ -117,9 +114,9 @@ export function SecurityCompliance() {
             <div className="shrink-0 flex flex-col items-center sm:items-start lg:items-center gap-2.5">
               <Link
                 href="/register"
-                className="btn-primary text-[13px] py-2.5 px-5 !rounded-[3px] text-center w-full font-semibold"
+                className="btn-primary text-[13px] py-2.5 px-5 !rounded-[var(--radius-sm)] text-center w-full font-semibold inline-flex items-center justify-center"
               >
-                Protect Your Google Shopping Ads
+                Start 14-Day Trial
               </Link>
               <Link
                 href="/privacy"

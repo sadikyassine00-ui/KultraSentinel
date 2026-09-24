@@ -9,7 +9,7 @@ export function DashboardIllustration() {
       {/* ============================================================ */}
       {/* 1. LEFT ELEMENT: THE GMC INCIDENT TRIAGE CARD                 */}
       {/* ============================================================ */}
-      <div className="w-full lg:w-[540px] xl:w-[560px] bg-[var(--bg-surface)] border border-[var(--danger)] rounded-[var(--radius-md)] p-5 sm:p-6 shadow-[0_0_28px_rgba(214,69,69,0.22)] flex flex-col justify-between text-left relative shrink-0">
+      <div className="w-full lg:w-[540px] xl:w-[560px] bg-[var(--bg-surface)] border border-[var(--danger)] rounded-[var(--radius-md)] p-5 sm:p-6 flex flex-col justify-between text-left relative shrink-0">
         <div>
           {/* Card Header: Triage Status & Latency Metric */}
           <div className="flex items-center justify-between gap-2 pb-4 border-b border-[var(--hairline)]">
@@ -184,7 +184,7 @@ export function DashboardIllustration() {
         </svg>
 
         {/* Anchored Latency Badge */}
-        <div className="mt-1 px-2.5 py-1 rounded-full bg-[var(--bg-surface-2)] border border-[var(--signal-dim)] text-[var(--signal)] font-mono text-[11px] font-medium flex items-center gap-1 shadow-[0_0_12px_rgba(242,169,59,0.2)] whitespace-nowrap">
+        <div className="mt-1 px-2.5 py-1 rounded-full bg-[var(--bg-surface-2)] border border-[var(--signal-dim)] text-[var(--signal)] font-mono text-[11px] font-medium flex items-center gap-1 whitespace-nowrap">
           <span>⚡ Live Dispatch: 0.28s</span>
         </div>
       </div>
@@ -285,7 +285,7 @@ export function DashboardIllustration() {
             Open Triage Log →
           </a>
           <p className="text-center text-[11px] text-[#868686] mt-2">
-            Direct deep link to Google Merchant Center &amp; Shopify fix
+            Direct deep link to Google Merchant Center item diagnostics
           </p>
         </div>
       </div>

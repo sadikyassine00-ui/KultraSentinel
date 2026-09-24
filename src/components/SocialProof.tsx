@@ -54,13 +54,13 @@ export function SocialProof() {
       ),
     },
     {
-      id: 'shopify',
-      name: 'Shopify Admin',
-      category: 'Deep links',
-      endpoint: 'admin.shopify.com/products/{id}',
-      desc: 'Maps GMC product identifiers to canonical Shopify variant IDs, directing media buyers straight to the offending field.',
-      protocol: 'Bi-directional deep link',
-      latency: 'Direct edit',
+      id: 'merchant-diagnostics',
+      name: 'Merchant Center Diagnostics',
+      category: 'Diagnostic links',
+      endpoint: 'merchants.google.com/diagnostics',
+      desc: 'Deep-links straight to the affected product in Google Merchant Center, highlighting the exact rejected attribute for instant triage.',
+      protocol: 'Direct diagnostic link',
+      latency: 'Instant triage',
       isLive: true,
       icon: (live) => (
         <Layers
@@ -76,7 +76,7 @@ export function SocialProof() {
       name: 'Slack Telemetry',
       category: 'Incident dispatch',
       endpoint: 'slack.com/api/chat.postMessage',
-      desc: 'Store-level alerts with 30-day click impact calculation, plain-English diagnosis, and Shopify Admin action CTAs.',
+      desc: 'Client-level alerts with 30-day click impact calculation, plain-English diagnosis, and direct Google Merchant Center diagnostic links.',
       protocol: 'App bot paging',
       latency: 'Sub-30s paging',
       isLive: true,
@@ -97,16 +97,13 @@ export function SocialProof() {
       className="relative w-full py-20 px-4 sm:px-6 z-10 border-t border-[var(--hairline)] bg-[var(--bg-canvas)]"
     >
       <div className="max-w-[1140px] mx-auto">
-        {/* Section Header */}
+        {/* Section Header without eyebrow tag */}
         <div className="max-w-[760px] mb-12">
-          <span className="font-mono text-[11px] text-[var(--ghost-text)] tracking-[0.02em] block mb-2">
-            Integrations
-          </span>
           <h2 className="font-display text-[1.85rem] sm:text-[2.25rem] font-semibold text-[var(--ink-primary)] leading-[1.2]">
             Engineered for high-volume merchant stacks
           </h2>
           <p className="mt-3 text-[14.5px] text-[var(--ink-secondary)] leading-[1.55]">
-            Kultra operates out-of-band via official Google and Shopify APIs. Zero theme scripts, zero tracking pixels, and zero impact on storefront page speed.
+            Kultra connects directly via official Google Content APIs. Zero theme scripts, zero tracking pixels, and zero impact on storefront page speed.
           </p>
         </div>
 

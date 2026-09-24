@@ -273,11 +273,9 @@ export function Header({ initialUser = null }: HeaderProps) {
               </Link>
               <Link
                 href="/register"
-                className="btn-primary !rounded-[var(--radius-sm)] text-[11px] xs:text-[12px] sm:text-[13px] py-1.5 sm:py-2 px-2.5 xs:px-3 sm:px-4 font-semibold whitespace-nowrap shrink-0"
+                className="btn-primary !rounded-[var(--radius-sm)] text-[12px] sm:text-[13px] py-1.5 px-3 sm:px-3.5 font-medium whitespace-nowrap shrink-0 inline-flex items-center justify-center text-center"
               >
-                <span className="hidden md:inline">Protect Your Google Shopping Ads</span>
-                <span className="hidden xs:inline md:hidden">Start 14-Day Trial</span>
-                <span className="xs:hidden">Start Trial</span>
+                <span>Start 14-Day Trial</span>
               </Link>
             </div>
           )}
@@ -352,9 +350,9 @@ export function Header({ initialUser = null }: HeaderProps) {
               <Link
                 href="/register"
                 onClick={() => setMobileMenuOpen(false)}
-                className="btn-primary !rounded-[3px] w-full justify-center text-[13px] py-2"
+                className="btn-primary !rounded-[var(--radius-sm)] w-full justify-center text-[13px] py-2 font-medium"
               >
-                Protect Your Google Shopping Ads
+                Start 14-Day Trial
               </Link>
             </div>
           )}

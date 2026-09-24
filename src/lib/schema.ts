@@ -65,7 +65,7 @@ export const homepageStructuredData = {
         {
           '@type': 'Offer',
           '@id': 'https://www.usekultra.com/#plan-solo',
-          name: 'Solo Plan',
+          name: 'Solo Merchant',
           price: '19.00',
           priceCurrency: 'USD',
           priceSpecification: {
@@ -75,8 +75,8 @@ export const homepageStructuredData = {
             unitText: 'MONTH',
           },
           description:
-            'Solo tier at $19 per month for single store monitoring. Includes a 14-day free trial activated upon Google Merchant Center account connection.',
-          url: 'https://www.usekultra.com/register?plan=solo',
+            'Solo tier at $19 per month for 1 Google Merchant Center store with unlimited SKUs. Includes a 14-day free trial activated strictly upon Google Merchant Center account connection.',
+          url: 'https://www.usekultra.com/register?plan=merchant',
           seller: {
             '@id': 'https://www.usekultra.com/#organization',
           },
@@ -94,7 +94,7 @@ export const homepageStructuredData = {
             unitText: 'MONTH',
           },
           description:
-            'Agency tier at $49 per month for unlimited accounts and team notifications. Includes a 14-day free trial activated upon Google Merchant Center account connection.',
+            'Agency tier at $49 per month for up to 5 client Google Merchant Center accounts (MCA supported) and isolated client Slack channel routing. Includes a 14-day free trial activated strictly upon Google Merchant Center account connection.',
           url: 'https://www.usekultra.com/register?plan=agency',
           seller: {
             '@id': 'https://www.usekultra.com/#organization',

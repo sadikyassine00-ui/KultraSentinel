@@ -18,6 +18,8 @@ import {
 import { openPaddleOverlayCheckout } from '@/lib/paddle/client';
 import { PaddleCheckoutModal } from '@/components/billing/PaddleCheckoutOverlay';
 import { FleetLimitModal } from '@/components/dashboard/FleetLimitModal';
+import { PRICING_TIERS } from '@/config/pricing';
+import { PricingCard } from '@/components/billing/PricingCard';
 
 interface BillingState {
   status: 'active trial' | 'paid active' | 'expired' | 'canceled';
@@ -418,140 +420,27 @@ export default function SettingsClientView({
               {/* Side-by-Side Comparison Cards for Trial/Expired Users */}
               {(isTrial || isExpired) && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-stretch">
-                  {/* Solo Plan Card */}
-                  <div className="bg-[var(--bg-surface)] border border-[var(--hairline)] hover:border-[var(--hairline-strong)] rounded-[var(--radius-md)] p-6 flex flex-col justify-between transition-colors">
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-mono text-[11px] text-[var(--ghost-text-dim)]">SINGLE STORE</span>
-                        <span className="tag-pill tag-ghost text-[10px]">Solo</span>
-                      </div>
-                      <h4 className="font-serif text-[20px] font-semibold text-[var(--ink-primary)]">
-                        Solo Merchant
-                      </h4>
-                      <p className="text-[13px] text-[var(--ghost-text)] mt-1">
-                        For standalone Shopify brands scaling Google Shopping campaigns.
-                      </p>
+                  <PricingCard
+                    tier={PRICING_TIERS.solo}
+                    action={{
+                      type: 'button',
+                      onClick: () => handleCheckout('solo'),
+                      loading: processingCheckout === 'solo',
+                      disabled: processingCheckout !== null,
+                      label: PRICING_TIERS.solo.ctaText,
+                    }}
+                  />
 
-                      <div className="mt-4 mb-5 pb-5 border-b border-[var(--hairline)]">
-                        <div className="flex items-baseline gap-1.5">
-                          <span className="font-mono text-[28px] font-semibold text-[var(--ink-primary)]">$19</span>
-                          <span className="font-mono text-[12px] text-[var(--ghost-text)]">/ month flat</span>
-                        </div>
-                      </div>
-
-                      <ul className="space-y-2.5 text-[12.5px] text-[var(--ink-secondary)]">
-                        <li className="flex items-start gap-2">
-                          <Check className="w-4 h-4 text-[var(--signal)] shrink-0 mt-0.5" />
-                          <span><strong className="text-[var(--ink-primary)]">1 GMC Account ID</strong> connected</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <Check className="w-4 h-4 text-[var(--signal)] shrink-0 mt-0.5" />
-                          <span><strong className="text-[var(--ink-primary)]">Unlimited SKUs</strong> monitored 24/7</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <Check className="w-4 h-4 text-[var(--signal)] shrink-0 mt-0.5" />
-                          <span>Real-time Cloud Pub/Sub push alerts (&lt; 30s)</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <Check className="w-4 h-4 text-[var(--signal)] shrink-0 mt-0.5" />
-                          <span>Direct 1-click Shopify Admin deep links</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <Check className="w-4 h-4 text-[var(--signal)] shrink-0 mt-0.5" />
-                          <span>Instant Slack incident dispatch</span>
-                        </li>
-                      </ul>
-                    </div>
-
-                    <div className="mt-6 pt-5 border-t border-[var(--hairline)]">
-                      <button
-                        type="button"
-                        disabled={processingCheckout !== null}
-                        onClick={() => handleCheckout('solo')}
-                        className="btn-secondary w-full justify-center text-[13px] py-2.5 !rounded-[3px] font-semibold disabled:opacity-50"
-                      >
-                        {processingCheckout === 'solo' ? (
-                          <>
-                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                            <span>Processing...</span>
-                          </>
-                        ) : (
-                          'Upgrade to Solo ($19/mo)'
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Agency Plan Card */}
-                  <div
-                    className="bg-[var(--bg-surface)] border border-[var(--signal-dim)] rounded-[var(--radius-md)] p-6 flex flex-col justify-between relative overflow-hidden"
-                    style={{ background: 'radial-gradient(ellipse at top right, var(--signal-wash) 0%, var(--bg-surface) 65%)' }}
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-mono text-[11px] text-[var(--signal)]">MULTI-STORE FLEET</span>
-                        <span className="tag-pill tag-signal text-[10px]">Recommended</span>
-                      </div>
-                      <h4 className="font-serif text-[20px] font-semibold text-[var(--ink-primary)]">
-                        Agency Fleet
-                      </h4>
-                      <p className="text-[13px] text-[var(--ink-secondary)] mt-1">
-                        For agencies and aggregators managing multiple stores and MCA child accounts.
-                      </p>
-
-                      <div className="mt-4 mb-5 pb-5 border-b border-[var(--hairline)]">
-                        <div className="flex items-baseline gap-1.5">
-                          <span className="font-mono text-[28px] font-semibold text-[var(--ink-primary)]">$49</span>
-                          <span className="font-mono text-[12px] text-[var(--ghost-text)]">/ month flat</span>
-                        </div>
-                      </div>
-
-                      <ul className="space-y-2.5 text-[12.5px] text-[var(--ink-secondary)]">
-                        <li className="flex items-start gap-2">
-                          <Check className="w-4 h-4 text-[var(--signal)] shrink-0 mt-0.5" />
-                          <span><strong className="text-[var(--ink-primary)]">Up to 5 GMC Accounts</strong> connected</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <Check className="w-4 h-4 text-[var(--signal)] shrink-0 mt-0.5" />
-                          <span>Expandable fleet capacity for high-volume portfolios</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <Check className="w-4 h-4 text-[var(--signal)] shrink-0 mt-0.5" />
-                          <span><strong className="text-[var(--ink-primary)]">Multi-Client MCA</strong> child store support</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <Check className="w-4 h-4 text-[var(--signal)] shrink-0 mt-0.5" />
-                          <span>Team seats &amp; shared client triage</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <Check className="w-4 h-4 text-[var(--signal)] shrink-0 mt-0.5" />
-                          <span>Sub-30s priority Pub/Sub stream</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <Check className="w-4 h-4 text-[var(--signal)] shrink-0 mt-0.5" />
-                          <span>Dedicated Slack channel routing per store</span>
-                        </li>
-                      </ul>
-                    </div>
-
-                    <div className="mt-6 pt-5 border-t border-[var(--hairline)]">
-                      <button
-                        type="button"
-                        disabled={processingCheckout !== null}
-                        onClick={() => handleCheckout('agency')}
-                        className="btn-primary w-full justify-center text-[13px] py-2.5 !rounded-[3px] font-semibold disabled:opacity-50"
-                      >
-                        {processingCheckout === 'agency' ? (
-                          <>
-                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                            <span>Processing...</span>
-                          </>
-                        ) : (
-                          'Upgrade to Agency ($49/mo)'
-                        )}
-                      </button>
-                    </div>
-                  </div>
+                  <PricingCard
+                    tier={PRICING_TIERS.agency}
+                    action={{
+                      type: 'button',
+                      onClick: () => handleCheckout('agency'),
+                      loading: processingCheckout === 'agency',
+                      disabled: processingCheckout !== null,
+                      label: PRICING_TIERS.agency.ctaText,
+                    }}
+                  />
                 </div>
               )}
 
@@ -564,14 +453,14 @@ export default function SettingsClientView({
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
                     <div className="space-y-1.5 max-w-xl">
                       <div className="flex items-center gap-2">
-                        <span className="tag-pill tag-signal text-[10.5px]">Multi-Store Expansion</span>
-                        <span className="font-mono text-[11px] text-[var(--signal)]">Save on Fleet Operations</span>
+                        <span className="tag-pill tag-signal text-[10.5px]">Recommended for Agencies</span>
+                        <span className="font-mono text-[11px] text-[var(--signal)]">Up to 5 Accounts</span>
                       </div>
                       <h4 className="font-serif text-[22px] font-semibold text-[var(--ink-primary)]">
                         Upgrade to Agency Fleet ($49/mo)
                       </h4>
                       <p className="text-[13px] text-[var(--ink-secondary)] leading-[1.55]">
-                        Need to monitor additional Google Merchant Center accounts? Upgrade to Agency to connect up to 5 GMC accounts, monitor MCA child stores, and add team seats.
+                        Scale to multi-client management: protect up to 5 client Google Merchant Center accounts (MCA supported) with dedicated Slack routing to separate private client channels and centralized multi-store overview.
                       </p>
                     </div>
 

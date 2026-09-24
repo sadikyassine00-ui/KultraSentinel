@@ -13,16 +13,13 @@ export function SlackPreview() {
       className="relative w-full py-20 px-4 sm:px-6 bg-[var(--bg-canvas)] border-t border-[var(--hairline)]"
     >
       <div className="relative z-10 max-w-[1140px] mx-auto">
-        {/* Section Header */}
+        {/* Section Header without eyebrow tag */}
         <div className="max-w-[760px] mb-12">
-          <span className="font-mono text-[11px] text-[var(--ghost-text)] tracking-[0.02em] block mb-2">
-            Incident dispatch
-          </span>
           <h2 className="font-display text-[1.85rem] sm:text-[2.25rem] font-semibold text-[var(--ink-primary)] leading-[1.2]">
             The exact diagnostic your team receives before traffic burns
           </h2>
           <p className="mt-3 text-[14.5px] text-[var(--ink-secondary)] leading-[1.55]">
-            Real-time incident dispatch with revenue impact metrics, direct Shopify remediation links, and raw protocol payload inspection.
+            Real-time incident dispatch with revenue impact metrics, direct deep links into Google Merchant Center item diagnostics, and structured payload inspection.
           </p>
         </div>
 
@@ -41,7 +38,7 @@ export function SlackPreview() {
             </div>
             <span className="font-mono text-[10.5px] text-[var(--signal)] flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)] shrink-0 inline-block" />
-              Pub/Sub stream live
+              Active event stream
             </span>
           </div>
 
@@ -59,7 +56,7 @@ export function SlackPreview() {
                 />
               </div>
               <div className="flex items-baseline gap-2 flex-wrap">
-                <span className="font-semibold text-[14px] text-[var(--ink-primary)]">Kultra Bot</span>
+                <span className="font-semibold text-[14px] text-[var(--ink-primary)]">Kultra Alerts</span>
                 <span className="font-mono text-[10px] text-[var(--ghost-text-dim)] px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-[var(--bg-surface-2)] border border-[var(--hairline)]">
                   APP
                 </span>
@@ -109,12 +106,12 @@ export function SlackPreview() {
               {/* Actions */}
               <div className="flex flex-wrap items-center gap-2.5 pt-1">
                 <a
-                  href="https://admin.shopify.com"
+                  href="https://merchants.google.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="btn-primary !rounded-[3px] text-[12.5px] py-2 px-3.5"
+                  className="btn-primary !rounded-[3px] text-[12.5px] py-2 px-3.5 inline-flex items-center gap-1.5"
                 >
-                  <span>Edit in Shopify Admin</span>
+                  <span>View in Google Merchant Center Diagnostics</span>
                   <ExternalLink className="w-3.5 h-3.5" strokeWidth={1.5} />
                 </a>
 
