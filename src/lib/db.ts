@@ -100,11 +100,13 @@ export interface Incident {
   product_title?: string;
   issue_code: string;
   severity: 'critical' | 'warning';
-  status: 'unresolved' | 'resolved' | 'pending_verification' | 'acknowledged';
+  status: 'unresolved' | 'resolved' | 'pending_verification' | 'acknowledged' | 'dismissed' | 'DISMISSED';
   first_detected_at: string;
   last_detected_at: string;
   detected_at?: string;
   resolved_at?: string | null;
+  dismissed_at?: string | null;
+  dismissedAt?: string | null;
   details?: Record<string, unknown> | null;
   is_simulated?: boolean;
   is_test?: boolean;
@@ -704,6 +706,8 @@ export async function ensureSchema(): Promise<boolean> {
     await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS detected_at TIMESTAMPTZ DEFAULT NOW();`;
     await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS is_simulated BOOLEAN DEFAULT FALSE;`;
     await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS is_test BOOLEAN DEFAULT FALSE;`;
+    await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS dismissed_at TIMESTAMPTZ;`;
+    await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS total_skus INT DEFAULT 0;`;
     await sql`ALTER TABLE telemetry_events ADD COLUMN IF NOT EXISTS is_test BOOLEAN DEFAULT FALSE;`;
     await sql`ALTER TABLE dispatch_logs ADD COLUMN IF NOT EXISTS is_test BOOLEAN DEFAULT FALSE;`;
 
@@ -2853,55 +2857,48 @@ export async function dismissOrAcknowledgeIncident(
       const inc = existing[0] as unknown as Incident;
       const isSimulated = Boolean(inc.is_simulated || inc.is_test || inc.sku === 'DEMO-RUNNER-402');
 
-      if (isSimulated) {
-        // Test drill incident: delete strictly this single record by unique primary key
-        await sql`
-          DELETE FROM incidents
-          WHERE id::text = ${cleanId};
-        `;
-        // Clean in-memory mirror if present (do not mutate store open_disapprovals as tests never incremented it)
-        const memIdx = inMemoryIncidents.findIndex((i) => String(i.id) === cleanId);
-        if (memIdx !== -1) inMemoryIncidents.splice(memIdx, 1);
+      // Soft-archive incident: never delete records from the database
+      const updated = await sql`
+        UPDATE incidents
+        SET status = 'DISMISSED',
+            dismissed_at = NOW(),
+            resolved_at = NOW(),
+            last_detected_at = NOW()
+        WHERE id::text = ${cleanId}
+        RETURNING *;
+      `;
 
-        return {
-          success: true,
-          isSimulated: true,
-          dismissed: true,
-          message: 'Test incident cleared.',
-        };
-      } else {
-        // Real Google disapproval: mark strictly this single record as acknowledged
-        const updated = await sql`
-          UPDATE incidents
-          SET status = 'acknowledged', resolved_at = NOW(), last_detected_at = NOW()
-          WHERE id::text = ${cleanId}
-          RETURNING *;
-        `;
-        // Decrement open_disapprovals on store by exactly 1
+      // Decrement open_disapprovals on store if previously active
+      if (inc.status === 'unresolved' && !isSimulated) {
         await sql`
           UPDATE stores
           SET open_disapprovals = GREATEST(0, open_disapprovals - 1)
           WHERE id::text = ${String(inc.store_id)};
         `;
-        // Clean in-memory mirror if present
-        const memInc = inMemoryIncidents.find((i) => String(i.id) === cleanId);
-        if (memInc) {
-          memInc.status = 'acknowledged';
-          memInc.resolved_at = new Date().toISOString();
-        }
-        const memStore = inMemoryStores.find((s) => String(s.id) === String(inc.store_id));
-        if (memStore) memStore.open_disapprovals = Math.max(0, memStore.open_disapprovals - 1);
-
-        return {
-          success: true,
-          isSimulated: false,
-          status: 'acknowledged',
-          incident: (updated[0] || inc) as unknown as Incident,
-          message: 'Incident acknowledged.',
-        };
       }
+
+      // Mirror soft-archival in-memory
+      const memInc = inMemoryIncidents.find((i) => String(i.id) === cleanId);
+      if (memInc) {
+        memInc.status = 'DISMISSED';
+        memInc.dismissed_at = new Date().toISOString();
+        memInc.resolved_at = new Date().toISOString();
+      }
+      const memStore = inMemoryStores.find((s) => String(s.id) === String(inc.store_id));
+      if (memStore && inc.status === 'unresolved' && !isSimulated) {
+        memStore.open_disapprovals = Math.max(0, memStore.open_disapprovals - 1);
+      }
+
+      return {
+        success: true,
+        isSimulated,
+        dismissed: true,
+        status: 'DISMISSED',
+        incident: (updated[0] || inc) as unknown as Incident,
+        message: 'Alert dismissed.',
+      };
     } catch (err) {
-      console.warn('[Neon DB] Error dismissing or acknowledging incident:', err);
+      console.warn('[Neon DB] Error dismissing incident:', err);
     }
   }
 
@@ -2916,26 +2913,21 @@ export async function dismissOrAcknowledgeIncident(
       return { success: false, error: 'Unauthorized to modify incident' };
     }
     const isSimulated = Boolean(inc.is_simulated || inc.is_test || inc.sku === 'DEMO-RUNNER-402');
-    if (isSimulated) {
-      inMemoryIncidents.splice(incidentIdx, 1);
-      return {
-        success: true,
-        isSimulated: true,
-        dismissed: true,
-        message: 'Test incident cleared.',
-      };
-    } else {
-      inc.status = 'acknowledged';
-      inc.resolved_at = new Date().toISOString();
+    const wasUnresolved = inc.status === 'unresolved';
+    inc.status = 'DISMISSED';
+    inc.dismissed_at = new Date().toISOString();
+    inc.resolved_at = new Date().toISOString();
+    if (wasUnresolved && !isSimulated) {
       store.open_disapprovals = Math.max(0, store.open_disapprovals - 1);
-      return {
-        success: true,
-        isSimulated: false,
-        status: 'acknowledged',
-        incident: inc,
-        message: 'Incident acknowledged.',
-      };
     }
+    return {
+      success: true,
+      isSimulated,
+      dismissed: true,
+      status: 'DISMISSED',
+      incident: inc,
+      message: 'Alert dismissed.',
+    };
   }
 
   return { success: false, error: 'Incident not found' };

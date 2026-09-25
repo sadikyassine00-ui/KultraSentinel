@@ -25,6 +25,7 @@ import {
   AlertCircle,
   ArrowRight,
   ShieldAlert,
+  History,
 } from 'lucide-react';
 import { Store } from '@/lib/db';
 import { isAccountSuspensionCode } from '@/lib/gmcErrors';
@@ -110,6 +111,8 @@ interface IncidentItem {
   first_detected_at: string;
   last_detected_at: string;
   resolved_at?: string | null;
+  dismissed_at?: string | null;
+  dismissedAt?: string | null;
   downtimeDuration?: string | null;
   is_simulated?: boolean;
   is_test?: boolean;
@@ -533,31 +536,31 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
     const targetIdStr = String(incidentId ?? '').trim();
     if (!targetIdStr) return;
 
-    const isSimulated = Boolean(
-      inc.sku === 'DEMO-RUNNER-402' ||
-      inc.title?.includes('(Demo Item)') ||
-      (inc as unknown as { is_simulated?: boolean }).is_simulated
-    );
-
     setVerifyingIncidentId(incidentId);
 
-    // Immediate optimistic mutation (§3: instantaneous card removal for test incidents, acknowledged state for real)
+    // Immediate optimistic mutation (§1: never delete, update status to DISMISSED)
     setData((prev) => {
       if (!prev) return prev;
-      let nextIncidents: IncidentItem[];
-      if (isSimulated) {
-        // Strictly filter out ONLY the clicked incident matching targetIdStr
-        nextIncidents = prev.incidents.filter((i) => String(i.id) !== targetIdStr);
-      } else {
-        // Strictly update ONLY the clicked incident matching targetIdStr
-        nextIncidents = prev.incidents.map((i) =>
-          String(i.id) === targetIdStr
-            ? { ...i, status: 'acknowledged' as const, resolved_at: new Date().toISOString() }
-            : i
-        );
-      }
-      const nextUnresolved = nextIncidents.filter((i) => i.status === 'unresolved');
+      const nextIncidents = prev.incidents.map((i) =>
+        String(i.id) === targetIdStr
+          ? {
+              ...i,
+              status: 'DISMISSED' as const,
+              resolved_at: new Date().toISOString(),
+              dismissed_at: new Date().toISOString(),
+            }
+          : i
+      );
+      const nextUnresolved = nextIncidents.filter((i) => (i.status || '').toLowerCase() === 'unresolved');
       const nextRealUnresolved = nextUnresolved.filter((i) => !i.is_simulated && !(i as unknown as { is_test?: boolean }).is_test && i.sku !== 'DEMO-RUNNER-402');
+      
+      const prevMonitored = Math.max(
+        prev.metrics.monitoredProducts || 0,
+        prev.incidents.filter((i) => !i.is_simulated && !(i as unknown as { is_test?: boolean }).is_test && i.sku !== 'DEMO-RUNNER-402').length,
+        1
+      );
+      const nextApproved = Math.max(0, prevMonitored - nextRealUnresolved.length);
+
       return {
         ...prev,
         incidents: nextIncidents,
@@ -567,16 +570,22 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
             : prev.criticalIncident,
         metrics: {
           ...prev.metrics,
+          monitoredProducts: prevMonitored,
           activeDisapprovals: nextRealUnresolved.length,
-          approvedProducts: prev.metrics.monitoredProducts === 0
-            ? 0
-            : Math.max(0, (prev.metrics.monitoredProducts || 0) - nextRealUnresolved.length),
+          approvedProducts: nextApproved,
+          inventoryBreakdown: prev.metrics.inventoryBreakdown
+            ? {
+                ...prev.metrics.inventoryBreakdown,
+                servingAds: nextApproved,
+                disapproved: nextRealUnresolved.length,
+              }
+            : undefined,
         },
       };
     });
 
     // Confirmation toast
-    setInlineFeedback(isSimulated ? 'Test incident cleared.' : 'Incident acknowledged.');
+    setInlineFeedback('Alert dismissed.');
     setTimeout(() => setInlineFeedback(null), 3500);
 
     try {
@@ -593,11 +602,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
       if (!res.ok || !resJson.success) {
         throw new Error(resJson.error || 'Failed to dismiss incident');
       }
-      if (resJson.isSimulated || resJson.dismissed) {
-        setInlineFeedback('Test incident cleared.');
-      } else {
-        setInlineFeedback('Incident acknowledged.');
-      }
+      setInlineFeedback('Alert dismissed.');
     } catch (err: unknown) {
       const e = err as Error;
       console.error('Failed to dismiss incident:', e);
@@ -607,10 +612,10 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
         if (!prev) return prev;
         const restored = prev.incidents.map((i) =>
           String(i.id) === targetIdStr
-            ? { ...i, status: 'unresolved' as const, resolved_at: null }
+            ? { ...i, status: 'unresolved' as const, resolved_at: null, dismissed_at: null }
             : i
         );
-        const restoredUnresolved = restored.filter((i) => i.status === 'unresolved');
+        const restoredUnresolved = restored.filter((i) => (i.status || '').toLowerCase() === 'unresolved');
         const restoredRealUnresolved = restoredUnresolved.filter((i) => !i.is_simulated && !(i as unknown as { is_test?: boolean }).is_test && i.sku !== 'DEMO-RUNNER-402');
         return {
           ...prev,
@@ -622,9 +627,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
           metrics: {
             ...prev.metrics,
             activeDisapprovals: restoredRealUnresolved.length,
-            approvedProducts: prev.metrics.monitoredProducts === 0
-              ? 0
-              : Math.max(0, (prev.metrics.monitoredProducts || 0) - restoredRealUnresolved.length),
+            approvedProducts: Math.max(0, (prev.metrics.monitoredProducts || 1) - restoredRealUnresolved.length),
           },
         };
       });
@@ -1067,23 +1070,31 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
   }
 
   const { activeStore, metrics, incidents, activityFeed = [] } = data;
-  const unresolvedIncidents = incidents.filter((i) => i.status === 'unresolved');
+  const unresolvedIncidents = incidents.filter((i) => (i.status || '').toLowerCase() === 'unresolved');
   const realUnresolvedIncidents = unresolvedIncidents.filter(
     (i) => !i.is_simulated && !(i as unknown as { is_test?: boolean }).is_test && i.sku !== 'DEMO-RUNNER-402'
   );
   const acknowledgedIncidents = incidents.filter(
-    (i) => i.status === 'acknowledged' || i.status === 'pending_verification'
+    (i) => {
+      const s = (i.status || '').toLowerCase();
+      return s === 'acknowledged' || s === 'pending_verification' || s === 'dismissed';
+    }
   );
   const activeCount = realUnresolvedIncidents.length;
-  const approvedCount = metrics.monitoredProducts === 0
-    ? 0
-    : (metrics.approvedProducts ?? Math.max(0, metrics.monitoredProducts - activeCount));
+
+  const hasHistoricalIncidents = incidents.filter(
+    (i) => !i.is_simulated && !(i as unknown as { is_test?: boolean }).is_test && i.sku !== 'DEMO-RUNNER-402'
+  ).length > 0;
+
+  const approvedCount = metrics.approvedProducts !== undefined
+    ? metrics.approvedProducts
+    : Math.max(0, (metrics.monitoredProducts || 0) - activeCount);
 
   // Dynamic calculation for Inventory Breakdown categories
   const expiringSoonCount = metrics.inventoryBreakdown?.expiringSoon ?? 0;
   const inReviewCount = metrics.inventoryBreakdown?.inReview ?? 0;
   const disapprovedCount = metrics.inventoryBreakdown?.disapproved !== undefined
-    ? Math.max(metrics.inventoryBreakdown.disapproved, activeCount)
+    ? metrics.inventoryBreakdown.disapproved
     : activeCount;
   const servingAdsCount = metrics.inventoryBreakdown?.servingAds !== undefined
     ? metrics.inventoryBreakdown.servingAds
@@ -1094,7 +1105,8 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
   const totalMonitoredCatalog = Math.max(
     metrics.monitoredProducts || 0,
     computedInventorySum,
-    activeCount
+    activeCount,
+    hasHistoricalIncidents ? 1 : 0
   );
 
   const hasActiveWebhook = Boolean(
@@ -1472,8 +1484,96 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
           </div>
         )}
 
+        {/* Emergency Account Suspension Alert Banner (§1) */}
+        {isAccountSuspensionActive && (
+          <div className="bg-[rgba(214,69,69,0.08)] border border-[rgba(214,69,69,0.35)] rounded-[var(--radius-md)] p-5 sm:p-6 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[rgba(214,69,69,0.2)] pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-[rgba(214,69,69,0.15)] border border-[rgba(214,69,69,0.4)] flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-5 h-5 text-[var(--danger)]" />
+                </div>
+                <div>
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--danger)] bg-[var(--danger-wash)] text-[var(--danger)] text-[10.5px] font-mono font-semibold tracking-wide">
+                    <span>STORE-WIDE EMERGENCY</span>
+                  </div>
+                  <h3 className="text-[17px] font-semibold text-[var(--ink-primary)] mt-1">
+                    Google Merchant Center Account Suspension Detected
+                  </h3>
+                </div>
+              </div>
+              <div className="font-mono text-[11px] text-[var(--ghost-text-dim)] shrink-0">
+                Scope: Total Store Suspension
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-[13.5px] text-[var(--ink-primary)] leading-[1.6]">
+                Google has <strong>paused ad delivery across all products in your catalog</strong> due to store-level policy enforcement (such as <em>Misrepresentation</em> or <em>Untrusted Store</em>). Google blocks the entire catalog at once until store trust requirements are met.
+              </p>
+
+              <div className="p-4 rounded-[var(--radius-sm)] bg-[var(--bg-surface)] border border-[var(--hairline-strong)] space-y-2.5">
+                <div className="text-[12.5px] font-semibold text-[var(--signal)] flex items-center gap-2">
+                  <span>Store-Level Compliance Resolution Checklist:</span>
+                </div>
+                <ul className="space-y-2 text-[12.5px] text-[var(--ink-secondary)] leading-[1.5]">
+                  <li className="flex items-start gap-2">
+                    <span className="font-mono text-[var(--signal)] shrink-0 font-medium">1.</span>
+                    <span><strong>Business Transparency:</strong> Add a valid physical address, direct support email, and operational phone number to your website footer and GMC business settings.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="font-mono text-[var(--signal)] shrink-0 font-medium">2.</span>
+                    <span><strong>Legal Pages:</strong> Provide clearly visible Refund and Return Policy, Shipping Policy, Privacy Policy, and Terms of Service links in your website navigation.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="font-mono text-[var(--signal)] shrink-0 font-medium">3.</span>
+                    <span><strong>Payment and Domain Integrity:</strong> Ensure checkout is secured with an active SSL certificate and all prices and currencies on the site match your GMC feed settings exactly.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="font-mono text-[var(--signal)] shrink-0 font-medium">4.</span>
+                    <span><strong>GMC Verification:</strong> Ensure your domain is verified and claimed in Google Merchant Center Business Information settings.</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="flex items-center gap-2 text-[12px] text-[var(--ghost-text)]">
+                <AlertCircle className="w-3.5 h-3.5 text-[var(--signal)] shrink-0" />
+                <span><strong>Do NOT edit individual product copy or images.</strong> Individual product attributes are not the root cause of this account suspension.</span>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-[rgba(214,69,69,0.2)]">
+              <a
+                href={`https://merchants.google.com/mc/merchantinfo/businessinfo?account=${activeStore?.gmc_id || activeStore?.merchant_id || ''}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-primary text-[12px] py-1.5 px-3.5 !rounded-[3px] inline-flex items-center gap-1.5 font-semibold"
+              >
+                <span>Open GMC Business Settings</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+              <a
+                href={`https://merchants.google.com/mc/products/diagnostics?account=${activeStore?.gmc_id || activeStore?.merchant_id || ''}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-secondary text-[12px] py-1.5 px-3 !rounded-[3px] inline-flex items-center gap-1.5"
+              >
+                <span>View Account Diagnostics</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+              <a
+                href="https://support.google.com/merchants/answer/2947246"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[var(--ghost-text)] hover:text-[var(--ink-primary)] text-[12px] underline underline-offset-4 ml-auto"
+              >
+                Google Policy Documentation →
+              </a>
+            </div>
+          </div>
+        )}
+
         {/* CONDITION A: Empty Catalog State (0 Products in Feed - Directive §3) */}
-        {metrics.monitoredProducts === 0 && activeCount === 0 ? (
+        {totalMonitoredCatalog === 0 && !hasHistoricalIncidents && activeCount === 0 ? (
           <div className="bg-[var(--bg-surface)] border border-[var(--hairline)] rounded-[var(--radius-md)] p-8 sm:p-12 text-center space-y-5">
             <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-[var(--bg-surface-2)] border border-[var(--hairline)]">
               <Package className="w-7 h-7 text-[var(--ghost-text)]" strokeWidth={1.5} />
@@ -1565,94 +1665,6 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
         ) : (
           /* CONDITION C: Active Incident Cards (Disapproved Products) */
           <div className="space-y-4">
-            {/* Emergency Account Suspension Alert Banner (§1) */}
-            {isAccountSuspensionActive && (
-              <div className="bg-[rgba(214,69,69,0.08)] border border-[rgba(214,69,69,0.35)] rounded-[var(--radius-md)] p-5 sm:p-6 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[rgba(214,69,69,0.2)] pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[rgba(214,69,69,0.15)] border border-[rgba(214,69,69,0.4)] flex items-center justify-center shrink-0">
-                      <AlertTriangle className="w-5 h-5 text-[var(--danger)]" />
-                    </div>
-                    <div>
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--danger)] bg-[var(--danger-wash)] text-[var(--danger)] text-[10.5px] font-mono font-semibold tracking-wide">
-                        <span>STORE-WIDE EMERGENCY</span>
-                      </div>
-                      <h3 className="text-[17px] font-semibold text-[var(--ink-primary)] mt-1">
-                        Google Merchant Center Account Suspension Detected
-                      </h3>
-                    </div>
-                  </div>
-                  <div className="font-mono text-[11px] text-[var(--ghost-text-dim)] shrink-0">
-                    Scope: Total Store Suspension
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <p className="text-[13.5px] text-[var(--ink-primary)] leading-[1.6]">
-                    Google has <strong>paused ad delivery across all products in your catalog</strong> due to store-level policy enforcement (such as <em>Misrepresentation</em> or <em>Untrusted Store</em>). Google blocks the entire catalog at once until store trust requirements are met.
-                  </p>
-
-                  <div className="p-4 rounded-[var(--radius-sm)] bg-[var(--bg-surface)] border border-[var(--hairline-strong)] space-y-2.5">
-                    <div className="text-[12.5px] font-semibold text-[var(--signal)] flex items-center gap-2">
-                      <span>Store-Level Compliance Resolution Checklist:</span>
-                    </div>
-                    <ul className="space-y-2 text-[12.5px] text-[var(--ink-secondary)] leading-[1.5]">
-                      <li className="flex items-start gap-2">
-                        <span className="font-mono text-[var(--signal)] shrink-0 font-medium">1.</span>
-                        <span><strong>Business Transparency:</strong> Add a valid physical address, direct support email, and operational phone number to your website footer and GMC business settings.</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="font-mono text-[var(--signal)] shrink-0 font-medium">2.</span>
-                        <span><strong>Legal Pages:</strong> Provide clearly visible Refund and Return Policy, Shipping Policy, Privacy Policy, and Terms of Service links in your website navigation.</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="font-mono text-[var(--signal)] shrink-0 font-medium">3.</span>
-                        <span><strong>Payment and Domain Integrity:</strong> Ensure checkout is secured with an active SSL certificate and all prices and currencies on the site match your GMC feed settings exactly.</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="font-mono text-[var(--signal)] shrink-0 font-medium">4.</span>
-                        <span><strong>GMC Verification:</strong> Ensure your domain is verified and claimed in Google Merchant Center Business Information settings.</span>
-                      </li>
-                    </ul>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-[12px] text-[var(--ghost-text)]">
-                    <AlertCircle className="w-3.5 h-3.5 text-[var(--signal)] shrink-0" />
-                    <span><strong>Do NOT edit individual product copy or images.</strong> Individual product attributes are not the root cause of this account suspension.</span>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-[rgba(214,69,69,0.2)]">
-                  <a
-                    href={`https://merchants.google.com/mc/merchantinfo/businessinfo?account=${activeStore?.gmc_id || activeStore?.merchant_id || ''}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn-primary text-[12px] py-1.5 px-3.5 !rounded-[3px] inline-flex items-center gap-1.5 font-semibold"
-                  >
-                    <span>Open GMC Business Settings</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
-                  <a
-                    href={`https://merchants.google.com/mc/products/diagnostics?account=${activeStore?.gmc_id || activeStore?.merchant_id || ''}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn-secondary text-[12px] py-1.5 px-3 !rounded-[3px] inline-flex items-center gap-1.5"
-                  >
-                    <span>View Account Diagnostics</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
-                  <a
-                    href="https://support.google.com/merchants/answer/2947246"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[var(--ghost-text)] hover:text-[var(--ink-primary)] text-[12px] underline underline-offset-4 ml-auto"
-                  >
-                    Google Policy Documentation →
-                  </a>
-                </div>
-              </div>
-            )}
-
             <div className="flex items-center justify-between pb-1">
               <div>
                 <h2 className="text-[16px] font-semibold text-[var(--ink-primary)] flex items-center gap-2">
@@ -1670,7 +1682,6 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
             {/* List of High-Contrast Incident Cards */}
             <div className="space-y-3">
               {unresolvedIncidents.map((inc) => {
-                const isPending = inc.status === 'pending_verification';
                 const isItemAccountLevel = Boolean(
                   inc.isAccountLevel ||
                   inc.plainEnglish?.isAccountLevel ||
@@ -1805,7 +1816,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                           disabled={verifyingIncidentId !== null && String(verifyingIncidentId) === String(inc.id)}
                           className="btn-secondary text-[12px] py-1.5 px-3 !rounded-[3px] text-[var(--ghost-text)] hover:text-[var(--ink-primary)] hover:border-[var(--signal-dim)] transition-colors disabled:opacity-50"
                         >
-                          {verifyingIncidentId !== null && String(verifyingIncidentId) === String(inc.id) ? 'Updating...' : 'Dismiss or Mark as Acknowledged'}
+                          {verifyingIncidentId !== null && String(verifyingIncidentId) === String(inc.id) ? 'Dismissing...' : 'Dismiss Alert'}
                         </button>
                       </div>
                     </div>
@@ -1813,203 +1824,160 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                 );
               })}
             </div>
-
-            {/* Acknowledged Disapprovals Section (§3) */}
-            {acknowledgedIncidents.length > 0 && (
-              <div className="pt-4 border-t border-[var(--hairline)]">
-                <button
-                  type="button"
-                  onClick={() => setAcknowledgedOpen((prev) => !prev)}
-                  className="flex items-center justify-between w-full py-2.5 px-3 rounded-[var(--radius-sm)] bg-[var(--bg-surface-2)] border border-[var(--hairline)] hover:border-[var(--hairline-strong)] text-left transition-colors group"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-[13.5px] font-semibold text-[var(--ghost-heading)] group-hover:text-[var(--ink-primary)] transition-colors">
-                      Acknowledged Disapprovals
-                    </span>
-                    <span className="font-mono text-[11px] px-2 py-0.5 rounded-[var(--radius-pill)] bg-[var(--bg-canvas)] text-[var(--ghost-text)] border border-[var(--hairline)] font-medium">
-                      {acknowledgedIncidents.length}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-[12px] text-[var(--ghost-text)] group-hover:text-[var(--ink-primary)] font-mono">
-                    <span>{acknowledgedOpen ? 'Hide' : 'Show'}</span>
-                    <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-150 ${acknowledgedOpen ? 'rotate-180' : ''}`} />
-                  </div>
-                </button>
-
-                {acknowledgedOpen && (
-                  <div className="space-y-3 mt-3">
-                    {acknowledgedIncidents.map((inc) => (
-                      <div
-                        key={inc.id}
-                        className="bg-[var(--bg-surface)] border border-[var(--hairline)] rounded-[var(--radius-md)] p-4 space-y-3 opacity-80"
-                      >
-                        <div className="flex items-center justify-between text-[11px] font-mono border-b border-[var(--hairline)] pb-2">
-                          <div className="flex items-center gap-2">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--ghost-line)] bg-[var(--bg-surface-2)] text-[var(--ghost-text)] text-[10.5px] font-medium">
-                              Acknowledged
-                            </span>
-                            <span className="text-[var(--ghost-text-dim)]">
-                              SKU: {inc.sku}
-                            </span>
-                          </div>
-                          {inc.resolved_at && (
-                            <span className="text-[var(--ghost-text-dim)]">
-                              Acknowledged {new Date(inc.resolved_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                          <div>
-                            <h4 className="text-[13.5px] font-semibold text-[var(--ink-primary)] truncate">
-                              {inc.title}
-                            </h4>
-                            <p className="text-[12px] text-[var(--ghost-text)] mt-0.5">
-                              {inc.plainEnglish?.explanation || inc.issue_code}
-                            </p>
-                          </div>
-                          {inc.gmcUrl && (
-                            <a
-                              href={inc.gmcUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="btn-secondary text-[11.5px] py-1 px-2.5 !rounded-[3px] shrink-0 inline-flex items-center gap-1"
-                            >
-                              <span>View in GMC</span>
-                              <ExternalLink className="w-3 h-3" />
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         )}
       </div>
 
       {/* --------------------------------------------------------------------- */}
-      {/* SECTION 4: Real-Time Surveillance Audit Feed (Persistent Proof-of-Work) */}
-      {/* Persistent activity table below primary incident triage area          */}
+      {/* SECTION 4: Incident History Table (Permanent Audit Log)               */}
       {/* --------------------------------------------------------------------- */}
       <div className="bg-[var(--bg-surface)] border border-[var(--hairline)] rounded-[var(--radius-md)] overflow-hidden">
         <div className="p-4 sm:p-5 border-b border-[var(--hairline)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[var(--bg-surface-2)]">
           <div className="flex items-center gap-2.5">
-            <Activity className="w-4 h-4 text-[var(--signal)] shrink-0" />
+            <History className="w-4 h-4 text-[var(--signal)] shrink-0" />
             <div>
               <div className="text-[14px] font-semibold text-[var(--ink-primary)]">
-                Real-Time Surveillance Audit Feed
+                Incident History &amp; Audit Log
               </div>
               <div className="font-mono text-[11px] text-[var(--ghost-text-dim)]">
-                Chronological proof-of-work log: Continuous Google Merchant Center audits, Pub/Sub events, and alert dispatches
+                Permanent chronological record of Google Merchant Center rejections, policy issues, and resolution history
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 font-mono text-[11px] text-[var(--signal)] bg-[var(--signal-wash)] border border-[var(--signal-dim)] px-2.5 py-1 rounded-[var(--radius-pill)] shrink-0 font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)]" />
-            <span>24/7 Background Surveillance Live</span>
+          <div className="flex items-center gap-2 font-mono text-[11px] text-[var(--ghost-text)] shrink-0">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[var(--radius-pill)] border border-[var(--hairline-strong)] bg-[var(--bg-canvas)]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)]" />
+              <span>{incidents.length} {incidents.length === 1 ? 'Record' : 'Records'}</span>
+            </span>
           </div>
         </div>
 
-        {/* Audit Table */}
+        {/* Incident History Table */}
         <div className="overflow-x-auto w-full">
-          <table className="w-full text-left border-collapse text-[12.5px] min-w-[580px]">
+          <table className="w-full text-left border-collapse text-[12.5px] min-w-[640px]">
             <thead>
               <tr className="border-b border-[var(--hairline)] bg-[var(--bg-canvas)] font-mono text-[10.5px] uppercase tracking-wider text-[var(--ghost-text-dim)]">
-                <th scope="col" className="py-2.5 px-4 font-semibold w-40">Timestamp</th>
-                <th scope="col" className="py-2.5 px-4 font-semibold w-44">Event Category</th>
-                <th scope="col" className="py-2.5 px-4 font-semibold">Operational Description</th>
+                <th scope="col" className="py-2.5 px-4 font-semibold w-44">Timestamp</th>
+                <th scope="col" className="py-2.5 px-4 font-semibold w-56">Target Item</th>
+                <th scope="col" className="py-2.5 px-4 font-semibold">Issue Detected</th>
                 <th scope="col" className="py-2.5 px-4 font-semibold text-right w-32">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--hairline)] font-sans">
-              {activityFeed.length === 0 ? (
+              {incidents.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="py-8 px-4 text-center font-mono text-[12px] text-[var(--ghost-text)]">
-                    Initializing surveillance feed telemetry...
+                    No incident history recorded. All Google Merchant Center products are compliant.
                   </td>
                 </tr>
               ) : (
-                activityFeed.map((evt) => {
-                  const category = evt.category || (
-                    evt.type === 'scan_verified'
-                      ? 'Catalog Audit'
-                      : evt.type === 'pubsub_healthy'
-                      ? 'Pub/Sub Ingestion'
-                      : evt.type === 'incident_dispatched'
-                      ? 'Disapproval Guard'
-                      : 'Remediation'
-                  );
+                [...incidents]
+                  .sort((a, b) => {
+                    const timeA = new Date(a.last_detected_at || a.first_detected_at).getTime();
+                    const timeB = new Date(b.last_detected_at || b.first_detected_at).getTime();
+                    return (isNaN(timeB) ? 0 : timeB) - (isNaN(timeA) ? 0 : timeA);
+                  })
+                  .map((inc) => {
+                    const isAcctLevel = Boolean(
+                      inc.isAccountLevel ||
+                      inc.plainEnglish?.isAccountLevel ||
+                      isAccountSuspensionCode(inc.issue_code)
+                    );
+                    const isSim = Boolean(
+                      inc.is_simulated ||
+                      (inc as unknown as { is_test?: boolean }).is_test ||
+                      inc.sku === 'DEMO-RUNNER-402'
+                    );
 
-                  const isSimulation = evt.status === 'Simulation' || evt.category === 'Simulation Drill' || evt.message.includes('simulation') || evt.message.includes('Fire drill') || evt.message.includes('simulated');
-                  const normalizedStatus = isSimulation
-                    ? 'Simulation'
-                    : evt.status === 'Nominal' || evt.status === 'success'
-                    ? 'Nominal'
-                    : evt.status === 'Active' || evt.status === 'danger'
-                    ? 'Active'
-                    : evt.status === 'Resolved' || evt.status === 'remediation'
-                    ? 'Resolved'
-                    : 'Nominal';
+                    const statusRaw = (inc.status || '').toLowerCase();
+                    const normalizedStatus: 'Active' | 'Dismissed' | 'Resolved' =
+                      statusRaw === 'unresolved'
+                        ? 'Active'
+                        : statusRaw === 'dismissed' || statusRaw === 'acknowledged' || statusRaw === 'pending_verification'
+                        ? 'Dismissed'
+                        : 'Resolved';
 
-                  return (
-                    <tr
-                      key={evt.id}
-                      className={`hover:bg-[var(--bg-surface-2)] transition-colors ${
-                        isSimulation ? 'bg-[rgba(242,169,59,0.02)]' : ''
-                      }`}
-                    >
-                      {/* Timestamp */}
-                      <td className="py-3 px-4 font-mono text-[11px] text-[var(--ghost-text)] whitespace-nowrap align-top">
-                        {evt.timestamp}
-                      </td>
+                    const rawDate = inc.dismissed_at || inc.resolved_at || inc.last_detected_at || inc.first_detected_at;
+                    const dateObj = rawDate ? new Date(rawDate) : null;
+                    const formattedDate = dateObj && !isNaN(dateObj.getTime())
+                      ? `${dateObj.toLocaleDateString([], { month: 'short', day: 'numeric' })} at ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                      : 'Recently';
 
-                      {/* Category */}
-                      <td className="py-3 px-4 font-mono text-[11px] whitespace-nowrap align-top">
-                        <span className="text-[var(--ink-secondary)]">
-                          {category}
-                        </span>
-                      </td>
+                    return (
+                      <tr
+                        key={inc.id}
+                        className={`hover:bg-[var(--bg-surface-2)] transition-colors ${
+                          isSim ? 'bg-[rgba(242,169,59,0.02)]' : ''
+                        }`}
+                      >
+                        {/* Timestamp */}
+                        <td className="py-3 px-4 font-mono text-[11.5px] text-[var(--ghost-text)] whitespace-nowrap align-top">
+                          <div>{formattedDate}</div>
+                          {inc.dismissed_at && (
+                            <div className="text-[10px] text-[var(--ghost-text-dim)] mt-0.5">
+                              Dismissed
+                            </div>
+                          )}
+                        </td>
 
-                      {/* Message */}
-                      <td className="py-3 px-4 text-[12.5px] text-[var(--ink-primary)] leading-snug align-top">
-                        <span>{evt.message}</span>
-                        {isSimulation && (
-                          <span className="ml-2 font-mono text-[10px] text-[var(--signal)] bg-[var(--signal-wash)] px-1.5 py-0.5 rounded-[var(--radius-sm)] border border-[var(--signal-dim)]">
-                            Test Isolation Active
-                          </span>
-                        )}
-                      </td>
+                        {/* Target Item */}
+                        <td className="py-3 px-4 align-top">
+                          <div className="font-medium text-[13px] text-[var(--ink-primary)] truncate max-w-[220px]">
+                            {isAcctLevel
+                              ? (activeStore?.store_name ? `${activeStore.store_name} Account` : 'Merchant Account')
+                              : (inc.title || 'Product Listing')}
+                          </div>
+                          <div className="font-mono text-[11px] text-[var(--ghost-text)] mt-0.5 flex items-center gap-1.5 flex-wrap">
+                            <span>
+                              {isAcctLevel
+                                ? `GMC: ${activeStore?.gmc_id || activeStore?.merchant_id || 'Account'}`
+                                : `SKU: ${inc.sku}`}
+                            </span>
+                            {isSim && (
+                              <span className="font-mono text-[9.5px] text-[var(--signal)] bg-[var(--signal-wash)] px-1.5 py-0.2 rounded-[var(--radius-sm)] border border-[var(--signal-dim)]">
+                                Demo Item
+                              </span>
+                            )}
+                          </div>
+                        </td>
 
-                      {/* Operational Status Badge */}
-                      <td className="py-3 px-4 text-right whitespace-nowrap align-top">
-                        {normalizedStatus === 'Nominal' ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--ghost-line)] bg-transparent text-[var(--ghost-text)] text-[10.5px] font-mono font-medium">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--ghost-line)]" />
-                            Nominal
-                          </span>
-                        ) : normalizedStatus === 'Active' ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--danger)] bg-[var(--danger-wash)] text-[var(--danger)] text-[10.5px] font-mono font-medium">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--danger)]" />
-                            Active
-                          </span>
-                        ) : normalizedStatus === 'Resolved' ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--ghost-line)] bg-transparent text-[var(--ghost-heading)] text-[10.5px] font-mono font-medium">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--ghost-text)]" />
-                            Resolved
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--signal-dim)] bg-[var(--signal-wash)] text-[var(--signal)] text-[10.5px] font-mono font-medium">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)]" />
-                            Simulation
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })
+                        {/* Issue Detected */}
+                        <td className="py-3 px-4 text-[12.5px] text-[var(--ink-primary)] leading-snug align-top">
+                          <div className="font-medium text-[12.5px] text-[var(--ink-primary)]">
+                            {isAcctLevel
+                              ? 'Store-Wide Account Disapproval'
+                              : (inc.plainEnglish?.title || inc.issue_code)}
+                          </div>
+                          <div className="text-[11.5px] text-[var(--ghost-text)] mt-0.5 line-clamp-2 max-w-xl">
+                            {isAcctLevel
+                              ? 'Google paused Shopping ads across all catalog products due to account-level policy enforcement.'
+                              : (inc.plainEnglish?.explanation || inc.issue_code)}
+                          </div>
+                        </td>
+
+                        {/* Status Pill */}
+                        <td className="py-3 px-4 text-right whitespace-nowrap align-top">
+                          {normalizedStatus === 'Active' ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--danger)] bg-[var(--danger-wash)] text-[var(--danger)] text-[10.5px] font-mono font-medium">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[var(--danger)]" />
+                              Active
+                            </span>
+                          ) : normalizedStatus === 'Dismissed' ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--ghost-line)] bg-transparent text-[var(--ghost-text)] text-[10.5px] font-mono font-medium">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[var(--ghost-text-dim)]" />
+                              Dismissed
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--signal-dim)] bg-[var(--signal-wash)] text-[var(--signal)] text-[10.5px] font-mono font-medium">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)]" />
+                              Resolved
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
               )}
             </tbody>
           </table>

@@ -123,7 +123,7 @@ export async function GET(request: Request) {
 
     // 4. Categorize active vs resolved/acknowledged incidents with universal simulation exclusion
     const unresolvedIncidents = incidents.filter(
-      (i) => i.status === 'unresolved'
+      (i) => (i.status || '').toLowerCase() === 'unresolved'
     );
     const realUnresolvedIncidents = unresolvedIncidents.filter(
       (i) => !i.is_simulated && !i.is_test && i.sku !== 'DEMO-RUNNER-402'
@@ -179,6 +179,7 @@ export async function GET(request: Request) {
         first_detected_at: inc.first_detected_at,
         last_detected_at: inc.last_detected_at,
         resolved_at: inc.resolved_at || null,
+        dismissed_at: (inc as unknown as { dismissed_at?: string | null }).dismissed_at || null,
         downtimeDuration,
         gmcUrl,
       };
@@ -189,12 +190,15 @@ export async function GET(request: Request) {
     const hasWebhook = activeWebhook.length > 0;
 
     // Authentic catalog data as sole source of truth (Directive §2)
-    // Pull from authentic GMC synchronization or active catalog incidents
-    const rawMonitored = tenant?.total_skus && tenant.total_skus > 0
-      ? tenant.total_skus
-      : 0;
+    // Pull from authentic GMC synchronization, recorded store skus, or known catalog incidents
+    const knownCatalogCount = Math.max(
+      tenant?.total_skus || 0,
+      (activeStore as unknown as { total_skus?: number })?.total_skus || 0,
+      activeStore?.total_caught || 0,
+      incidents.filter((i) => !i.is_simulated && !i.is_test && i.sku !== 'DEMO-RUNNER-402').length
+    );
 
-    const monitoredProducts = Math.max(rawMonitored, realUnresolvedIncidents.length);
+    const monitoredProducts = Math.max(knownCatalogCount, realUnresolvedIncidents.length);
     const approvedProducts = Math.max(0, monitoredProducts - realUnresolvedIncidents.length);
 
     // Dynamic channel resolution without hardcoded mock strings (Directive §4)
@@ -260,46 +264,7 @@ export async function GET(request: Request) {
       message: string;
       type: 'scan_verified' | 'pubsub_healthy' | 'incident_dispatched' | 'remediation';
       status: 'Nominal' | 'Active' | 'Resolved' | 'Simulation';
-    }> = [
-      {
-        id: 'evt-scan-latest',
-        timestamp: `Today at ${formattedNowTime}`,
-        rawTimestamp: now.toISOString(),
-        category: 'Catalog Audit',
-        message: `Content API catalog audit completed for ${monitoredProducts.toLocaleString()} items. 0 schema or policy mutations detected.`,
-        type: 'scan_verified',
-        status: 'Nominal',
-      },
-      {
-        id: 'evt-pubsub-qos',
-        timestamp: `Today at ${timeAgo12m}`,
-        rawTimestamp: new Date(now.getTime() - 1000 * 60 * 12).toISOString(),
-        category: 'Pub/Sub Ingestion',
-        message: `Official Google Cloud push stream active for GMC #${activeStore.gmc_id || activeStore.merchant_id}. Push handshake acknowledged in 14ms.`,
-        type: 'pubsub_healthy',
-        status: 'Nominal',
-      },
-      {
-        id: 'evt-webhook-latency',
-        timestamp: `Today at ${timeAgo38m}`,
-        rawTimestamp: new Date(now.getTime() - 1000 * 60 * 38).toISOString(),
-        category: 'Webhook Latency',
-        message: hasWebhook
-          ? `Alert destination probe verified in ${channelLabel}. Delivery latency: 14ms.`
-          : 'Webhook listener idle. Alert destination pending configuration in settings.',
-        type: 'pubsub_healthy',
-        status: 'Nominal',
-      },
-      {
-        id: 'evt-feed-health',
-        timestamp: `Today at ${timeAgo2h}`,
-        rawTimestamp: new Date(now.getTime() - 1000 * 60 * 124).toISOString(),
-        category: 'Catalog Audit',
-        message: `Automated feed verification check passed. ${approvedProducts.toLocaleString()} items actively serving Shopping ads.`,
-        type: 'scan_verified',
-        status: 'Nominal',
-      },
-    ];
+    }> = [];
 
     if (critical) {
       const critTime = new Date(critical.first_detected_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -318,7 +283,7 @@ export async function GET(request: Request) {
       });
     }
 
-    // Include any resolved incidents into the audit feed as proof of resolution
+    // Include any resolved or dismissed incidents into the audit feed as proof of resolution
     const resolvedIncidents = incidents.filter((i) => i.status === 'resolved' && !i.is_simulated && !i.is_test);
     for (const resInc of resolvedIncidents.slice(0, 3)) {
       if (resInc.resolved_at) {
@@ -329,6 +294,23 @@ export async function GET(request: Request) {
           rawTimestamp: resInc.resolved_at,
           category: 'Disapproval Guard',
           message: `Disapproval cleared for SKU ${resInc.sku}. Product re-approved and serving shopping ads.`,
+          type: 'remediation',
+          status: 'Resolved',
+        });
+      }
+    }
+
+    const dismissedIncidents = incidents.filter((i) => ((i.status || '').toLowerCase() === 'dismissed' || (i.status || '').toLowerCase() === 'acknowledged') && !i.is_simulated && !i.is_test);
+    for (const disInc of dismissedIncidents.slice(0, 3)) {
+      const disDate = disInc.dismissed_at || disInc.resolved_at || disInc.last_detected_at;
+      if (disDate) {
+        const disTime = new Date(disDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        activityFeed.unshift({
+          id: `evt-dis-${disInc.id}`,
+          timestamp: `Today at ${disTime}`,
+          rawTimestamp: disDate,
+          category: 'Disapproval Guard',
+          message: `Disapproval dismissed for SKU ${disInc.sku}. Policy flag archived.`,
           type: 'remediation',
           status: 'Resolved',
         });

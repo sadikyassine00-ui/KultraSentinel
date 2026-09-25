@@ -69,7 +69,7 @@ export async function POST(
       isSimulated: result.isSimulated,
       dismissed: result.dismissed,
       status: result.status,
-      message: result.message || (result.isSimulated ? 'Test incident cleared.' : 'Incident acknowledged.'),
+      message: result.message || 'Alert dismissed.',
       incident: result.incident,
     });
   } catch (error) {
