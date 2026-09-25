@@ -502,82 +502,93 @@ export default function AdminDashboardPage() {
         />
       )}
 
-      {/* Refined Sidebar Navigation (Collapsible Rail per GEMINI.md §16) */}
+      {/* Desktop Fixed Sidebar Spacer (preserves layout width so main content flows beside the fixed rail) */}
+      <div
+        aria-hidden="true"
+        className={`hidden lg:block shrink-0 transition-all duration-200 ease-in-out ${
+          sidebarCollapsed ? 'w-16' : 'w-60'
+        }`}
+      />
+
+      {/* Refined Sidebar Navigation (Fixed Rail per GEMINI.md §16) */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 bg-[#0e0f11] border-r border-[rgba(255,255,255,0.08)] flex flex-col justify-between transition-all duration-200 ease-in-out lg:translate-x-0 lg:sticky lg:top-[60px] lg:h-[calc(100vh-60px)] lg:overflow-y-auto shrink-0 ${
-          mobileMenuOpen ? 'translate-x-0 w-64' : '-translate-x-full lg:translate-x-0'
-        } ${sidebarCollapsed ? 'lg:w-16' : 'lg:w-60'}`}
+        className={`fixed inset-y-0 left-0 z-50 bg-[#0e0f11] border-r border-[rgba(255,255,255,0.08)] flex flex-col transition-all duration-200 ease-in-out shrink-0 select-none ${
+          mobileMenuOpen ? 'translate-x-0 w-64 max-w-[85vw]' : '-translate-x-full lg:translate-x-0'
+        } lg:top-[60px] lg:bottom-0 lg:h-[calc(100vh-60px)] lg:z-30 ${
+          sidebarCollapsed ? 'lg:w-16' : 'lg:w-60'
+        }`}
       >
-        <div className="py-3 space-y-3">
-          {/* Top Bar: Mobile Close or Desktop Collapse Toggle */}
-          <div className="flex items-center justify-between px-3 pb-3 border-b border-[rgba(255,255,255,0.08)]">
-            {/* Mobile View: Title + Close Button */}
-            <div className="lg:hidden flex items-center justify-between w-full">
-              <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-[3px] bg-[#131418] border border-[rgba(255,255,255,0.14)] flex items-center justify-center text-[#f4f1ea] shrink-0">
-                  <ShieldAlert className="w-3.5 h-3.5 text-[#f2a93b]" />
+        {/* Top Header: Unscrolled, Always Fixed at Top of Sidebar */}
+        <div className="shrink-0 h-14 px-3 flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] bg-[#0e0f11]">
+          {/* Mobile View: Title + Close Button */}
+          <div className="lg:hidden flex items-center justify-between w-full">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-[3px] bg-[#131418] border border-[rgba(255,255,255,0.14)] flex items-center justify-center text-[#f4f1ea] shrink-0">
+                <ShieldAlert className="w-3.5 h-3.5 text-[#f2a93b]" />
+              </div>
+              <div>
+                <div className="text-xs font-semibold text-[#f4f1ea] tracking-tight">
+                  Mission Control
                 </div>
-                <div>
-                  <div className="text-xs font-semibold text-[#f4f1ea] tracking-tight">
-                    Mission Control
-                  </div>
-                  <div className="text-[10.5px] font-mono text-[#6b7078] flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" />
-                    <span>Production console</span>
-                  </div>
+                <div className="text-[10.5px] font-mono text-[#6b7078] flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" />
+                  <span>Production console</span>
                 </div>
               </div>
-              <button
-                onClick={() => setMobileMenuOpen(false)}
-                className="p-1.5 rounded-[3px] border border-[rgba(255,255,255,0.14)] bg-transparent text-[#b9b3a5] hover:text-[#f4f1ea] transition-colors"
-                aria-label="Close navigation"
-              >
-                <X className="w-4 h-4" />
-              </button>
             </div>
-
-            {/* Desktop View: Expanded Mode */}
-            <div className="hidden lg:flex items-center justify-between w-full">
-              {!sidebarCollapsed ? (
-                <>
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-7 h-7 rounded-[3px] bg-[#131418] border border-[rgba(255,255,255,0.14)] flex items-center justify-center text-[#f4f1ea] shrink-0">
-                      <ShieldAlert className="w-3.5 h-3.5 text-[#f2a93b]" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-xs font-semibold text-[#f4f1ea] tracking-tight truncate">
-                        Kultra
-                      </div>
-                      <div className="text-[10.5px] font-mono text-[#6b7078] flex items-center gap-1.5 mt-0.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" />
-                        <span>Fleet console</span>
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={toggleSidebar}
-                    title="Collapse sidebar"
-                    className="p-1.5 rounded-[3px] border border-[rgba(255,255,255,0.08)] bg-transparent text-[#6b7078] hover:text-[#f4f1ea] hover:border-[rgba(255,255,255,0.14)] transition-colors"
-                    aria-label="Collapse sidebar"
-                  >
-                    <PanelLeftClose className="w-3.5 h-3.5" />
-                  </button>
-                </>
-              ) : (
-                <div className="w-full flex justify-center">
-                  <button
-                    onClick={toggleSidebar}
-                    title="Expand sidebar"
-                    className="p-1.5 rounded-[3px] border border-[rgba(255,255,255,0.08)] bg-transparent text-[#6b7078] hover:text-[#f4f1ea] hover:border-[rgba(255,255,255,0.14)] transition-colors"
-                    aria-label="Expand sidebar"
-                  >
-                    <PanelLeftOpen className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-            </div>
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="p-1.5 rounded-[3px] border border-[rgba(255,255,255,0.14)] bg-transparent text-[#b9b3a5] hover:text-[#f4f1ea] transition-colors"
+              aria-label="Close navigation"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
 
+          {/* Desktop View: Expanded Mode */}
+          <div className="hidden lg:flex items-center justify-between w-full">
+            {!sidebarCollapsed ? (
+              <>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-7 h-7 rounded-[3px] bg-[#131418] border border-[rgba(255,255,255,0.14)] flex items-center justify-center text-[#f4f1ea] shrink-0">
+                    <ShieldAlert className="w-3.5 h-3.5 text-[#f2a93b]" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold text-[#f4f1ea] tracking-tight truncate">
+                      Kultra
+                    </div>
+                    <div className="text-[10.5px] font-mono text-[#6b7078] flex items-center gap-1.5 mt-0.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" />
+                      <span>Fleet console</span>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={toggleSidebar}
+                  title="Collapse sidebar"
+                  className="p-1.5 rounded-[3px] border border-[rgba(255,255,255,0.08)] bg-transparent text-[#6b7078] hover:text-[#f4f1ea] hover:border-[rgba(255,255,255,0.14)] transition-colors"
+                  aria-label="Collapse sidebar"
+                >
+                  <PanelLeftClose className="w-3.5 h-3.5" />
+                </button>
+              </>
+            ) : (
+              <div className="w-full flex justify-center">
+                <button
+                  onClick={toggleSidebar}
+                  title="Expand sidebar"
+                  className="p-1.5 rounded-[3px] border border-[rgba(255,255,255,0.08)] bg-transparent text-[#6b7078] hover:text-[#f4f1ea] hover:border-[rgba(255,255,255,0.14)] transition-colors"
+                  aria-label="Expand sidebar"
+                >
+                  <PanelLeftOpen className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Navigation Area: Smoothly scrollable with custom slim scrollbar */}
+        <div className="flex-1 min-h-0 overflow-y-auto py-3 space-y-3 overscroll-contain">
           {/* Navigation Items (Expanded Mode & Mobile) */}
           <nav
             className={`space-y-3 ${sidebarCollapsed ? 'lg:hidden' : 'block'}`}
@@ -679,66 +690,69 @@ export default function AdminDashboardPage() {
           </nav>
         </div>
 
-        {/* Sidebar Footer (Admin Profile & Sign Out - Expanded Mode) */}
-        <div className={`p-3 border-t border-[rgba(255,255,255,0.08)] bg-[#0e0f11] ${sidebarCollapsed ? 'lg:hidden' : 'block'}`}>
-          {/* Fleet Telemetry Heartbeat */}
-          <div className="px-2.5 py-2 rounded-[3px] bg-[#0a0b0d] border border-[rgba(255,255,255,0.08)] mb-3 space-y-1">
-            <div className="flex items-center justify-between text-[11px]">
-              <div className="flex items-center gap-1.5 text-[#b9b3a5] font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" />
-                <span>QoS 1 Ingestion</span>
+        {/* Sidebar Footer: Anchored at bottom, never scrolled away */}
+        <div className="shrink-0 border-t border-[rgba(255,255,255,0.08)] bg-[#0e0f11]">
+          {/* Expanded Mode */}
+          <div className={`p-3 ${sidebarCollapsed ? 'lg:hidden' : 'block'}`}>
+            {/* Fleet Telemetry Heartbeat */}
+            <div className="px-2.5 py-2 rounded-[3px] bg-[#0a0b0d] border border-[rgba(255,255,255,0.08)] mb-3 space-y-1">
+              <div className="flex items-center justify-between text-[11px]">
+                <div className="flex items-center gap-1.5 text-[#b9b3a5] font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" />
+                  <span>QoS 1 Ingestion</span>
+                </div>
+                <span className="font-mono text-[#f2a93b] font-medium text-[11px]">{telemetry.globalIngestionRate} m/m</span>
               </div>
-              <span className="font-mono text-[#f2a93b] font-medium text-[11px]">{telemetry.globalIngestionRate} m/m</span>
+              <div className="flex items-center justify-between text-[10.5px] font-mono text-[#6b7078]">
+                <span>Pipeline SLA</span>
+                <span className="text-[#b9b3a5]">{telemetry.averageLatencyMs} ms</span>
+              </div>
             </div>
-            <div className="flex items-center justify-between text-[10.5px] font-mono text-[#6b7078]">
-              <span>Pipeline SLA</span>
-              <span className="text-[#b9b3a5]">{telemetry.averageLatencyMs} ms</span>
+
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-7 h-7 rounded-full bg-[#131418] border border-[rgba(255,255,255,0.14)] flex items-center justify-center text-[11px] font-mono font-medium text-[#f4f1ea] shrink-0">
+                  {getInitials(adminUser?.name || adminUser?.email || 'Platform Owner')}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[12.5px] text-[#f4f1ea] font-medium truncate" title={adminUser?.email}>
+                    {adminUser?.email || 'Platform Owner'}
+                  </div>
+                  <div className="text-[10.5px] font-mono text-[#6b7078] flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" />
+                    <span>Platform Owner</span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={handleLogout}
+                title="Sign out of console"
+                className="p-1.5 rounded-[3px] border border-[rgba(255,255,255,0.08)] bg-transparent text-[#6b7078] hover:text-[#d64545] hover:bg-[rgba(214,69,69,0.08)] transition-colors shrink-0"
+                aria-label="Sign out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
             </div>
           </div>
 
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-7 h-7 rounded-full bg-[#131418] border border-[rgba(255,255,255,0.14)] flex items-center justify-center text-[11px] font-mono font-medium text-[#f4f1ea] shrink-0">
-                YS
-              </div>
-              <div className="min-w-0">
-                <div className="text-[12.5px] text-[#f4f1ea] font-medium truncate" title={adminUser?.email}>
-                  {adminUser?.email || 'Platform Owner'}
-                </div>
-                <div className="text-[10.5px] font-mono text-[#6b7078] flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" />
-                  <span>Platform Owner</span>
-                </div>
-              </div>
+          {/* Collapsed Rail Mode */}
+          <div className={`p-2.5 flex-col items-center gap-2.5 hidden ${sidebarCollapsed ? 'lg:flex' : 'lg:hidden'}`}>
+            <div
+              className="w-7 h-7 rounded-full bg-[#131418] border border-[rgba(255,255,255,0.14)] flex items-center justify-center text-[11px] font-mono font-medium text-[#f4f1ea]"
+              title={`${adminUser?.email} (Platform Owner)`}
+            >
+              {getInitials(adminUser?.name || adminUser?.email || 'Platform Owner')}
             </div>
-
             <button
               onClick={handleLogout}
               title="Sign out of console"
-              className="p-1.5 rounded-[3px] border border-[rgba(255,255,255,0.08)] bg-transparent text-[#6b7078] hover:text-[#d64545] hover:bg-[rgba(214,69,69,0.08)] transition-colors shrink-0"
+              className="p-1.5 rounded-[3px] border border-[rgba(255,255,255,0.08)] bg-transparent text-[#6b7078] hover:text-[#d64545] hover:bg-[rgba(214,69,69,0.08)] transition-colors"
               aria-label="Sign out"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-3.5 h-3.5" />
             </button>
           </div>
-        </div>
-
-        {/* Sidebar Footer (Collapsed Rail Mode) */}
-        <div className={`p-2.5 border-t border-[rgba(255,255,255,0.08)] bg-[#0e0f11] flex-col items-center gap-2.5 hidden ${sidebarCollapsed ? 'lg:flex' : 'lg:hidden'}`}>
-          <div
-            className="w-7 h-7 rounded-full bg-[#131418] border border-[rgba(255,255,255,0.14)] flex items-center justify-center text-[11px] font-mono font-medium text-[#f4f1ea]"
-            title={`${adminUser?.email} (Platform Owner)`}
-          >
-            YS
-          </div>
-          <button
-            onClick={handleLogout}
-            title="Sign out of console"
-            className="p-1.5 rounded-[3px] border border-[rgba(255,255,255,0.08)] bg-transparent text-[#6b7078] hover:text-[#d64545] hover:bg-[rgba(214,69,69,0.08)] transition-colors"
-            aria-label="Sign out"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-          </button>
         </div>
       </aside>
 

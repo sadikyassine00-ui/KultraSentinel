@@ -146,10 +146,10 @@ export default async function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="bg-[#0a0b0d] text-[#f4f1ea] font-sans antialiased overflow-x-hidden max-w-full selection:bg-[#f2a93b]/20 selection:text-[#f4f1ea] min-h-screen flex flex-col">
+      <body className="bg-[#0a0b0d] text-[#f4f1ea] font-sans antialiased overflow-x-clip max-w-full selection:bg-[#f2a93b]/20 selection:text-[#f4f1ea] min-h-screen flex flex-col">
         <Providers>
           <Header initialUser={initialUser} />
-          <div className="flex-1 flex flex-col min-h-0 w-full max-w-full overflow-x-hidden">
+          <div className="flex-1 flex flex-col min-h-0 w-full max-w-full overflow-x-clip">
             {children}
           </div>
         </Providers>
