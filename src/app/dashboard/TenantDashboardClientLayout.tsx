@@ -4,7 +4,8 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { LogOut, Shield, ChevronDown, ShieldCheck, LayoutDashboard, CreditCard } from 'lucide-react';
+import { LogOut, Shield, ChevronDown, ShieldCheck, LayoutDashboard, CreditCard, Loader2 } from 'lucide-react';
+import { startRouteTransition } from '@/components/RouteProgressBar';
 import { FleetLimitModal } from '@/components/dashboard/FleetLimitModal';
 import { PaddleCheckoutModal } from '@/components/billing/PaddleCheckoutOverlay';
 import { PlanSelectionModal } from '@/components/billing/PlanSelectionModal';
@@ -65,6 +66,7 @@ export default function TenantDashboardClientLayout({
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [checkoutPlan, setCheckoutPlan] = useState<'solo' | 'agency'>('solo');
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const storeDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -155,13 +157,17 @@ export default function TenantDashboardClientLayout({
   }, []);
 
   const handleSignOut = async () => {
+    if (isSigningOut) return;
+    setIsSigningOut(true);
+    startRouteTransition();
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
-      window.dispatchEvent(new Event('auth-change'));
-      router.push('/login');
-      router.refresh();
     } catch {
-      router.push('/login');
+      // Continue cleanup even if network fails
+    }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('auth-change'));
+      window.location.href = '/login';
     }
   };
 
@@ -551,10 +557,15 @@ export default function TenantDashboardClientLayout({
                     <button
                       type="button"
                       onClick={handleSignOut}
-                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-[12.5px] text-[var(--ink-secondary)] hover:text-[var(--danger)] hover:bg-[var(--danger-wash)] transition-colors text-left font-medium"
+                      disabled={isSigningOut}
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-[12.5px] text-[var(--ink-secondary)] hover:text-[var(--danger)] hover:bg-[var(--danger-wash)] transition-colors text-left font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                     >
-                      <LogOut className="w-3.5 h-3.5 text-[var(--danger)]" />
-                      <span>Sign out</span>
+                      {isSigningOut ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--danger)]" />
+                      ) : (
+                        <LogOut className="w-3.5 h-3.5 text-[var(--danger)]" />
+                      )}
+                      <span>{isSigningOut ? 'Signing out...' : 'Sign out'}</span>
                     </button>
                   </div>
                 </div>

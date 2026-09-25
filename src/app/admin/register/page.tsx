@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Lock, Mail, Building2, Globe, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { Lock, Mail, Building2, Globe, CheckCircle2, ShieldCheck, Loader2 } from 'lucide-react';
+import { startRouteTransition } from '@/components/RouteProgressBar';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -42,6 +43,7 @@ export default function RegisterPage() {
     }
     setLoading(true);
     setError(null);
+    startRouteTransition();
 
     try {
       const res = await fetch('/api/auth/register', {
@@ -87,6 +89,7 @@ export default function RegisterPage() {
   const handleGoogleSignUp = async () => {
     setLoading(true);
     setError(null);
+    startRouteTransition();
 
     try {
       window.location.href = '/api/auth/google?prompt=select_account&from=/admin/register';
@@ -176,25 +179,34 @@ export default function RegisterPage() {
                   disabled={loading}
                   className="btn-secondary w-full justify-center !rounded-[3px] text-[13px] py-2.5 gap-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
-                    <path
-                      fill="#EA4335"
-                      d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.4 1 3.5 3.6 1.6 7.4l3.7 2.9C6.2 7.3 8.8 5 12 5z"
-                    />
-                    <path
-                      fill="#4285F4"
-                      d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.9z"
-                    />
-                    <path
-                      fill="#FBBC05"
-                      d="M5.3 14.7c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.6 7.2C.6 9.2 0 11.5 0 14s.6 4.8 1.6 6.8l3.7-2.9z"
-                    />
-                    <path
-                      fill="#34A853"
-                      d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3.2 0-5.8-2.2-6.8-5.2L1.5 16c1.9 3.8 5.8 6.4 10.5 6.4z"
-                    />
-                  </svg>
-                  <span>Continue with Google</span>
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-[var(--ink-secondary)] shrink-0" />
+                      <span>Connecting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+                        <path
+                          fill="#EA4335"
+                          d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.4 1 3.5 3.6 1.6 7.4l3.7 2.9C6.2 7.3 8.8 5 12 5z"
+                        />
+                        <path
+                          fill="#4285F4"
+                          d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.9z"
+                        />
+                        <path
+                          fill="#FBBC05"
+                          d="M5.3 14.7c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.6 7.2C.6 9.2 0 11.5 0 14s.6 4.8 1.6 6.8l3.7-2.9z"
+                        />
+                        <path
+                          fill="#34A853"
+                          d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3.2 0-5.8-2.2-6.8-5.2L1.5 16c1.9 3.8 5.8 6.4 10.5 6.4z"
+                        />
+                      </svg>
+                      <span>Continue with Google</span>
+                    </>
+                  )}
                 </button>
 
                 <div className="relative my-4 flex items-center justify-center">
@@ -339,8 +351,9 @@ export default function RegisterPage() {
                   <button
                     type="submit"
                     disabled={loading || !agreedToTerms}
-                    className="btn-primary w-full justify-center text-[13px] py-2.5 disabled:opacity-50"
+                    className="btn-primary w-full justify-center text-[13px] py-2.5 disabled:opacity-50 gap-2 flex items-center"
                   >
+                    {loading && <Loader2 className="w-4 h-4 animate-spin text-[#1a1305] shrink-0" />}
                     <span>{loading ? 'Provisioning account...' : 'Create platform account'}</span>
                   </button>
                 </div>

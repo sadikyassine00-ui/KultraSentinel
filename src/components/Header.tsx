@@ -11,7 +11,9 @@ import {
   ShieldAlert,
   Settings,
   CreditCard,
+  Loader2,
 } from 'lucide-react';
+import { startRouteTransition } from '@/components/RouteProgressBar';
 
 export interface AuthUser {
   email: string;
@@ -33,6 +35,7 @@ export function Header({ initialUser = null }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(initialUser ?? null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Sync state if server component re-renders and supplies a fresh initialUser
@@ -99,15 +102,19 @@ export function Header({ initialUser = null }: HeaderProps) {
   }, []);
 
   const handleLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    startRouteTransition();
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
-      setUser(null);
-      setDropdownOpen(false);
-      window.dispatchEvent(new Event('auth-change'));
-      router.push('/login');
-      router.refresh();
     } catch {
-      router.push('/login');
+      // Continue cleanup even if network fails
+    }
+    setUser(null);
+    setDropdownOpen(false);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('auth-change'));
+      window.location.href = '/login';
     }
   };
 
@@ -262,10 +269,15 @@ export function Header({ initialUser = null }: HeaderProps) {
                     <button
                       type="button"
                       onClick={handleLogout}
-                      className="w-full flex items-center gap-2 px-2.5 py-2 rounded-[var(--radius-sm)] text-[13px] text-[var(--danger)] hover:bg-[var(--danger-wash)] transition-colors text-left cursor-pointer"
+                      disabled={loggingOut}
+                      className="w-full flex items-center gap-2 px-2.5 py-2 rounded-[var(--radius-sm)] text-[13px] text-[var(--danger)] hover:bg-[var(--danger-wash)] transition-colors text-left cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <LogOut className="w-3.5 h-3.5" />
-                      <span>Sign out</span>
+                      {loggingOut ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <LogOut className="w-3.5 h-3.5" />
+                      )}
+                      <span>{loggingOut ? 'Signing out...' : 'Sign out'}</span>
                     </button>
                   </div>
                 </div>
@@ -366,9 +378,15 @@ export function Header({ initialUser = null }: HeaderProps) {
                   setMobileMenuOpen(false);
                   handleLogout();
                 }}
-                className="w-full text-center text-[13px] py-2 text-[var(--danger)] hover:underline font-medium"
+                disabled={loggingOut}
+                className="w-full flex items-center justify-center gap-2 text-center text-[13px] py-2 text-[var(--danger)] hover:underline font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
-                Sign out
+                {loggingOut ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <LogOut className="w-3.5 h-3.5" />
+                )}
+                <span>{loggingOut ? 'Signing out...' : 'Sign out'}</span>
               </button>
             </div>
           ) : (

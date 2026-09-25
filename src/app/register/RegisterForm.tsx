@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Mail, Lock, Building, Globe, Check, AlertCircle, Loader2 } from 'lucide-react';
+import { startRouteTransition } from '@/components/RouteProgressBar';
 
 export default function RegisterForm() {
   const router = useRouter();
@@ -45,6 +46,7 @@ export default function RegisterForm() {
     setError(null);
 
     try {
+      startRouteTransition();
       window.location.href = '/api/auth/google?prompt=select_account&from=/register';
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Google registration failed.');
@@ -90,6 +92,7 @@ export default function RegisterForm() {
         window.dispatchEvent(new Event('auth-change'));
       }
 
+      startRouteTransition();
       router.push(data.redirectUrl || '/dashboard?just_connected=true');
       router.refresh();
     } catch (err: unknown) {

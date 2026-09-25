@@ -4,8 +4,9 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Mail, Lock } from 'lucide-react';
+import { Mail, Lock, Loader2 } from 'lucide-react';
 import { sanitizeRedirectUrl } from '@/lib/security';
+import { startRouteTransition } from '@/components/RouteProgressBar';
 
 export default function LoginForm() {
   const searchParams = useSearchParams();
@@ -48,10 +49,10 @@ export default function LoginForm() {
         ? '/suspended'
         : sanitizeRedirectUrl(data.redirectUrl || redirectParam, '/dashboard');
 
+      startRouteTransition();
       window.location.href = safeDestination;
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Invalid email or password.');
-    } finally {
       setLoading(false);
     }
   };
@@ -61,6 +62,7 @@ export default function LoginForm() {
     setError(null);
 
     try {
+      startRouteTransition();
       window.location.href = '/api/auth/google?prompt=select_account&from=/login';
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Google sign-in failed.');
@@ -175,9 +177,16 @@ export default function LoginForm() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-2 py-2.5 px-4 rounded-[3px] bg-[#f2a93b] hover:bg-[#f6b855] text-[#1a1305] text-[12.5px] font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full mt-2 py-2.5 px-4 rounded-[3px] bg-[#f2a93b] hover:bg-[#f6b855] text-[#1a1305] text-[12.5px] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
           >
-            {loading ? 'Signing in...' : 'Sign in'}
+            {loading ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Signing in...</span>
+              </>
+            ) : (
+              <span>Sign in</span>
+            )}
           </button>
         </form>
       </div>

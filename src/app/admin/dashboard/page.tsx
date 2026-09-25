@@ -11,6 +11,7 @@ import {
   Search,
   ExternalLink,
   LogOut,
+  Loader2,
   AlertTriangle,
   Play,
   Trash2,
@@ -50,6 +51,7 @@ import {
   DashboardPageSkeleton,
 } from '@/components/Skeleton';
 import TenantTriageCenter from '@/components/dashboard/TenantTriageCenter';
+import { startRouteTransition } from '@/components/RouteProgressBar';
 
 type TabType = 'triage' | 'tenants' | 'stores' | 'pipeline' | 'dispatches' | 'config';
 
@@ -100,6 +102,7 @@ export default function AdminDashboardPage() {
 
   // Impersonation state
   const [impersonatingTenant, setImpersonatingTenant] = useState<{ user_id: string; email: string; company_name: string } | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Telemetry KPIs
   const [telemetry, setTelemetry] = useState<SuperTelemetry>({
@@ -415,14 +418,17 @@ export default function AdminDashboardPage() {
   };
 
   const handleLogout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    startRouteTransition();
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new Event('auth-change'));
-      }
-      router.push('/admin/login');
     } catch {
-      router.push('/admin/login');
+      // Continue cleanup even if network fails
+    }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('auth-change'));
+      window.location.href = '/admin/login';
     }
   };
 
@@ -727,11 +733,16 @@ export default function AdminDashboardPage() {
 
               <button
                 onClick={handleLogout}
+                disabled={isLoggingOut}
                 title="Sign out of console"
-                className="p-1.5 rounded-[3px] border border-[rgba(255,255,255,0.08)] bg-transparent text-[#6b7078] hover:text-[#d64545] hover:bg-[rgba(214,69,69,0.08)] transition-colors shrink-0"
+                className="p-1.5 rounded-[3px] border border-[rgba(255,255,255,0.08)] bg-transparent text-[#6b7078] hover:text-[#d64545] hover:bg-[rgba(214,69,69,0.08)] transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 aria-label="Sign out"
               >
-                <LogOut className="w-4 h-4" />
+                {isLoggingOut ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-[#d64545]" />
+                ) : (
+                  <LogOut className="w-4 h-4" />
+                )}
               </button>
             </div>
           </div>
@@ -746,11 +757,16 @@ export default function AdminDashboardPage() {
             </div>
             <button
               onClick={handleLogout}
+              disabled={isLoggingOut}
               title="Sign out of console"
-              className="p-1.5 rounded-[3px] border border-[rgba(255,255,255,0.08)] bg-transparent text-[#6b7078] hover:text-[#d64545] hover:bg-[rgba(214,69,69,0.08)] transition-colors"
+              className="p-1.5 rounded-[3px] border border-[rgba(255,255,255,0.08)] bg-transparent text-[#6b7078] hover:text-[#d64545] hover:bg-[rgba(214,69,69,0.08)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               aria-label="Sign out"
             >
-              <LogOut className="w-3.5 h-3.5" />
+              {isLoggingOut ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#d64545]" />
+              ) : (
+                <LogOut className="w-3.5 h-3.5" />
+              )}
             </button>
           </div>
         </div>
