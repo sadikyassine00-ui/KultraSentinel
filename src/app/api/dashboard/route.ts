@@ -131,15 +131,8 @@ export async function GET(request: Request) {
     );
     const critical = realUnresolvedIncidents[0] || null;
 
-    // 5. Dynamic and authentic external deep links (Directive §4)
-    // Shopify Edit Links: Only display if actively configured or on a myshopify.com domain
-    const isShopifyStore = Boolean(activeStore.store_url && (activeStore.store_url.includes('myshopify.com') || activeStore.store_url.includes('.myshopify.')));
-    const cleanDomain = (activeStore.store_url || '')
-      .replace(/^https?:\/\//, '')
-      .replace(/\/.*$/, '');
-
-    // Format incidents items with plain English error translations and sanitized deep links.
-    // If account is locked (expired/canceled trial), redact direct admin fix and deep links.
+    // Format incidents items with plain English error translations and direct Google Merchant Center item diagnostics.
+    // If account is locked (expired/canceled trial), redact direct diagnostics links.
     const formattedIncidents = incidents.map((inc) => {
       let downtimeDuration: string | null = null;
       if (inc.status === 'resolved') {
@@ -159,12 +152,7 @@ export async function GET(request: Request) {
       const isAccountLevel = Boolean(plainEnglish.isAccountLevel || isAccountSuspensionCode(inc.issue_code));
       const gmcId = activeStore.gmc_id || activeStore.merchant_id || '';
 
-      // For account-level suspensions, do NOT direct merchants to edit single product listings in Shopify
-      const shopifyUrl = (billing.isLocked || !isShopifyStore || !cleanDomain || isAccountLevel)
-        ? null
-        : `https://${cleanDomain}/admin/products?query=${encodeURIComponent(inc.sku)}`;
-
-      // Deep-link directly to GMC Account Settings for store-level issues, or item diagnostics for SKU issues
+      // Direct links to Google Merchant Center Account Settings for store-level issues, or Item Diagnostics for SKU issues
       const gmcUrl = billing.isLocked || !gmcId
         ? null
         : (isAccountLevel
@@ -193,7 +181,6 @@ export async function GET(request: Request) {
         last_detected_at: inc.last_detected_at,
         resolved_at: inc.resolved_at || null,
         downtimeDuration,
-        shopifyUrl,
         gmcUrl,
       };
     });
@@ -421,9 +408,6 @@ export async function GET(request: Request) {
             severity: critical.severity === 'critical' ? 'CRITICAL_DISAPPROVAL' : 'DEMOTION',
             status: critical.status,
             first_detected_at: critical.first_detected_at,
-            shopifyUrl: (billing.isLocked || !isShopifyStore || !cleanDomain || isAccountSuspensionCode(critical.issue_code))
-              ? null
-              : `https://${cleanDomain}/admin/products?query=${encodeURIComponent(critical.sku)}`,
             gmcUrl: billing.isLocked || !(activeStore.gmc_id || activeStore.merchant_id)
               ? null
               : (isAccountSuspensionCode(critical.issue_code)

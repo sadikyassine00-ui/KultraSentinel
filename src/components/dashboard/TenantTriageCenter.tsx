@@ -113,7 +113,6 @@ interface IncidentItem {
   downtimeDuration?: string | null;
   is_simulated?: boolean;
   is_test?: boolean;
-  shopifyUrl?: string | null;
   gmcUrl?: string | null;
 }
 
@@ -389,9 +388,6 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
         );
 
         // Immediate optimistic incident card mutation
-        const cleanDomain = (data.activeStore.store_url || 'admin.shopify.com')
-          .replace(/^https?:\/\//, '')
-          .replace(/\/.*$/, '');
         const demoIncident: IncidentItem = {
           id: json.incident?.id || `demo-${Date.now()}`,
           sku: json.incident?.sku || 'DEMO-RUNNER-402',
@@ -400,7 +396,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
           plainEnglish: {
             title: 'Missing Barcode (GTIN / UPC)',
             explanation: 'Google requires a valid GTIN or UPC for branded products to match them across search results.',
-            fixAdvice: 'Add the 12- or 14-digit barcode (GTIN/UPC/EAN) in your product catalog or Shopify admin.',
+            fixAdvice: 'Add the authentic 12- or 14-digit barcode (GTIN/UPC/EAN) in your product feed catalog or Merchant Center diagnostics.',
             category: 'barcode',
           },
           price: '$165.00',
@@ -410,8 +406,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
           status: 'unresolved',
           first_detected_at: json.incident?.first_detected_at || new Date().toISOString(),
           last_detected_at: json.incident?.last_detected_at || new Date().toISOString(),
-          shopifyUrl: `https://${cleanDomain}/admin/products?query=DEMO-RUNNER`,
-          gmcUrl: `https://merchants.google.com/mc/products/diagnostics?account=${data.activeStore.gmc_id || data.activeStore.merchant_id || ''}`,
+          gmcUrl: `https://merchants.google.com/mc/items/details?account=${data.activeStore.gmc_id || data.activeStore.merchant_id || ''}&item=DEMO-RUNNER-402`,
         };
 
         const demoFeedEvent: ActivityEvent = {
@@ -1774,19 +1769,6 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                             <ExternalLink className="w-3.5 h-3.5" />
                           </a>
                         ) : null}
-
-                        {/* Secondary Button: Edit in Shopify (only for SKU attribute issues, NOT account suspensions) */}
-                        {!isItemAccountLevel && inc.shopifyUrl && (
-                          <a
-                            href={inc.shopifyUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="btn-secondary text-[12px] py-1.5 px-3 !rounded-[3px] inline-flex items-center gap-1.5"
-                          >
-                            <span>Edit in Shopify</span>
-                            <ExternalLink className="w-3 h-3 text-[var(--ghost-text)]" />
-                          </a>
-                        )}
 
                         {isItemAccountLevel && (
                           <a

@@ -233,9 +233,6 @@ export async function dispatchDisapprovalSlackNotification({
 
   const storeName = store.store_name || store.store_url || 'Store';
   const gmcId = store.gmc_id || store.merchant_id || 'UNKNOWN';
-  const cleanDomain = (store.store_url || 'admin.shopify.com')
-    .replace(/^https?:\/\//, '')
-    .replace(/\/.*$/, '');
 
   const sku = incident?.sku || 'DEMO-RUNNER-402';
   const title = incident?.title || 'Apex Carbon Runner - Size 10.5 (Demo Item)';
@@ -246,7 +243,6 @@ export async function dispatchDisapprovalSlackNotification({
   
   const isSimulation = triggerType.includes('Diagnostic') || triggerType.includes('Fire Drill') || triggerType.includes('Test');
   const triageUrl = `${appUrl}/dashboard?store_id=${store.id}`;
-  const shopifyAdminEditUrl = `https://${cleanDomain}/admin/products?query=${encodeURIComponent(sku)}`;
   const gmcDiagnosticsUrl = `https://merchants.google.com/mc/items/details?account=${gmcId}&item=${encodeURIComponent(sku)}`;
   const gmcAccountSettingsUrl = `https://merchants.google.com/mc/merchantinfo/businessinfo?account=${gmcId}`;
 
@@ -395,7 +391,7 @@ export async function dispatchDisapprovalSlackNotification({
             text: `*Why Google Blocked This Ad:* (Diagnosis)\n${plainEnglish.explanation}`,
           },
         },
-        // Resolution: Exact steps to fix the attribute in Shopify or the product feed
+        // Resolution: Exact steps to fix the attribute in the product feed or Merchant Center diagnostics
         {
           type: 'section',
           text: {
@@ -412,19 +408,14 @@ export async function dispatchDisapprovalSlackNotification({
           elements: [
             {
               type: 'button',
-              text: { type: 'plain_text', text: 'Triage in Kultra' },
-              url: triageUrl,
+              text: { type: 'plain_text', text: 'Open GMC Diagnostics' },
+              url: gmcDiagnosticsUrl,
               style: 'primary',
             },
             {
               type: 'button',
-              text: { type: 'plain_text', text: 'Fix in Store Backend' },
-              url: shopifyAdminEditUrl,
-            },
-            {
-              type: 'button',
-              text: { type: 'plain_text', text: 'Open GMC Diagnostics' },
-              url: gmcDiagnosticsUrl,
+              text: { type: 'plain_text', text: 'Triage in Kultra' },
+              url: triageUrl,
             },
           ],
         },

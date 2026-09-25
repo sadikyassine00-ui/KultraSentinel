@@ -47,7 +47,7 @@ export function FaqSection() {
   return (
     <section
       id="faq"
-      className="relative w-full py-20 px-4 sm:px-6 bg-[var(--bg-canvas)] border-t border-[var(--hairline)]"
+      className="relative w-full py-20 px-4 sm:px-6 bg-[var(--bg-canvas)] border-t border-[var(--hairline)] scroll-mt-16"
     >
       <div className="relative z-10 max-w-[860px] mx-auto">
         {/* Section Header without eyebrow tag */}

@@ -1,193 +1,117 @@
 'use client';
 
 import React from 'react';
-import { ArrowUpRight, Check, Network, Layers, ShieldCheck, Terminal } from 'lucide-react';
+import { Zap, ShieldCheck, ExternalLink, Users, Check } from 'lucide-react';
 
-interface Integration {
+interface OperationalCard {
   id: string;
-  name: string;
-  category: string;
-  endpoint: string;
-  desc: string;
-  protocol: string;
-  latency: string;
-  isLive: boolean;
-  icon: (isLive: boolean) => React.ReactNode;
+  badge: string;
+  title: string;
+  subtitle: string;
+  body: string;
+  footerMetric: string;
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
 }
 
 export function SocialProof() {
-  const integrations: Integration[] = [
+  const cards: OperationalCard[] = [
     {
-      id: 'pubsub',
-      name: 'Google Cloud Pub/Sub',
-      category: 'Push ingest',
-      endpoint: 'pubsub.googleapis.com/v1',
-      desc: 'Intercepts crawler disapproval events via Cloud Pub/Sub push subscription, bypassing 4-6 hour batch cron delays.',
-      protocol: 'Push QoS 1 subscription',
-      latency: '< 18s latency',
-      isLive: true,
-      icon: (live) => (
-        <Network
-          className={`w-5 h-5 transition-colors duration-120 ${
-            live ? 'text-[var(--signal)]' : 'text-[var(--ghost-text)]'
-          }`}
-          strokeWidth={1.5}
-        />
-      ),
+      id: 'detection-speed',
+      badge: 'Real-Time Speed',
+      title: 'Sub-30-Second Push Alerts',
+      subtitle: 'Direct Cloud Event Triggers',
+      body: 'Intercepts Google crawler rejection events the millisecond they occur. Bypasses the 24 to 48 hour delays of native Google email digests.',
+      footerMetric: 'Sub-30s alert delivery',
+      icon: Zap,
     },
     {
-      id: 'merchant',
-      name: 'Google Merchant API v1',
-      category: 'Catalog protocol',
-      endpoint: 'merchantapi.googleapis.com/v1',
-      desc: 'Built natively on Google Merchant API v1 with Accounts, Products, and Notification sub-APIs for live catalog state.',
-      protocol: 'Modular sub-APIs',
-      latency: 'Instant sync',
-      isLive: true,
-      icon: (live) => (
-        <ShieldCheck
-          className={`w-5 h-5 transition-colors duration-120 ${
-            live ? 'text-[var(--signal)]' : 'text-[var(--ghost-text)]'
-          }`}
-          strokeWidth={1.5}
-        />
-      ),
+      id: 'store-safety',
+      badge: 'Zero Storefront Code',
+      title: '0% Site Speed Impact',
+      subtitle: 'Out-of-Band Integration',
+      body: 'Operates entirely outside your clients\' Shopify themes. No tracking scripts, no theme backups, and zero Core Web Vitals risk.',
+      footerMetric: '0 KB storefront weight',
+      icon: ShieldCheck,
     },
     {
-      id: 'merchant-diagnostics',
-      name: 'Merchant Center Diagnostics',
-      category: 'Diagnostic links',
-      endpoint: 'merchants.google.com/diagnostics',
-      desc: 'Deep-links straight to the affected product in Google Merchant Center, highlighting the exact rejected attribute for instant triage.',
-      protocol: 'Direct diagnostic link',
-      latency: 'Instant triage',
-      isLive: true,
-      icon: (live) => (
-        <Layers
-          className={`w-5 h-5 transition-colors duration-120 ${
-            live ? 'text-[var(--signal)]' : 'text-[var(--ghost-text)]'
-          }`}
-          strokeWidth={1.5}
-        />
-      ),
+      id: 'remediation',
+      badge: 'Instant Triage',
+      title: 'Direct Diagnostic Deep Links',
+      subtitle: 'Google Merchant Center Links',
+      body: 'Links media buyers directly to the offending SKU inside Google Merchant Center, highlighting the exact rejected attribute in seconds.',
+      footerMetric: '1-click inspection',
+      icon: ExternalLink,
     },
     {
-      id: 'slack',
-      name: 'Slack Telemetry',
-      category: 'Incident dispatch',
-      endpoint: 'slack.com/api/chat.postMessage',
-      desc: 'Client-level alerts with 30-day click impact calculation, plain-English diagnosis, and direct Google Merchant Center diagnostic links.',
-      protocol: 'App bot paging',
-      latency: 'Sub-30s paging',
-      isLive: true,
-      icon: (live) => (
-        <Terminal
-          className={`w-5 h-5 transition-colors duration-120 ${
-            live ? 'text-[var(--signal)]' : 'text-[var(--ghost-text)]'
-          }`}
-          strokeWidth={1.5}
-        />
-      ),
+      id: 'organization',
+      badge: 'Agency Isolation',
+      title: 'Client-Specific Slack Routing',
+      subtitle: 'Dedicated Channels',
+      body: 'Route Client A alerts to #client-a and Client B alerts to #client-b. Keeps client data strictly segregated across your entire agency roster.',
+      footerMetric: 'Isolated per client',
+      icon: Users,
     },
   ];
 
   return (
     <section
       id="integrations"
-      className="relative w-full py-20 px-4 sm:px-6 z-10 border-t border-[var(--hairline)] bg-[var(--bg-canvas)]"
+      className="relative w-full py-20 px-4 sm:px-6 z-10 border-t border-[var(--hairline)] bg-[var(--bg-canvas)] scroll-mt-16"
     >
       <div className="max-w-[1140px] mx-auto">
-        {/* Section Header without eyebrow tag */}
+        {/* Section Header */}
         <div className="max-w-[760px] mb-12">
           <h2 className="font-display text-[1.85rem] sm:text-[2.25rem] font-semibold text-[var(--ink-primary)] leading-[1.2]">
-            Engineered for high-volume merchant stacks
+            Engineered for Agency Reliability. Built for Speed.
           </h2>
           <p className="mt-3 text-[14.5px] text-[var(--ink-secondary)] leading-[1.55]">
-            Kultra connects directly via official Google Content APIs. Zero theme scripts, zero tracking pixels, and zero impact on storefront page speed.
+            Passive, real-time Google Merchant Center monitoring with zero client store code, zero tracking pixels, and zero impact on site speed.
           </p>
         </div>
 
-        {/* 4-Column Integration Cards (Differentiated by live vs ghost state per §5 and A2) */}
+        {/* 4-Card Operational Benefits Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {integrations.map((item) => {
-            const isLive = item.isLive;
+          {cards.map((card) => {
+            const Icon = card.icon;
             return (
               <div
-                key={item.id}
-                className={`group relative rounded-[var(--radius-md)] p-5 transition-colors duration-150 flex flex-col justify-between ${
-                  isLive
-                    ? 'border border-[var(--signal-dim)] hover:border-[var(--signal)]'
-                    : 'bg-[var(--bg-surface)] border border-[var(--hairline)] hover:border-[var(--hairline-strong)]'
-                }`}
-                style={
-                  isLive
-                    ? {
-                        background:
-                          'radial-gradient(ellipse at top right, var(--signal-wash) 0%, var(--bg-surface) 72%)',
-                      }
-                    : undefined
-                }
+                key={card.id}
+                className="group relative rounded-[var(--radius-md)] bg-[var(--bg-surface)] border border-[var(--hairline)] hover:border-[var(--hairline-strong)] p-5 sm:p-6 transition-colors duration-150 flex flex-col justify-between"
               >
                 <div>
-                  {/* Header: Outline Icon + Mono Category Tag (§7, sentence case) */}
+                  {/* Card Header: Outline Icon + Operational Status Pill */}
                   <div className="flex items-center justify-between gap-3 mb-4">
-                    <div
-                      className={`w-9 h-9 rounded-[var(--radius-sm)] flex items-center justify-center shrink-0 border ${
-                        isLive
-                          ? 'bg-[var(--bg-surface-2)] border-[var(--signal-dim)]'
-                          : 'bg-[var(--bg-surface-2)] border-[var(--hairline)]'
-                      }`}
-                    >
-                      {item.icon(isLive)}
+                    <div className="w-9 h-9 rounded-[var(--radius-sm)] bg-[var(--bg-surface-2)] border border-[var(--hairline)] flex items-center justify-center shrink-0 text-[var(--signal)]">
+                      <Icon className="w-4 h-4 text-[var(--signal)]" strokeWidth={1.5} />
                     </div>
 
-                    <span
-                      className={`tag-pill text-[10.5px] ${
-                        isLive ? 'tag-signal' : 'tag-ghost'
-                      }`}
-                    >
-                      {item.category}
+                    <span className="tag-pill tag-ghost text-[10.5px]">
+                      {card.badge}
                     </span>
                   </div>
 
-                  {/* Integration Name */}
-                  <h3
-                    className={`text-[15px] font-semibold flex items-center justify-between ${
-                      isLive ? 'text-[var(--ink-primary)]' : 'text-[var(--ghost-heading)]'
-                    }`}
-                  >
-                    <span>{item.name}</span>
-                    <ArrowUpRight className="w-3.5 h-3.5 text-[var(--ghost-text)] opacity-0 group-hover:opacity-100 transition-opacity duration-120" />
+                  {/* Card Title */}
+                  <h3 className="text-[15.5px] font-semibold text-[var(--ink-primary)] leading-snug">
+                    {card.title}
                   </h3>
 
-                  {/* Technical Endpoint (High-contrast ghost-text per §13) */}
-                  <div className="mt-1 font-mono text-[11px] text-[var(--ghost-text)] truncate">
-                    {item.endpoint}
+                  {/* Operational Subtitle */}
+                  <div className="mt-1 font-mono text-[11px] text-[var(--ghost-text)]">
+                    {card.subtitle}
                   </div>
 
-                  {/* Description */}
-                  <p className="text-[13px] text-[var(--ink-secondary)] mt-3 leading-[1.5]">
-                    {item.desc}
+                  {/* Body Copy */}
+                  <p className="text-[13px] text-[var(--ink-secondary)] mt-3 leading-[1.55]">
+                    {card.body}
                   </p>
                 </div>
 
-                {/* Bottom Telemetry Spec Bar */}
+                {/* Footer Metric Bar */}
                 <div className="mt-5 pt-3.5 border-t border-[var(--hairline)] flex items-center justify-between gap-2 text-[11px] font-mono">
-                  <span className="text-[var(--ghost-text)]">
-                    {item.protocol}
-                  </span>
-                  <span
-                    className={`font-medium flex items-center gap-1 ${
-                      isLive ? 'text-[var(--signal)]' : 'text-[var(--ghost-text)]'
-                    }`}
-                  >
-                    <Check
-                      className={`w-3 h-3 ${
-                        isLive ? 'text-[var(--signal)]' : 'text-[var(--ghost-text)]'
-                      }`}
-                      strokeWidth={2}
-                    />
-                    <span>{item.latency}</span>
+                  <span className="text-[var(--ghost-text-dim)]">Agency SLA</span>
+                  <span className="font-medium text-[var(--signal)] flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5 text-[var(--signal)]" strokeWidth={2} />
+                    <span>{card.footerMetric}</span>
                   </span>
                 </div>
               </div>

@@ -13,7 +13,7 @@ export function Hero() {
           Built for boutique PPC agencies managing Google Shopping
         </div>
 
-        {/* Main Heading in Fraunces (Strictly weight 600 per §2) */}
+        {/* Main Heading in Tinos */}
         <h1
           className="font-display font-semibold text-[2.25rem] sm:text-[3rem] md:text-[3.6rem] text-[var(--ink-primary)] leading-[1.15] tracking-[-0.01em] max-w-[960px] mx-auto text-center"
           style={{ fontWeight: 600 }}

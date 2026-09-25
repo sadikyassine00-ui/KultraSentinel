@@ -11,7 +11,7 @@ export function InstantActivationCta() {
       className="relative w-full py-20 sm:py-24 px-4 sm:px-6 bg-[var(--bg-canvas)] border-t border-[var(--hairline)]"
     >
       <div className="relative z-10 max-w-[960px] mx-auto text-center">
-        {/* Section Headline in Fraunces without eyebrow tag */}
+        {/* Section Headline in Tinos without eyebrow tag */}
         <h2 className="font-display text-[2rem] sm:text-[2.6rem] font-semibold text-[var(--ink-primary)] leading-[1.2] max-w-[780px] mx-auto">
           Stop Finding Out About Broken Feeds from Angry Clients.
         </h2>

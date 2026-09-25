@@ -77,7 +77,7 @@ export function QuickReference() {
                 Target Audience &amp; Eligibility
               </div>
               <p className="font-body text-[13.5px] text-[var(--ink-primary)] leading-[1.6]">
-                Designed specifically for boutique PPC agencies managing e-commerce client catalogs, and high-volume Shopify merchants spending $5,000+ per month on Google Shopping.
+                Designed specifically for boutique PPC agencies managing e-commerce client catalogs, and high-volume e-commerce merchants spending $5,000+ per month on Google Shopping.
               </p>
             </div>
           </div>

@@ -1,28 +1,74 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
 import { ExternalLink } from 'lucide-react';
 
 export function DashboardIllustration() {
+  const [activeToastCard, setActiveToastCard] = useState<'left' | 'right' | null>(null);
+  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleActionClick = (e: React.MouseEvent, card: 'left' | 'right') => {
+    e.preventDefault();
+    setActiveToastCard(card);
+
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+
+    toastTimeoutRef.current = setTimeout(() => {
+      setActiveToastCard(null);
+    }, 6000);
+  };
+
+  const renderToast = () => (
+    <div
+      role="status"
+      aria-live="polite"
+      className="mt-3 p-3 rounded-[var(--radius-sm)] bg-[var(--bg-canvas)] border border-[var(--signal-dim)] text-[12px] text-[var(--ink-primary)] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-lg"
+    >
+      <div className="flex items-center gap-2">
+        <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)] shrink-0" aria-hidden="true" />
+        <span>In live alerts, this button opens the exact SKU diagnostic panel inside Google Merchant Center.</span>
+      </div>
+      <Link
+        href="/register"
+        className="text-[var(--signal)] hover:underline whitespace-nowrap font-medium inline-flex items-center gap-1 shrink-0"
+      >
+        <span>Start 14-day trial</span>
+        <ExternalLink className="w-3 h-3" strokeWidth={1.5} />
+      </Link>
+    </div>
+  );
+
   return (
     <div className="relative w-full bg-transparent flex flex-col lg:flex-row items-center lg:items-stretch justify-center gap-6 lg:gap-8 xl:gap-10 select-none">
       {/* ============================================================ */}
-      {/* 1. LEFT ELEMENT: THE GMC INCIDENT TRIAGE CARD                 */}
+      {/* 1. LEFT ELEMENT: DETECTION ENGINE TRIAGE CARD                */}
       {/* ============================================================ */}
       <div className="w-full lg:w-[540px] xl:w-[560px] bg-[var(--bg-surface)] border border-[var(--danger)] rounded-[var(--radius-md)] p-5 sm:p-6 flex flex-col justify-between text-left relative shrink-0">
         <div>
-          {/* Card Header: Triage Status & Latency Metric */}
+          {/* Card Header: Triage Status Badges */}
           <div className="flex items-center justify-between gap-2 pb-4 border-b border-[var(--hairline)]">
-            {/* Status Pill Badge */}
+            {/* Status Indicator: Disapproval Detected */}
             <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[rgba(214,69,69,0.1)] border border-[var(--danger)] text-[var(--danger)] font-mono text-[10.5px] sm:text-[11px] font-semibold tracking-wider">
               <span className="w-2 h-2 rounded-full bg-[var(--danger)]" />
-              DISAPPROVAL DETECTED
+              Disapproval Detected
             </span>
 
-            {/* Real Latency Metric: Captured in <1s */}
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[rgba(242,169,59,0.08)] border border-[rgba(242,169,59,0.3)] text-[var(--ink-primary)] font-mono text-[11px] font-medium">
+            {/* Amber Indicator: Captured in under 1s */}
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[rgba(242,169,59,0.08)] border border-[var(--signal-dim)] text-[var(--signal)] font-mono text-[11px] font-medium">
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)]" />
-              Captured in &lt;1s
+              Captured in under 1s
             </span>
           </div>
 
@@ -41,7 +87,7 @@ export function DashboardIllustration() {
             {/* Product Meta & Titles */}
             <div className="min-w-0 flex-1">
               <span className="font-mono text-[10.5px] text-[var(--ghost-text)] tracking-wider block truncate">
-                CATALOG SKU: OW-8842-BLK-M
+                SKU: OW-8842-BLK-M
               </span>
               <h3 className="font-display font-semibold text-[17px] sm:text-[18px] text-[var(--ink-primary)] leading-snug mt-0.5 truncate">
                 Alpine Expedition Anorak
@@ -50,33 +96,33 @@ export function DashboardIllustration() {
                 Variant: Slate Black / Medium · Price: $148.00 USD
               </p>
               <p className="font-mono text-[11px] text-[var(--ghost-text-dim)] mt-0.5">
-                GMC Offer ID: raw_feed_91024_us
+                Offer ID: US-8492049182
               </p>
             </div>
           </div>
 
-          {/* Ad Traffic Exposure Stats Band */}
+          {/* Status Breakdown: Catalog Status & Destination */}
           <div className="bg-[var(--bg-surface-2)] border border-[var(--hairline)] rounded-[var(--radius-sm)] p-3 sm:p-3.5 my-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left">
             <div>
-              <span className="text-[11px] text-[var(--ghost-text)] block">Active Traffic Exposure</span>
-              <span className="font-mono font-medium text-[14.5px] text-[var(--ink-primary)]">
-                1,840 clicks at risk
+              <span className="text-[11px] text-[var(--ghost-text)] block">Catalog Status</span>
+              <span className="font-mono font-medium text-[13.5px] sm:text-[14px] text-[var(--danger)]">
+                Disapproved
               </span>
             </div>
             <div className="hidden sm:block w-[1px] h-8 bg-[var(--hairline)]" />
             <div>
-              <span className="text-[11px] text-[var(--ghost-text)] block">Google Ads Campaign Status</span>
-              <span className="font-mono font-medium text-[14.5px] text-[var(--danger)]">
-                Shopping Ads Auction Paused
+              <span className="text-[11px] text-[var(--ghost-text)] block">Destination</span>
+              <span className="font-mono font-medium text-[13.5px] sm:text-[14px] text-[var(--danger)]">
+                Shopping Ads Suspended
               </span>
             </div>
           </div>
 
-          {/* Protocol Error Box & Active Laser Scanning Interception */}
+          {/* Policy Error Box & Active Laser Scanning Interception */}
           <div className="space-y-1.5 mt-2">
             <div className="flex items-center justify-between">
               <span className="font-mono text-[11px] text-[var(--ghost-text)] tracking-wider">
-                INTERCEPTED PROTOCOL ERROR
+                Google Policy Rejection
               </span>
               <span className="font-mono text-[10.5px] text-[var(--danger)] font-semibold">
                 [CRITICAL]
@@ -102,27 +148,17 @@ export function DashboardIllustration() {
           </div>
         </div>
 
-        {/* Agnostic Action Buttons: [Edit Product] and [GMC Console] */}
-        <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 mt-6 pt-4 border-t border-[var(--hairline)]">
-          {/* Primary High-Contrast Button: [Edit Product] */}
-          <a
-            href="#triage"
-            className="btn-primary !rounded-[3px] text-[13px] py-2.5 px-4 font-semibold inline-flex items-center justify-center gap-2 flex-1 text-center"
+        {/* Action Button: Single Outlined Button */}
+        <div className="mt-6 pt-4 border-t border-[var(--hairline)]">
+          <button
+            type="button"
+            onClick={(e) => handleActionClick(e, 'left')}
+            className="btn-secondary !rounded-[var(--radius-sm)] text-[13px] py-2.5 px-4 font-semibold inline-flex items-center justify-center gap-2 w-full text-center cursor-pointer"
           >
-            <span>Edit Product</span>
-            <ExternalLink className="w-3.5 h-3.5" strokeWidth={1.5} />
-          </a>
-
-          {/* Secondary High-Contrast Button: [GMC Console] */}
-          <a
-            href="https://merchants.google.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-secondary !rounded-[3px] text-[13px] py-2.5 px-4 font-semibold inline-flex items-center justify-center gap-2 flex-1 text-center"
-          >
-            <span>GMC Console</span>
+            <span>Inspect in Merchant Center</span>
             <ExternalLink className="w-3.5 h-3.5 text-[var(--ghost-text)]" strokeWidth={1.5} />
-          </a>
+          </button>
+          {activeToastCard === 'left' && renderToast()}
         </div>
       </div>
 
@@ -199,94 +235,94 @@ export function DashboardIllustration() {
       </div>
 
       {/* ============================================================ */}
-      {/* 3. RIGHT ELEMENT: THE CONVERSION DRIVER (SLACK ALERT CARD)    */}
-      {/* High contrast, crisp white surface, verbatim notification     */}
+      {/* 3. RIGHT ELEMENT: SLACK NOTIFICATION SIMULATION CARD          */}
+      {/* Dark theme visual hierarchy matching the rest of Kultra       */}
       {/* ============================================================ */}
-      <div className="w-full lg:w-[460px] xl:w-[480px] bg-[#ffffff] text-[#1d1c1d] rounded-[8px] p-5 sm:p-6 shadow-[0_24px_54px_-12px_rgba(0,0,0,0.7),0_0_0_1px_rgba(255,255,255,0.15)] flex flex-col justify-between border border-white/20 text-left relative shrink-0">
+      <div className="w-full lg:w-[460px] xl:w-[480px] bg-[var(--bg-surface)] text-[var(--ink-primary)] rounded-[var(--radius-md)] p-5 sm:p-6 border border-[var(--hairline)] flex flex-col justify-between text-left relative shrink-0">
         <div>
           {/* Slack Channel Ribbon */}
-          <div className="flex items-center justify-between pb-3 border-b border-[#f0f0f0]">
-            <span className="font-bold flex items-center gap-1 text-[13px] text-[#1d1c1d]">
-              <span className="text-[#616061]">#</span> merchant-alerts
+          <div className="flex items-center justify-between pb-3 border-b border-[var(--hairline)]">
+            <span className="font-semibold flex items-center gap-1.5 text-[13px] text-[var(--ink-primary)]">
+              <span className="text-[var(--ghost-text)] font-mono">#</span>
+              <span>client-feed-alerts</span>
             </span>
-            <span className="font-mono text-[10.5px] font-medium text-[#007a5a] bg-[#e6f4ea] px-2 py-0.5 rounded">
-              LIVE DISPATCH · 0.28s
+            <span className="font-mono text-[10.5px] font-medium text-[var(--signal)] bg-[var(--signal-wash)] border border-[var(--signal-dim)] px-2 py-0.5 rounded-[var(--radius-pill)] flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)]" />
+              Live Dispatch · 0.28s
             </span>
           </div>
 
           {/* Slack App Identity */}
           <div className="flex items-center gap-3 pt-3">
             {/* Kultra Alerts Avatar */}
-            <div className="w-9 h-9 rounded-[6px] bg-[#0e0f11] flex items-center justify-center shrink-0">
-              <svg className="w-5 h-5" viewBox="0 0 48 48" fill="none">
-                <g transform="translate(24, 24) scale(1.05) translate(-21.55, -19.25)">
-                  <line x1="20" y1="20" x2="6" y2="10" stroke="#6b7078" strokeWidth="2" />
-                  <line x1="20" y1="20" x2="8" y2="32" stroke="#6b7078" strokeWidth="2" />
-                  <line x1="20" y1="20" x2="33" y2="33" stroke="#6b7078" strokeWidth="2" />
-                  <line x1="20" y1="20" x2="34" y2="9" stroke="#f2a93b" strokeWidth="2.5" />
-                  <circle cx="6" cy="10" r="3.2" fill="#6b7078" />
-                  <circle cx="8" cy="32" r="3.2" fill="#6b7078" />
-                  <circle cx="33" cy="33" r="2.8" fill="#6b7078" />
-                  <circle cx="34" cy="9" r="4.2" fill="#f2a93b" />
-                  <circle cx="20" cy="20" r="5.5" fill="#f2a93b" />
-                </g>
-              </svg>
+            <div className="w-8 h-8 rounded-[var(--radius-sm)] bg-[var(--bg-surface-2)] border border-[var(--hairline)] flex items-center justify-center shrink-0">
+              <Image
+                src="/favicon-32x32.png"
+                alt="Kultra"
+                width={18}
+                height={18}
+                className="w-4 h-4 object-contain"
+              />
             </div>
 
             {/* App Name & Meta */}
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-bold text-[14.5px] text-[#1d1c1d]">Kultra Alerts</span>
-              <span className="bg-[#f2f2f2] text-[#616061] text-[10px] font-bold px-1.5 py-0.5 rounded-[3px]">
+              <span className="font-bold text-[14px] text-[var(--ink-primary)]">Kultra Alerts</span>
+              <span className="bg-[var(--bg-surface-2)] border border-[var(--hairline)] text-[var(--ghost-text-dim)] text-[10px] font-bold px-1.5 py-0.5 rounded-[var(--radius-sm)] font-mono">
                 APP
               </span>
-              <span className="text-[#616061] text-[12px]">12:04 PM</span>
+              <span className="text-[var(--ghost-text)] text-[11px] font-mono">12:04 PM</span>
             </div>
           </div>
 
-          {/* Verbatim Slack Block Notification Box with Red Left Accent */}
-          <div className="mt-3.5 border-l-4 border-[#e01e5a] bg-[#fafafa] p-4 rounded-r-md space-y-2.5 text-left border border-l-0 border-[#f0f0f0]">
+          {/* Slack Block Notification Box with Red Left Accent */}
+          <div className="mt-3.5 border-l-4 border-[var(--danger)] bg-[var(--bg-surface-2)] p-4 rounded-r-[var(--radius-sm)] space-y-2 text-left border-y border-r border-[var(--hairline)]">
             {/* Headline */}
-            <div className="font-bold text-[15px] text-[#1d1c1d] flex items-center gap-1.5">
-              <span>🚨</span>
+            <div className="font-semibold text-[14.5px] text-[var(--ink-primary)] flex items-center gap-2">
+              <span className="text-[var(--danger)]">🚨</span>
               <span>Critical Disapproval Detected</span>
             </div>
 
-            <hr className="border-[#ebebeb]" />
-
-            {/* Verbatim Key-Value Rows */}
-            <div className="space-y-1 text-[13px]">
+            <div className="pt-2 border-t border-[var(--hairline)] space-y-1.5 text-[12.5px] sm:text-[13px]">
               <div>
-                <span className="font-bold text-[#1d1c1d]">Merchant ID:</span>{' '}
-                <span className="font-mono font-medium text-[#1d1c1d]">4918374</span>
+                <span className="text-[var(--ghost-text)]">Merchant ID:</span>{' '}
+                <span className="font-mono font-medium text-[var(--ink-primary)]">4918374</span>
               </div>
               <div>
-                <span className="font-bold text-[#1d1c1d]">Item:</span>{' '}
-                <span className="font-medium text-[#1d1c1d]">ACR-909 (Apex Carbon Runner)</span>
+                <span className="text-[var(--ghost-text)]">Item:</span>{' '}
+                <span className="font-medium text-[var(--ink-primary)]">OW-8842-BLK-M (Alpine Expedition Anorak)</span>
               </div>
               <div>
-                <span className="font-bold text-[#1d1c1d]">Error:</span>{' '}
-                <span className="text-[#e01e5a] font-semibold">Missing GTIN. Ad traffic paused.</span>
+                <span className="text-[var(--ghost-text)]">Variant:</span>{' '}
+                <span className="text-[var(--ink-secondary)]">Slate Black / Medium · $148.00 USD</span>
+              </div>
+              <div>
+                <span className="text-[var(--ghost-text)]">Error:</span>{' '}
+                <span className="text-[var(--danger)] font-medium">Missing GTIN barcode. Google crawler rejected feed.</span>
               </div>
             </div>
 
             {/* Impact Pill */}
-            <div className="bg-[#feeef1] border border-[#fad2da] text-[#e01e5a] font-mono text-[11px] font-medium px-2.5 py-1.5 rounded-[3px] mt-1">
-              Campaign Impact: 24 active ads suspended
+            <div className="bg-[rgba(214,69,69,0.08)] border border-[rgba(214,69,69,0.25)] text-[var(--danger)] font-mono text-[11px] font-medium px-2.5 py-1.5 rounded-[var(--radius-sm)] mt-2">
+              Impact: Ads for this SKU stopped serving across active campaigns.
             </div>
           </div>
         </div>
 
-        {/* Footer Action: Open Triage Log */}
-        <div className="mt-5 pt-3 border-t border-[#f0f0f0]">
-          <a
-            href="#triage"
-            className="w-full block bg-[#111214] hover:bg-black text-white font-semibold text-[13.5px] py-2.5 px-4 rounded-[4px] text-center transition-colors shadow-sm"
+        {/* Footer Action: View in Google Merchant Center */}
+        <div className="mt-5 pt-3 border-t border-[var(--hairline)]">
+          <button
+            type="button"
+            onClick={(e) => handleActionClick(e, 'right')}
+            className="btn-primary !rounded-[var(--radius-sm)] w-full py-2.5 px-4 font-semibold text-[13px] text-center inline-flex items-center justify-center gap-2 cursor-pointer shadow-sm"
           >
-            Open Triage Log →
-          </a>
-          <p className="text-center text-[11px] text-[#868686] mt-2">
-            Direct deep link to Google Merchant Center item diagnostics
+            <span>View in Google Merchant Center</span>
+            <ExternalLink className="w-3.5 h-3.5" strokeWidth={1.5} />
+          </button>
+          <p className="text-center text-[11px] text-[var(--ghost-text-dim)] mt-2 font-mono">
+            Direct link to Google Merchant Center item diagnostics
           </p>
+          {activeToastCard === 'right' && renderToast()}
         </div>
       </div>
     </div>

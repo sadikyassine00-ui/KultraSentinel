@@ -60,7 +60,8 @@ const config: Config = {
         "stroke-subtle": "rgba(255, 255, 255, 0.05)",
       },
       fontFamily: {
-        display: ["'Fraunces'", "Georgia", "serif"],
+        display: ["'Tinos'", "Georgia", "serif"],
+        serif: ["'Tinos'", "Georgia", "serif"],
         sans: ["'Inter'", "system-ui", "-apple-system", "sans-serif"],
         body: ["'Inter'", "system-ui", "-apple-system", "sans-serif"],
         mono: ["'Roboto'", "ui-sans-serif", "system-ui", "-apple-system", "sans-serif"],

@@ -1,25 +1,48 @@
 'use client';
 
-import React, { useState } from 'react';
-import { ExternalLink, Code2, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { ExternalLink } from 'lucide-react';
 import Image from 'next/image';
 
 export function SlackPreview() {
-  const [showRawPayload, setShowRawPayload] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleActionClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setShowToast(true);
+
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+
+    toastTimeoutRef.current = setTimeout(() => {
+      setShowToast(false);
+    }, 4500);
+  };
 
   return (
     <section
-      id="diagnostics"
-      className="relative w-full py-20 px-4 sm:px-6 bg-[var(--bg-canvas)] border-t border-[var(--hairline)]"
+      id="features"
+      className="relative w-full py-20 px-4 sm:px-6 bg-[var(--bg-canvas)] border-t border-[var(--hairline)] scroll-mt-16"
     >
+      <div id="diagnostics" className="absolute -top-16" />
       <div className="relative z-10 max-w-[1140px] mx-auto">
-        {/* Section Header without eyebrow tag */}
+        {/* Section Header */}
         <div className="max-w-[760px] mb-12">
           <h2 className="font-display text-[1.85rem] sm:text-[2.25rem] font-semibold text-[var(--ink-primary)] leading-[1.2]">
-            The exact diagnostic your team receives before traffic burns
+            What Your Team Sees the Second an Item Breaks.
           </h2>
           <p className="mt-3 text-[14.5px] text-[var(--ink-secondary)] leading-[1.55]">
-            Real-time incident dispatch with revenue impact metrics, direct deep links into Google Merchant Center item diagnostics, and structured payload inspection.
+            Sub-30-second Slack notifications with the exact product title, rejected attribute, and a direct link to resolve the issue in Google Merchant Center.
           </p>
         </div>
 
@@ -29,16 +52,16 @@ export function SlackPreview() {
           <div className="flex items-center justify-between px-4 py-2.5 bg-[var(--bg-canvas)] border-b border-[var(--hairline)]">
             <div className="flex items-center gap-2">
               <span className="font-mono text-[11px] text-[var(--ink-primary)] font-medium">
-                #alerts-google-merchant
+                #client-shopping-alerts
               </span>
               <span className="font-mono text-[10.5px] text-[var(--ghost-text)] pl-2 border-l border-[var(--hairline)] flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--ghost-line)] shrink-0 inline-block" />
-                Webhook active
+                Client retainer channel
               </span>
             </div>
             <span className="font-mono text-[10.5px] text-[var(--signal)] flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)] shrink-0 inline-block" />
-              Active event stream
+              Active alert stream
             </span>
           </div>
 
@@ -64,15 +87,15 @@ export function SlackPreview() {
               </div>
             </div>
 
-            {/* Attached Alert Card: Left accent border */}
-            <div className="border-l-2 border-[var(--danger)] bg-[var(--bg-surface-2)] rounded-r-[var(--radius-sm)] p-5 border-y border-r border-[var(--hairline)]">
-              {/* Urgency Badge */}
+            {/* Attached Alert Card: Prominent red vertical accent border matching Slack Block Kit */}
+            <div className="border-l-4 border-[var(--danger)] bg-[var(--bg-surface-2)] rounded-r-[var(--radius-sm)] p-5 border-y border-r border-[var(--hairline)]">
+              {/* Diagnostic Indicator */}
               <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                 <span className="tag-pill tag-danger text-[10.5px]">
-                  Bestseller disapproval
+                  Disapproval Detected
                 </span>
-                <span className="font-mono text-[11px] text-[var(--danger)]">
-                  14,280 clicks / 30d at risk
+                <span className="font-mono text-[11px] text-[var(--ghost-text-dim)]">
+                  GMC Policy Violation
                 </span>
               </div>
 
@@ -88,7 +111,7 @@ export function SlackPreview() {
                 </div>
               </div>
 
-              {/* Plain-English Root Cause with Isolated Monospace Error String */}
+              {/* Root Cause Diagnosis Box */}
               <div className="p-3.5 rounded-[var(--radius-sm)] bg-[var(--bg-canvas)] border border-[var(--hairline)] mb-5 space-y-2">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <span className="text-[12px] font-medium text-[var(--ghost-text)]">
@@ -103,64 +126,29 @@ export function SlackPreview() {
                 </p>
               </div>
 
-              {/* Actions */}
-              <div className="flex flex-wrap items-center gap-2.5 pt-1">
-                <a
-                  href="https://merchants.google.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-primary !rounded-[3px] text-[12.5px] py-2 px-3.5 inline-flex items-center gap-1.5"
+              {/* Single Primary Action Button with Informative Toast */}
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={handleActionClick}
+                  className="btn-primary !rounded-[var(--radius-sm)] text-[12.5px] py-2 px-3.5 inline-flex items-center gap-1.5 cursor-pointer"
+                  aria-label="View in Google Merchant Center Diagnostics preview action"
                 >
                   <span>View in Google Merchant Center Diagnostics</span>
                   <ExternalLink className="w-3.5 h-3.5" strokeWidth={1.5} />
-                </a>
-
-                <button
-                  type="button"
-                  onClick={() => setShowRawPayload(!showRawPayload)}
-                  className="btn-secondary !rounded-[3px] text-[12.5px] py-2 px-3.5"
-                >
-                  <Code2 className="w-3.5 h-3.5" strokeWidth={1.5} />
-                  <span>Inspect raw payload</span>
-                  {showRawPayload ? (
-                    <ChevronUp className="w-3.5 h-3.5" />
-                  ) : (
-                    <ChevronDown className="w-3.5 h-3.5" />
-                  )}
                 </button>
-              </div>
 
-              {/* Raw Protocol Diagnostic Inspector */}
-              {showRawPayload && (
-                <div className="mt-4 pt-4 border-t border-[var(--hairline)]">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-mono text-[11px] text-[var(--ghost-text-dim)]">
-                      RAW_PAYLOAD
-                    </span>
-                    <span className="font-mono text-[10.5px] text-[var(--signal)]">200 OK</span>
+                {showToast && (
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    className="mt-3 flex items-start sm:items-center gap-2.5 p-2.5 rounded-[var(--radius-sm)] bg-[var(--bg-canvas)] border border-[var(--signal-dim)] text-[12px] text-[var(--ink-primary)]"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)] shrink-0 mt-1 sm:mt-0" aria-hidden="true" />
+                    <span>Live alerts link directly to the specific SKU diagnostic panel inside Google Merchant Center.</span>
                   </div>
-                  <pre className="p-3.5 rounded-[var(--radius-sm)] bg-[var(--bg-canvas)] border border-[var(--hairline)] font-mono text-[11.5px] text-[var(--ink-secondary)] overflow-x-auto leading-[1.6]">
-{`{
-  "event_type": "product_status_change",
-  "feed_label": "US",
-  "target_country": "US",
-  "product_id": "shopify_US_8492049182_402",
-  "item_issues": [
-    {
-      "code": "promotional_overlay_image",
-      "severity": "disapproved",
-      "attribute": "image_link",
-      "raw_error": "item_disapproved: promotional_overlay_image [image_link]",
-      "destination": "Shopping_ads",
-      "detail": "Promotional text on image violates Google Shopping feed specification."
-    }
-  ],
-  "pubsub_message_id": "9482019482018",
-  "timestamp_utc": "2026-09-13T10:42:18.420Z"
-}`}
-                  </pre>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </div>

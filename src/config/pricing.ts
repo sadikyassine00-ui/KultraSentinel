@@ -80,7 +80,7 @@ export const PRICING_TIERS: Record<'solo' | 'agency', PricingTier> = {
       },
       {
         anchor: 'Zero storefront code',
-        detail: 'across all client Shopify themes',
+        detail: 'across all client storefront themes',
       },
     ],
     ctaText: 'Start Agency Trial',

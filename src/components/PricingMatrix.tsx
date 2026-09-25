@@ -12,7 +12,7 @@ export function PricingMatrix({ onSelectPlan }: PricingMatrixProps) {
   return (
     <section
       id="pricing"
-      className="relative w-full py-20 sm:py-24 px-4 sm:px-6 bg-[var(--bg-canvas)] border-t border-[var(--hairline)]"
+      className="relative w-full py-20 sm:py-24 px-4 sm:px-6 bg-[var(--bg-canvas)] border-t border-[var(--hairline)] scroll-mt-16"
     >
       <div className="relative z-10 max-w-[1140px] mx-auto flex flex-col items-center">
         {/* Section Header without eyebrow, centered */}

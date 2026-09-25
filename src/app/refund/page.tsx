@@ -205,7 +205,7 @@ export default function RefundPolicyPage() {
                 Solo Plan: $19 / Month
               </h3>
               <p className="text-xs text-[#b9b3a5] leading-[1.5]">
-                Tailored for standalone Shopify store owners. Monitors 1 Google Merchant Center account with unlimited catalog SKUs and instant Slack alert routing.
+                Tailored for standalone e-commerce brands. Monitors 1 Google Merchant Center account with unlimited catalog SKUs and instant Slack alert routing.
               </p>
             </div>
 

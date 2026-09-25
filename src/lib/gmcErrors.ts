@@ -81,7 +81,7 @@ export function translateGmcIssue(issueCode: string): TranslatedIssue {
     return {
       title: 'Missing GTIN or Barcode',
       explanation: 'Google requires an authentic UPC, EAN, or ISBN (valid 12- or 14-digit GTIN, UPC, or EAN) for branded products to serve in Google Shopping ads.',
-      fixAdvice: 'Add the authentic 12- or 14-digit barcode (GTIN, UPC, EAN, or ISBN) to this product in your Shopify admin or product feed catalog.',
+      fixAdvice: 'Add the authentic 12- or 14-digit barcode (GTIN, UPC, EAN, or ISBN) to this product in your product feed catalog or Merchant Center diagnostics.',
       category: 'barcode',
       documentationUrl: 'https://support.google.com/merchants/answer/6324461',
     };

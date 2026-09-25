@@ -9,6 +9,8 @@ import {
   ChevronDown,
   LayoutDashboard,
   ShieldAlert,
+  Settings,
+  CreditCard,
 } from 'lucide-react';
 
 export interface AuthUser {
@@ -109,11 +111,10 @@ export function Header({ initialUser = null }: HeaderProps) {
     }
   };
 
-
+  // 4 clear, buyer-focused navigation anchors
   const navLinks = [
     { label: 'How It Works', href: '/#how-it-works' },
-    { label: 'Architecture', href: '/#architecture' },
-    { label: 'Integrations', href: '/#integrations' },
+    { label: 'Features', href: '/#features' },
     { label: 'Pricing', href: '/#pricing' },
     { label: 'FAQ', href: '/#faq' },
   ];
@@ -139,9 +140,9 @@ export function Header({ initialUser = null }: HeaderProps) {
           : 'bg-[#0a0b0d] border-b border-[var(--hairline)]'
       }`}
     >
-      <div className="max-w-[1400px] h-[60px] mx-auto px-2.5 sm:px-6 lg:px-8 flex items-center justify-between gap-1.5 sm:gap-6 min-w-0">
-        {/* Brand Group */}
-        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+      <div className="max-w-[1400px] h-[60px] mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4 sm:gap-6 min-w-0">
+        {/* Brand Group: Clean Kultra icon and wordmark, linking to root */}
+        <div className="flex items-center shrink-0">
           <Link
             href="/"
             className="flex items-center rounded-[var(--radius-sm)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal-glow)] shrink-0"
@@ -152,16 +153,13 @@ export function Header({ initialUser = null }: HeaderProps) {
               alt="Kultra"
               width={140}
               height={36}
-              className="h-[22px] xs:h-[26px] sm:h-[30px] w-auto object-contain brightness-105 shrink-0"
+              className="h-[24px] xs:h-[26px] sm:h-[30px] w-auto object-contain brightness-105 shrink-0"
               priority
             />
           </Link>
-          <span className="hidden xl:inline-block font-mono text-[11px] text-[var(--ghost-text-dim)] pl-3 border-l border-[var(--hairline)]">
-            Merchant API v1
-          </span>
         </div>
 
-        {/* Desktop Navigation Links */}
+        {/* Desktop Navigation Links: 4 Buyer-Focused Anchors */}
         <nav className="hidden md:flex items-center gap-6 lg:gap-8" aria-label="Main Navigation">
           {navLinks.map((link) => (
             <Link
@@ -174,77 +172,88 @@ export function Header({ initialUser = null }: HeaderProps) {
           ))}
         </nav>
 
-        {/* Header Actions */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        {/* Header Actions: User Profile Dropdown OR Sign In + Start 14-Day Trial */}
+        <div className="flex items-center gap-2.5 sm:gap-4 shrink-0">
           {user ? (
-            /* Logged-In User Profile Pill & Dropdown (§16 Top bar) - Single centered line */
+            /* Authenticated User: Profile Badge, Status Pill & Self-Contained Dropdown */
             <div className="relative shrink-0" ref={dropdownRef}>
               <button
                 type="button"
                 onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="flex items-center gap-1.5 sm:gap-2 px-1.5 sm:px-2.5 py-1 rounded-[var(--radius-sm)] bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-2)] border border-[var(--hairline)] text-[12.5px] sm:text-[13px] text-[var(--ink-primary)] transition-colors min-h-[36px] shrink-0"
+                className="flex items-center gap-2 px-2 sm:px-2.5 py-1.5 rounded-[var(--radius-sm)] bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-2)] border border-[var(--hairline)] text-[12.5px] sm:text-[13px] text-[var(--ink-primary)] transition-colors min-h-[36px] shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal-glow)] cursor-pointer"
                 aria-expanded={dropdownOpen}
                 aria-haspopup="true"
-                aria-label="User profile and navigation"
+                aria-label="User account menu"
               >
-                <div className="w-7 h-7 rounded-full bg-[var(--bg-surface-2)] border border-[var(--hairline)] text-[var(--ink-primary)] flex items-center justify-center font-mono text-[10px] font-semibold shrink-0">
+                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[var(--bg-surface-2)] border border-[var(--hairline)] text-[var(--ink-primary)] flex items-center justify-center font-mono text-[10px] sm:text-[11px] font-semibold shrink-0">
                   {getInitials(user.name || user.email)}
                 </div>
-                <span className="hidden sm:inline-block max-w-[100px] md:max-w-[130px] truncate text-[12.5px] sm:text-[13px] text-[var(--ink-primary)] min-w-0">
-                  {user.name || user.email}
+                <span className="hidden sm:inline-block max-w-[110px] md:max-w-[140px] truncate text-[12.5px] sm:text-[13px] text-[var(--ink-primary)] min-w-0 font-medium">
+                  {user.name || user.email.split('@')[0]}
                 </span>
-                {/* Active Plan Indicator Badge (§7 Design System) */}
+                {/* Trial / Active Plan Status Pill */}
                 <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-pill)] border border-[var(--signal-dim)] text-[10px] font-mono text-[var(--signal)] bg-[var(--signal-wash)] shrink-0 font-medium">
                   <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)] shrink-0" aria-hidden="true" />
-                  <span>{user.planName || (user.isAdmin ? 'Admin' : 'Active Plan')}</span>
+                  <span>{user.planName || (user.isAdmin ? 'Admin' : '14-Day Trial')}</span>
                 </span>
-                <ChevronDown className={`w-3.5 h-3.5 text-[var(--ghost-text)] shrink-0 transition-transform duration-120 ${dropdownOpen ? 'rotate-180 text-[var(--signal)]' : ''}`} />
+                <ChevronDown
+                  className={`w-3.5 h-3.5 text-[var(--ghost-text)] shrink-0 transition-transform duration-120 ${
+                    dropdownOpen ? 'rotate-180 text-[var(--signal)]' : ''
+                  }`}
+                />
               </button>
 
-              {/* Profile Dropdown Menu */}
+              {/* Self-Contained Profile Dropdown Menu */}
               {dropdownOpen && (
                 <div className="absolute right-0 mt-2 w-64 rounded-[var(--radius-md)] bg-[var(--bg-surface)] border border-[var(--hairline-strong)] p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.5)] z-[100]">
-                  <div className="p-2 border-b border-[var(--hairline)]">
+                  <div className="p-2.5 border-b border-[var(--hairline)]">
                     <div className="flex items-center justify-between gap-2">
                       <div className="text-[13px] font-medium text-[var(--ink-primary)] truncate">
-                        {user.name || user.email}
+                        {user.name || user.email.split('@')[0]}
                       </div>
                       <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--signal-dim)] text-[10px] font-mono text-[var(--signal)] bg-[var(--signal-wash)] shrink-0 font-medium">
                         <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)] shrink-0" aria-hidden="true" />
-                        <span>{user.planName || (user.isAdmin ? 'Admin' : 'Active Plan')}</span>
+                        <span>{user.planName || (user.isAdmin ? 'Admin' : '14-Day Trial')}</span>
                       </span>
                     </div>
-                    <div className="text-[11px] font-mono text-[var(--ghost-text-dim)] truncate mt-0.5">{user.email}</div>
+                    <div className="text-[11px] font-mono text-[var(--ghost-text-dim)] truncate mt-0.5">
+                      {user.email}
+                    </div>
                   </div>
 
                   <div className="py-1 space-y-0.5">
-                    {user.isAdmin || user.role === 'admin' ? (
-                      <>
-                        <Link
-                          href="/admin/dashboard"
-                          onClick={() => setDropdownOpen(false)}
-                          className="flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-[13px] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:bg-[var(--bg-surface-2)] transition-colors"
-                        >
-                          <LayoutDashboard className="w-3.5 h-3.5 text-[var(--ghost-text)]" />
-                          <span>Mission Control</span>
-                        </Link>
-                        <Link
-                          href="/dashboard"
-                          onClick={() => setDropdownOpen(false)}
-                          className="flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-[13px] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:bg-[var(--bg-surface-2)] transition-colors"
-                        >
-                          <ShieldAlert className="w-3.5 h-3.5 text-[var(--signal)]" />
-                          <span>Catalog Shield</span>
-                        </Link>
-                      </>
-                    ) : (
+                    <Link
+                      href="/dashboard"
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-2 px-2.5 py-2 rounded-[var(--radius-sm)] text-[13px] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:bg-[var(--bg-surface-2)] transition-colors"
+                    >
+                      <LayoutDashboard className="w-3.5 h-3.5 text-[var(--signal)]" />
+                      <span>Surveillance Dashboard</span>
+                    </Link>
+                    <Link
+                      href="/dashboard/settings"
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-2 px-2.5 py-2 rounded-[var(--radius-sm)] text-[13px] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:bg-[var(--bg-surface-2)] transition-colors"
+                    >
+                      <Settings className="w-3.5 h-3.5 text-[var(--ghost-text)]" />
+                      <span>Account Settings</span>
+                    </Link>
+                    <Link
+                      href="/dashboard/settings?tab=billing"
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-2 px-2.5 py-2 rounded-[var(--radius-sm)] text-[13px] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:bg-[var(--bg-surface-2)] transition-colors"
+                    >
+                      <CreditCard className="w-3.5 h-3.5 text-[var(--ghost-text)]" />
+                      <span>Billing &amp; Subscription</span>
+                    </Link>
+                    {(user.isAdmin || user.role === 'admin') && (
                       <Link
-                        href="/dashboard"
+                        href="/admin/dashboard"
                         onClick={() => setDropdownOpen(false)}
-                        className="flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-[13px] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:bg-[var(--bg-surface-2)] transition-colors"
+                        className="flex items-center gap-2 px-2.5 py-2 rounded-[var(--radius-sm)] text-[13px] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:bg-[var(--bg-surface-2)] transition-colors"
                       >
-                        <LayoutDashboard className="w-3.5 h-3.5 text-[var(--signal)]" />
-                        <span>Catalog Shield</span>
+                        <ShieldAlert className="w-3.5 h-3.5 text-[var(--ghost-text)]" />
+                        <span>Mission Control (Admin)</span>
                       </Link>
                     )}
                   </div>
@@ -253,7 +262,7 @@ export function Header({ initialUser = null }: HeaderProps) {
                     <button
                       type="button"
                       onClick={handleLogout}
-                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-[13px] text-[var(--danger)] hover:bg-[var(--danger-wash)] transition-colors text-left"
+                      className="w-full flex items-center gap-2 px-2.5 py-2 rounded-[var(--radius-sm)] text-[13px] text-[var(--danger)] hover:bg-[var(--danger-wash)] transition-colors text-left cursor-pointer"
                     >
                       <LogOut className="w-3.5 h-3.5" />
                       <span>Sign out</span>
@@ -263,28 +272,28 @@ export function Header({ initialUser = null }: HeaderProps) {
               )}
             </div>
           ) : (
-            /* Visitor Actions: Sign In + Call to Value CTA */
-            <div className="flex items-center gap-1.5 xs:gap-2 sm:gap-4 shrink-0">
+            /* Unauthenticated Visitor: Discreet Sign In + Compact Start 14-Day Trial */
+            <div className="flex items-center gap-2 sm:gap-4 shrink-0">
               <Link
                 href="/login"
-                className="text-[12px] sm:text-[13px] font-medium text-[var(--ghost-text)] hover:text-[var(--ink-primary)] px-1.5 sm:px-2 py-1 transition-colors duration-120 shrink-0"
+                className="text-[13px] font-medium text-[var(--ghost-text)] hover:text-[var(--ink-primary)] px-2 py-1.5 transition-colors duration-120 shrink-0"
               >
                 Sign In
               </Link>
               <Link
                 href="/register"
-                className="btn-primary !rounded-[var(--radius-sm)] text-[12px] sm:text-[13px] py-1.5 px-3 sm:px-3.5 font-medium whitespace-nowrap shrink-0 inline-flex items-center justify-center text-center"
+                className="btn-primary !rounded-[var(--radius-sm)] text-[12.5px] sm:text-[13px] py-2 px-3.5 sm:px-4 font-semibold whitespace-nowrap shrink-0 inline-flex items-center justify-center text-center"
               >
                 <span>Start 14-Day Trial</span>
               </Link>
             </div>
           )}
 
-          {/* Mobile Hamburger Toggle for all users */}
+          {/* Mobile Hamburger Toggle */}
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-1.5 xs:p-2 text-[var(--ghost-text)] hover:text-[var(--ink-primary)] transition-colors rounded-[var(--radius-sm)] border border-[var(--hairline)] bg-[var(--bg-surface)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal-glow)] shrink-0"
+            className="md:hidden p-2 text-[var(--ghost-text)] hover:text-[var(--ink-primary)] transition-colors rounded-[var(--radius-sm)] border border-[var(--hairline)] bg-[var(--bg-surface)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal-glow)] shrink-0"
             aria-label="Toggle navigation menu"
             aria-expanded={mobileMenuOpen}
           >
@@ -301,7 +310,7 @@ export function Header({ initialUser = null }: HeaderProps) {
         </div>
       </div>
 
-      {/* Mobile Menu Dropdown */}
+      {/* Accessible Mobile Menu Dropdown */}
       {mobileMenuOpen && (
         <div className="md:hidden bg-[var(--bg-surface)] border-b border-[var(--hairline)] px-5 py-4 space-y-3">
           {/* Navigation Links */}
@@ -320,20 +329,44 @@ export function Header({ initialUser = null }: HeaderProps) {
 
           {user ? (
             <div className="pt-2 border-t border-[var(--hairline)] space-y-2">
+              <div className="p-2 rounded-[var(--radius-sm)] bg-[var(--bg-surface-2)] flex items-center justify-between">
+                <span className="text-[13px] font-medium text-[var(--ink-primary)] truncate">
+                  {user.name || user.email}
+                </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-pill)] border border-[var(--signal-dim)] text-[10px] font-mono text-[var(--signal)] bg-[var(--signal-wash)] font-medium">
+                  {user.planName || '14-Day Trial'}
+                </span>
+              </div>
               <Link
                 href="/dashboard"
                 onClick={() => setMobileMenuOpen(false)}
-                className="btn-primary !rounded-[3px] w-full justify-center text-[13px] py-2"
+                className="btn-primary !rounded-[var(--radius-sm)] w-full justify-center text-[13px] py-2 font-medium"
               >
-                Open Catalog Shield
+                Surveillance Dashboard
               </Link>
+              <div className="grid grid-cols-2 gap-2">
+                <Link
+                  href="/dashboard/settings"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="btn-secondary !rounded-[var(--radius-sm)] justify-center text-[12.5px] py-2 font-medium"
+                >
+                  Settings
+                </Link>
+                <Link
+                  href="/dashboard/settings?tab=billing"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="btn-secondary !rounded-[var(--radius-sm)] justify-center text-[12.5px] py-2 font-medium"
+                >
+                  Billing
+                </Link>
+              </div>
               <button
                 type="button"
                 onClick={() => {
                   setMobileMenuOpen(false);
                   handleLogout();
                 }}
-                className="btn-secondary !rounded-[3px] w-full justify-center text-[13px] py-2"
+                className="w-full text-center text-[13px] py-2 text-[var(--danger)] hover:underline font-medium"
               >
                 Sign out
               </button>
@@ -343,7 +376,7 @@ export function Header({ initialUser = null }: HeaderProps) {
               <Link
                 href="/login"
                 onClick={() => setMobileMenuOpen(false)}
-                className="btn-secondary !rounded-[3px] w-full justify-center text-[13px] py-2"
+                className="btn-secondary !rounded-[var(--radius-sm)] w-full justify-center text-[13px] py-2 font-medium"
               >
                 Sign In
               </Link>
