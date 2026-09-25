@@ -18,29 +18,27 @@ export function Hero() {
           className="font-display font-semibold text-[2.25rem] sm:text-[3rem] md:text-[3.6rem] text-[var(--ink-primary)] leading-[1.15] tracking-[-0.01em] max-w-[960px] mx-auto text-center"
           style={{ fontWeight: 600 }}
         >
-          Never Walk into a Monday Morning Client Fire Drill Over a Silent Feed Disapproval.
+          Catch Google Feed Disapprovals Before Your Clients Notice.
         </h1>
 
         {/* Subheadline in Inter (High-contrast ink-secondary per §13) */}
         <p className="mt-6 text-[15.5px] sm:text-[16.5px] text-[var(--ink-secondary)] leading-[1.65] max-w-[720px] mx-auto text-balance">
-          Kultra monitors your clients&apos; Google Merchant Center feeds 24/7 and delivers sub-30-second Slack alerts the moment an item gets rejected. Connect in under 60 seconds with zero tracking scripts and 0% impact on client website speed.
+          Kultra monitors your client feeds 24/7 and pings Slack within 30 seconds of any product disapproval. Connect in 60 seconds with zero storefront scripts and 0% speed impact.
         </p>
 
         {/* Action Group: Strictly One Clear Primary Conversion Action */}
-        <div className="mt-8 flex items-center justify-center">
+        <div className="mt-8 flex flex-col items-center justify-center">
           <Link
             href="/register"
             className="btn-primary !rounded-[var(--radius-sm)] text-[14.5px] px-8 py-3.5 font-semibold inline-flex items-center justify-center text-center"
           >
             Start 14-Day Trial
           </Link>
-        </div>
 
-        {/* Risk-Reversal Subtext Directly Below Primary Action */}
-        <div className="mt-3 text-center">
-          <span className="font-mono text-[11.5px] text-[var(--ghost-text)] tracking-[0.02em]">
-            Starts on store connection. No credit card required.
-          </span>
+          {/* Clean Trial & No Credit Card Reassurance - No pills, no dots */}
+          <p className="mt-3 text-[13px] text-[var(--ghost-text)] text-center">
+            14-day trial starts on store connection. No credit card required.
+          </p>
         </div>
 
         {/* Setup Speed Reassurance & Friction Reducer Pills */}

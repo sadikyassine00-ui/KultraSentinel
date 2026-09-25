@@ -16,20 +16,20 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: '/favicon-48x48.png?v=20260922', sizes: '48x48', type: 'image/png' },
-      { url: '/favicon-96x96.png?v=20260922', sizes: '96x96', type: 'image/png' },
-      { url: '/favicon.svg?v=20260922', type: 'image/svg+xml' },
-      { url: '/favicon-32x32.png?v=20260922', sizes: '32x32', type: 'image/png' },
-      { url: '/favicon.ico?v=20260922', sizes: 'any' },
+      { url: '/favicon-48x48.png?v=20260925-gmc', sizes: '48x48', type: 'image/png' },
+      { url: '/favicon-96x96.png?v=20260925-gmc', sizes: '96x96', type: 'image/png' },
+      { url: '/favicon.svg?v=20260925-gmc', type: 'image/svg+xml' },
+      { url: '/favicon-32x32.png?v=20260925-gmc', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon.ico?v=20260925-gmc', sizes: 'any' },
     ],
-    shortcut: '/favicon.ico?v=20260922',
+    shortcut: '/favicon.ico?v=20260925-gmc',
     apple: [
-      { url: '/apple-touch-icon.png?v=20260922', sizes: '180x180', type: 'image/png' },
+      { url: '/apple-touch-icon.png?v=20260925-gmc', sizes: '180x180', type: 'image/png' },
     ],
     other: [
       {
         rel: 'apple-touch-icon-precomposed',
-        url: '/apple-touch-icon.png?v=20260922',
+        url: '/apple-touch-icon.png?v=20260925-gmc',
       },
     ],
   },
@@ -128,13 +128,14 @@ export default async function RootLayout({
   return (
     <html lang="en" className="dark">
       <head>
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-        <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png" />
-        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-        <link rel="manifest" href="/site.webmanifest" />
+        {/* Google Search & Browser Favicon Hierarchy (48x48 PNG explicitly first with fresh cache buster) */}
+        <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png?v=20260925-gmc" />
+        <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png?v=20260925-gmc" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260925-gmc" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=20260925-gmc" />
+        <link rel="alternate icon" href="/favicon.ico?v=20260925-gmc" sizes="any" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=20260925-gmc" />
+        <link rel="manifest" href="/site.webmanifest?v=20260925-gmc" />
         <meta name="theme-color" content="#0a0b0d" />
         <meta name="msapplication-TileColor" content="#0a0b0d" />
         <meta name="msapplication-config" content="/browserconfig.xml" />

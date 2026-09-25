@@ -33,8 +33,18 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ['/api/', '/dashboard/', '/admin/', '/suspended/'],
       },
       {
-        userAgent: 'Googlebot-Image',
-        allow: ['/', '/*.png$', '/*.ico$', '/*.svg$', '/*.webp$'],
+        userAgent: ['Googlebot-Image', 'Google-Favicon'],
+        allow: [
+          '/',
+          '/favicon*',
+          '/icon*',
+          '/apple-touch-icon*',
+          '/*.png',
+          '/*.ico',
+          '/*.svg',
+          '/*.webp',
+          '/site.webmanifest',
+        ],
         disallow: ['/api/', '/dashboard/', '/admin/', '/suspended/'],
       },
       {
