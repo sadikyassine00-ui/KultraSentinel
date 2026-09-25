@@ -490,7 +490,7 @@ export default function AdminDashboardPage() {
 
         <div className="inline-flex items-center gap-1.5 text-[10.5px] sm:text-[11px] font-mono tracking-[0.02em] text-[#f2a93b] bg-[rgba(242,169,59,0.06)] px-2 sm:px-2.5 py-1 rounded-[100px] border border-[#7a5a26] shrink-0">
           <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" aria-hidden="true" />
-          <span><span className="hidden xs:inline">Pub/Sub </span>QoS 1 active</span>
+          <span><span className="hidden xs:inline">Cloud Stream </span>Active</span>
         </div>
       </div>
 
@@ -699,7 +699,7 @@ export default function AdminDashboardPage() {
               <div className="flex items-center justify-between text-[11px]">
                 <div className="flex items-center gap-1.5 text-[#b9b3a5] font-medium">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#f2a93b]" />
-                  <span>QoS 1 Ingestion</span>
+                  <span>Real-Time Ingestion</span>
                 </div>
                 <span className="font-mono text-[#f2a93b] font-medium text-[11px]">{telemetry.globalIngestionRate} m/m</span>
               </div>
@@ -832,7 +832,7 @@ export default function AdminDashboardPage() {
                       </span>
                     </div>
                     <p className="text-[13px] text-[#6b7078] mt-1">
-                      Real-time commercial volume and Google Cloud Pub/Sub QoS 1 streaming metrics
+                      Real-time commercial volume and Official Google Event Stream metrics
                     </p>
                   </div>
 
@@ -984,7 +984,7 @@ export default function AdminDashboardPage() {
                       </span>
                     </div>
                     <p className="text-[11px] font-mono text-[#6b7078]">
-                      {telemetry.globalIngestionRate > 0 ? 'Pub/Sub QoS 1 streaming' : 'Subscriber queue idle'}
+                      {telemetry.globalIngestionRate > 0 ? 'Official Google Event Stream active' : 'Subscriber queue idle'}
                     </p>
                   </div>
 

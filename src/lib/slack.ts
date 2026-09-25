@@ -542,7 +542,7 @@ export async function dispatchSlackWelcomePing({
         elements: [
           {
             type: 'mrkdwn',
-            text: `Kultra Alerts | Real-Time Google Merchant API v1 Pub/Sub QoS-1 Stream`,
+            text: `Kultra Alerts | Official Google Event Stream`,
           },
         ],
       },

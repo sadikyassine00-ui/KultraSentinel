@@ -478,7 +478,7 @@ let inMemoryConfig: SystemConfig = {
   maintenance_mode: false,
   registration_gate: 'invite_only',
   rate_limit_per_min: 1200,
-  banner_text: 'Platform operating normally on Google Merchant API v1 and Cloud Pub/Sub QoS 1 streaming.',
+  banner_text: 'Platform operating normally on Google Merchant API v1 and Official Google Event Stream.',
   updated_at: new Date().toISOString(),
 };
 
