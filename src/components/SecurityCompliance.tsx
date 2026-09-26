@@ -11,61 +11,61 @@ export function SecurityCompliance() {
       className="relative w-full py-20 sm:py-24 px-4 sm:px-6 bg-[var(--bg-canvas)] border-t border-[var(--hairline)]"
     >
       <div className="relative z-10 max-w-[1140px] mx-auto">
-        {/* Section Header without eyebrow tag */}
+        {/* Section Header */}
         <div className="max-w-[760px] mb-12 sm:mb-14">
           <h2 className="font-display text-[1.85rem] sm:text-[2.25rem] font-semibold text-[var(--ink-primary)] leading-[1.2]">
-            Enterprise-grade data protection, zero catalog mutation
+            Enterprise-Grade Security. Zero Risk to Client Feeds.
           </h2>
           <p className="mt-3 text-[14.5px] text-[var(--ink-secondary)] leading-[1.55] max-w-[65ch]">
-            Kultra operates strictly as a read-only monitoring and telemetry watchdog. Your product catalog, advertising campaigns, and customer data remain untouched.
+            Kultra operates strictly as a passive, read-only monitoring layer. Your product feeds, active campaigns, and client data remain completely untouched.
           </p>
         </div>
 
         {/* 3 Prominent Compliance & Credibility Standards (§3 Compliance Directive) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
-          {/* Standard 1: AES-256-GCM */}
+          {/* Card 1: Data Storage and Token Security */}
           <div className="rounded-[var(--radius-md)] bg-[var(--bg-surface)] border border-[var(--hairline)] p-6 flex flex-col justify-between">
             <div>
               <div className="w-9 h-9 rounded-[var(--radius-sm)] bg-[var(--bg-surface-2)] border border-[var(--hairline)] flex items-center justify-center mb-4">
                 <Lock className="w-4 h-4 text-[var(--signal)]" strokeWidth={1.5} />
               </div>
               <span className="tag-pill tag-ghost text-[10px] mb-2 inline-block">
-                Cryptographic storage
+                Encrypted at Rest
               </span>
               <h3 className="font-display text-[16px] font-semibold text-[var(--ink-primary)] mb-2">
-                AES-256-GCM Token Encryption at Rest
+                AES-256 Token Encryption
               </h3>
               <p className="text-[13px] text-[var(--ghost-text)] leading-[1.55]">
-                OAuth refresh tokens, merchant API credentials, and client webhook targets are encrypted using authenticated Galois/Counter Mode with isolated secret management.
+                OAuth refresh tokens and credentials are encrypted at rest using industry-standard AES-256 encryption. Your client credentials never sit exposed in plain text.
               </p>
             </div>
             <div className="mt-6 pt-4 border-t border-[var(--hairline)] font-mono text-[10.5px] text-[var(--ghost-text)]">
-              FIPS 140-2 aligned
+              Zero plain-text storage
             </div>
           </div>
 
-          {/* Standard 2: TLS 1.3 */}
+          {/* Card 2: Transport Layer Security */}
           <div className="rounded-[var(--radius-md)] bg-[var(--bg-surface)] border border-[var(--hairline)] p-6 flex flex-col justify-between">
             <div>
               <div className="w-9 h-9 rounded-[var(--radius-sm)] bg-[var(--bg-surface-2)] border border-[var(--hairline)] flex items-center justify-center mb-4">
                 <Server className="w-4 h-4 text-[var(--signal)]" strokeWidth={1.5} />
               </div>
               <span className="tag-pill tag-ghost text-[10px] mb-2 inline-block">
-                Encrypted in transit
+                Secure Transmission
               </span>
               <h3 className="font-display text-[16px] font-semibold text-[var(--ink-primary)] mb-2">
                 Enforced TLS 1.3 Transport
               </h3>
               <p className="text-[13px] text-[var(--ghost-text)] leading-[1.55]">
-                All incoming Pub/Sub ingestion webhooks, API dispatches, and dashboard browser traffic enforce TLS 1.3 encryption with strict HSTS headers.
+                All incoming Google Pub/Sub alerts, dashboard communication, and outbound Slack webhooks are encrypted in transit over modern TLS protocols.
               </p>
             </div>
             <div className="mt-6 pt-4 border-t border-[var(--hairline)] font-mono text-[10.5px] text-[var(--ghost-text)]">
-              Forward secrecy enforced
+              Encrypted in transit
             </div>
           </div>
 
-          {/* Standard 3: Google Limited Use */}
+          {/* Card 3: Google Compliance and Privacy (Highlighted Card) */}
           <div className="rounded-[var(--radius-md)] bg-[var(--bg-surface)] border border-[var(--signal-dim)] p-6 flex flex-col justify-between relative overflow-hidden"
                style={{ background: 'radial-gradient(ellipse at top right, var(--signal-wash) 0%, var(--bg-surface) 65%)' }}>
             <div>
@@ -73,17 +73,17 @@ export function SecurityCompliance() {
                 <Shield className="w-4 h-4 text-[var(--signal)]" strokeWidth={1.5} />
               </div>
               <span className="tag-pill tag-signal text-[10px] mb-2 inline-block">
-                OAuth verification verified
+                Google API Standards
               </span>
               <h3 className="font-display text-[16px] font-semibold text-[var(--ink-primary)] mb-2">
-                Google Limited Use Policy Compliant
+                Google Limited Use Compliant
               </h3>
               <p className="text-[13px] text-[var(--ink-secondary)] leading-[1.55]">
-                Kultra adheres strictly to the Google API Services User Data Policy, including the Limited Use requirements. We never transfer or sell merchant data, nor use it for advertising or AI training.
+                Kultra adheres strictly to Google API Services User Data Policy Limited Use requirements. We never transfer, monetize, or sell merchant data, nor do we use it to train AI models.
               </p>
             </div>
             <div className="mt-6 pt-4 border-t border-[var(--hairline)] font-mono text-[10.5px] text-[var(--signal)]">
-              Limited Use verified
+              Zero data monetization
             </div>
           </div>
         </div>
@@ -97,7 +97,7 @@ export function SecurityCompliance() {
                   Pre-OAuth transparency
                 </span>
                 <span className="font-mono text-[11px] text-[var(--ghost-text)]">
-                  Strict non-mutation guarantee
+                  Strict read-only guarantee
                 </span>
               </div>
               <h3 className="font-display text-[1.25rem] font-semibold text-[var(--ink-primary)]">
@@ -107,7 +107,7 @@ export function SecurityCompliance() {
                 Google Merchant Center API does not provide a dedicated read-only scope tier. The standard OAuth consent screen displays &ldquo;Manage your product listings&rdquo; as Google&apos;s default category description.
               </p>
               <div className="p-3.5 rounded-[var(--radius-sm)] bg-[var(--bg-canvas)] border border-[var(--hairline)] text-[13px] text-[var(--ink-primary)] leading-[1.55]">
-                <strong className="text-[var(--signal)] font-semibold">Core Guarantee:</strong> Kultra operates strictly in read-only diagnostic telemetry mode. Kultra will never edit, overwrite, delete, or mutate your product catalog, pricing, or Google Ads campaigns.
+                <strong className="text-[var(--signal)] font-semibold">Core Guarantee:</strong> Kultra operates strictly as a passive, read-only monitoring layer. Kultra will never edit, overwrite, delete, or modify your product feeds, pricing, or active campaigns.
               </div>
             </div>
 
