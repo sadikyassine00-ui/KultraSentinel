@@ -30,11 +30,6 @@ export function Footer() {
               <div>Headquartered in Ouarzazate, Morocco</div>
               <div>Direct inquiry: <a href="mailto:support@usekultra.com" className="text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] underline underline-offset-2">support@usekultra.com</a></div>
             </div>
-
-            {/* System Status */}
-            <div className="tag-pill tag-signal text-[10.5px] mt-1">
-              Google Merchant API v1: Operational
-            </div>
           </div>
 
           {/* Navigation Links */}
@@ -117,7 +112,7 @@ export function Footer() {
               </div>
               <div className="flex items-center gap-2 text-[11px] font-mono text-[var(--ghost-text)]">
                 <Server className="w-3.5 h-3.5 text-[var(--signal)] shrink-0" strokeWidth={1.5} />
-                <span>Enforced TLS 1.3 Transport</span>
+                <span>Encrypted Data Transmission</span>
               </div>
               <div className="flex items-center gap-2 text-[11px] font-mono text-[var(--ghost-text)]">
                 <ShieldCheck className="w-3.5 h-3.5 text-[var(--signal)] shrink-0" strokeWidth={1.5} />

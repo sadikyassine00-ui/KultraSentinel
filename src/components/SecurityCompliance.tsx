@@ -14,7 +14,7 @@ export function SecurityCompliance() {
         {/* Section Header */}
         <div className="max-w-[760px] mb-12 sm:mb-14">
           <h2 className="font-display text-[1.85rem] sm:text-[2.25rem] font-semibold text-[var(--ink-primary)] leading-[1.2]">
-            Enterprise-Grade Security. Zero Risk to Client Feeds.
+            Strictly Read-Only. Zero Risk to Client Accounts.
           </h2>
           <p className="mt-3 text-[14.5px] text-[var(--ink-secondary)] leading-[1.55] max-w-[65ch]">
             Kultra operates strictly as a passive, read-only monitoring layer. Your product feeds, active campaigns, and client data remain completely untouched.
@@ -54,10 +54,10 @@ export function SecurityCompliance() {
                 Secure Transmission
               </span>
               <h3 className="font-display text-[16px] font-semibold text-[var(--ink-primary)] mb-2">
-                Enforced TLS 1.3 Transport
+                Encrypted Data Transmission
               </h3>
               <p className="text-[13px] text-[var(--ghost-text)] leading-[1.55]">
-                All incoming Google Pub/Sub alerts, dashboard communication, and outbound Slack webhooks are encrypted in transit over modern TLS protocols.
+                All incoming Google Pub/Sub alerts, dashboard communication, and outbound Slack webhooks are securely encrypted in transit over modern HTTPS/TLS protocols.
               </p>
             </div>
             <div className="mt-6 pt-4 border-t border-[var(--hairline)] font-mono text-[10.5px] text-[var(--ghost-text)]">
