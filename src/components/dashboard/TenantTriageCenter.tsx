@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { Store } from '@/lib/db';
 import { isAccountSuspensionCode } from '@/lib/gmcErrors';
+import { CustomerDashboardSkeleton } from '@/components/Skeleton';
 
 interface InventoryBreakdown {
   servingAds: number;
@@ -901,20 +902,9 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
     );
   };
 
-  // Loading: static skeleton blocks per §11
+  // High-fidelity layout-matched skeleton placeholder per GEMINI.md §11
   if (loading) {
-    return (
-      <div className="space-y-5 max-w-7xl mx-auto">
-        <div className="h-16 bg-[var(--bg-surface-2)] border border-[var(--hairline)] rounded-[var(--radius-md)]" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="h-28 bg-[var(--bg-surface-2)] border border-[var(--hairline)] rounded-[var(--radius-md)]" />
-          <div className="h-28 bg-[var(--bg-surface-2)] border border-[var(--hairline)] rounded-[var(--radius-md)]" />
-          <div className="h-28 bg-[var(--bg-surface-2)] border border-[var(--hairline)] rounded-[var(--radius-md)]" />
-          <div className="h-28 bg-[var(--bg-surface-2)] border border-[var(--hairline)] rounded-[var(--radius-md)]" />
-        </div>
-        <div className="h-72 bg-[var(--bg-surface-2)] border border-[var(--hairline)] rounded-[var(--radius-md)]" />
-      </div>
-    );
+    return <CustomerDashboardSkeleton />;
   }
 
   // ---------------------------------------------------------------------------
@@ -1166,7 +1156,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
   const dynamicAuditFormatted = computeRelativeAuditTime(auditTimestamp);
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto w-full min-w-0 max-w-full">
+    <div className="space-y-6 max-w-7xl mx-auto w-full min-w-0 max-w-full animate-in fade-in duration-150">
       {renderErrorBanner()}
       {renderPastDueBanner()}
       {renderScheduledCancellationBanner()}

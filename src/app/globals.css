@@ -332,11 +332,37 @@ h1 {
   background: var(--danger-wash);
 }
 
-/* Skeletons hold still — NO shimmer sweeps, NO pulsing loops (§11) */
+/* Skeletons hold still or pulse subtly in dark theme (§11) */
 .skeleton-static {
   background: var(--bg-surface-2);
   border-radius: var(--radius-sm);
 }
+
+/* Subtle, muted dark-theme skeleton pulse per design system */
+@keyframes skeleton-pulse {
+  0%, 100% {
+    opacity: 0.95;
+    background-color: var(--bg-surface-2);
+  }
+  50% {
+    opacity: 0.55;
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+}
+
+.skeleton-pulse {
+  animation: skeleton-pulse 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  border-radius: var(--radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-pulse {
+    animation: none !important;
+    opacity: 1 !important;
+    background-color: var(--bg-surface-2) !important;
+  }
+}
+
 
 /* Dashboard frame fade mask for peek views */
 .dashboard-frame-mask {

@@ -482,7 +482,7 @@ export default function AdminDashboardPage() {
   };
 
   return (
-    <div className="flex-1 w-full bg-[#0a0b0d] text-[#f4f1ea] font-sans antialiased selection:bg-[#7a5a26] selection:text-[#f4f1ea] flex flex-col lg:flex-row">
+    <div className="flex-1 w-full bg-[#0a0b0d] text-[#f4f1ea] font-sans antialiased selection:bg-[#7a5a26] selection:text-[#f4f1ea] flex flex-col lg:flex-row animate-in fade-in duration-150">
       {/* Mobile Sub-Navigation Bar */}
       <div className="lg:hidden h-12 border-b border-[rgba(255,255,255,0.08)] bg-[#0a0b0d] px-3 sm:px-4 flex items-center justify-between sticky top-[60px] z-30 gap-2">
         <button
@@ -1093,7 +1093,7 @@ export default function AdminDashboardPage() {
                 {/* TAB 1: Tenant Management */}
                 {activeTab === 'tenants' && tabLoading && <TenantsTabSkeleton />}
                 {activeTab === 'tenants' && !tabLoading && (
-                  <div className="space-y-4">
+                  <div className="space-y-4 animate-in fade-in duration-150">
                     {/* Search & Filter Bar */}
                     <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-[#0e0f11] border border-[rgba(255,255,255,0.08)] p-3 rounded-[4px]">
                       <div className="relative w-full sm:w-80 md:w-96">
@@ -1297,7 +1297,7 @@ export default function AdminDashboardPage() {
                 {/* TAB 2: Global Store Registry */}
                 {activeTab === 'stores' && tabLoading && <StoresTabSkeleton />}
                 {activeTab === 'stores' && !tabLoading && (
-                  <div className="space-y-4">
+                  <div className="space-y-4 animate-in fade-in duration-150">
                     <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-[#0e0f11] border border-[rgba(255,255,255,0.08)] p-3 rounded-[4px]">
                       <div className="relative w-full sm:w-80 md:w-96">
                         <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#45484f]" />

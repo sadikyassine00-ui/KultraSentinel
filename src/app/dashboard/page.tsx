@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { COOKIE_NAME, verifySessionToken } from '@/lib/token';
 import { isTenantSuspended } from '@/lib/db';
 import TenantTriageCenter from '@/components/dashboard/TenantTriageCenter';
-import { DashboardPageSkeleton } from '@/components/Skeleton';
+import { CustomerDashboardSkeleton } from '@/components/Skeleton';
 
 interface PageProps {
   searchParams: Promise<{
@@ -38,7 +38,7 @@ export default async function CustomerDashboardPage({ searchParams }: PageProps)
   const initialError = resolvedParams.error || null;
 
   return (
-    <Suspense fallback={<DashboardPageSkeleton />}>
+    <Suspense fallback={<CustomerDashboardSkeleton />}>
       <TenantTriageCenter
         initialStoreId={initialStoreId}
         justConnected={justConnected}
