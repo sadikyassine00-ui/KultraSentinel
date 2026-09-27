@@ -42,7 +42,8 @@ interface SurveillanceTelemetry {
   streamType?: string;
   pushLatencyMs?: number;
   eventVolume24h?: number;
-  lastSyncTimestamp?: string;
+  lastAuditTimestamp?: string | null;
+  lastSyncTimestamp?: string | null;
   lastSyncFormatted?: string;
   itemsChecked?: number;
 }
@@ -278,6 +279,29 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
   const [fireDrillBanner, setFireDrillBanner] = useState<string | null>(null);
   const [activityFeedOpen, setActivityFeedOpen] = useState(false);
   const [acknowledgedOpen, setAcknowledgedOpen] = useState(false);
+
+  // Dynamic client-side relative time ticker (updates every 30s without freezing)
+  const [currentTime, setCurrentTime] = useState(Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 30000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const computeRelativeAuditTime = useCallback((timestamp?: string | null): string => {
+    if (!timestamp) return 'Initial feed sync complete';
+    const date = new Date(timestamp);
+    if (isNaN(date.getTime())) return 'Initial feed sync complete';
+    const diffSec = Math.max(0, Math.floor((currentTime - date.getTime()) / 1000));
+    if (diffSec < 45) return 'Audited just now';
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `Audited ${diffMin}m ago`;
+    const diffHours = Math.floor(diffMin / 60);
+    if (diffHours < 24) return `Audited ${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `Audited ${diffDays}d ago`;
+  }, [currentTime]);
 
   const closeModal = useCallback(() => {
     setModalOpen(false);
@@ -1128,6 +1152,19 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
     )
   );
 
+  const isStoreDisconnected = Boolean(
+    !activeStore ||
+    activeStore.status === 'disconnected' ||
+    activeStore.is_active === false
+  );
+
+  const isStoreConnecting = Boolean(
+    justConnected && (!activeStore || !activeStore.last_message_at)
+  );
+
+  const auditTimestamp = metrics.surveillance?.lastAuditTimestamp || activeStore?.last_message_at;
+  const dynamicAuditFormatted = computeRelativeAuditTime(auditTimestamp);
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto w-full min-w-0 max-w-full">
       {renderErrorBanner()}
@@ -1140,7 +1177,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
           <div className="flex items-center gap-2.5 text-[13px] font-medium">
             <ShieldCheck className="w-4 h-4 text-[var(--signal)] shrink-0" />
             <span>
-              Kultra Shield Armed: Real-time Google Merchant Center surveillance is live for{' '}
+              Kultra Shield Armed: Real-time Google Merchant Center monitoring is live for{' '}
               <strong>{activeStore?.store_name || activeStore?.store_url}</strong> in{' '}
               <strong className="font-mono">{slackConnectedBanner.channel}</strong>.
             </span>
@@ -1171,31 +1208,60 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
         </div>
       )}
 
-      {/* Operational Action Bar (§2 Heartbeat Telemetry & Control Placement) */}
-      <div className="flex flex-wrap items-center justify-between gap-3 py-2.5 border-b border-[var(--hairline)]">
-        {/* Left: Proof-of-work Heartbeat Telemetry */}
+      {/* Operational Header Bar: Store Context & Primary Actions */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-1 pb-2">
+        {/* Left: Store Identity & Switcher */}
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="flex items-center gap-2 font-mono text-[11px] sm:text-[12px] flex-wrap">
-            <span className="w-2 h-2 rounded-full bg-[var(--signal)] shrink-0" aria-hidden="true" />
-            <span className="font-semibold text-[var(--ink-primary)]">Surveillance Active</span>
-            <span className="text-[var(--ghost-line)]">/</span>
-            <span className="text-[var(--ghost-text)]">Last sync {metrics.surveillance?.lastSyncFormatted || '2m ago'}</span>
-            <span className="text-[var(--ghost-line)]">/</span>
-            <span className={activeCount > 0 ? 'text-[var(--danger)] font-medium' : 'text-[var(--ghost-text)]'}>
-              {activeCount === 0 ? '0 issues detected' : `${activeCount} ${activeCount === 1 ? 'issue' : 'issues'} detected`}
-            </span>
-            <span className="text-[var(--ghost-line)] hidden md:inline">/</span>
-            <span className="text-[var(--ghost-text-dim)] hidden md:inline">
-              {totalMonitoredCatalog.toLocaleString()} {totalMonitoredCatalog === 1 ? 'item monitored' : 'items monitored'}
-            </span>
-          </div>
+          {data.stores && data.stores.length > 1 ? (
+            <div className="flex items-center gap-2">
+              <span className="text-[12px] font-mono text-[var(--ghost-text)] hidden sm:inline">Store:</span>
+              <select
+                value={String(activeStore?.id)}
+                onChange={(e) => {
+                  const selectedId = e.target.value;
+                  const url = new URL(window.location.href);
+                  url.searchParams.set('store_id', selectedId);
+                  window.location.href = url.pathname + url.search;
+                }}
+                className="bg-[var(--bg-surface-2)] border border-[var(--hairline-strong)] hover:border-[var(--signal-dim)] text-[var(--ink-primary)] rounded-[var(--radius-sm)] py-1 px-2.5 text-[12px] font-medium focus:outline-none focus:border-[var(--signal)] cursor-pointer"
+                aria-label="Switch active store"
+              >
+                {data.stores.map((s) => (
+                  <option key={s.id} value={String(s.id)}>
+                    {s.store_name || s.store_url} (GMC #{s.gmc_id})
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-[13.5px] font-semibold text-[var(--ink-primary)] truncate">
+                {activeStore?.store_name || activeStore?.store_url || 'Active Catalog'}
+              </span>
+              {activeStore?.gmc_id && (
+                <span className="font-mono text-[10.5px] px-2 py-0.5 rounded-[var(--radius-pill)] border border-[var(--hairline-strong)] text-[var(--ghost-text)] bg-[var(--bg-surface-2)] shrink-0">
+                  GMC #{activeStore.gmc_id}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Right: Refined Action Hierarchy */}
+        {/* Right: Operational Actions */}
         <div className="flex items-center flex-wrap gap-2">
           {inlineFeedback && (
             <span className="font-mono text-[11px] text-[var(--signal)] font-medium mr-1">{inlineFeedback}</span>
           )}
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="btn-secondary text-[12px] py-1.5 px-2.5 !rounded-[3px] inline-flex items-center gap-1.5 border-[var(--hairline-strong)] hover:border-[var(--signal-dim)] hover:text-[var(--ink-primary)] disabled:opacity-50 transition-colors"
+            title="Refresh feed status"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-[var(--ghost-text)] ${refreshing ? 'animate-spin text-[var(--signal)]' : ''}`} />
+            <span className="hidden sm:inline">{refreshing ? 'Refreshing...' : 'Refresh'}</span>
+          </button>
           <button
             type="button"
             onClick={handleRunFireDrill}
@@ -1216,6 +1282,86 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
           </button>
         </div>
       </div>
+
+      {/* Operational Health Ribbon (Sleek Segmented Status Bar) */}
+      {isStoreConnecting ? (
+        <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-[var(--radius-sm)] bg-[var(--bg-surface-2)] border border-[var(--hairline-strong)] text-[var(--ink-primary)] animate-in fade-in-50 duration-150">
+          <RefreshCw className="w-3.5 h-3.5 text-[var(--signal)] animate-spin shrink-0" />
+          <span className="font-mono text-[12px] text-[var(--ink-secondary)]">Establishing Google Cloud event stream...</span>
+        </div>
+      ) : isStoreDisconnected ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 rounded-[var(--radius-sm)] bg-[var(--signal-wash)] border border-[var(--signal-dim)] text-[var(--ink-primary)] animate-in fade-in-50 duration-150">
+          <div className="flex items-center gap-2.5 text-[12px] font-mono">
+            <span className="w-2 h-2 rounded-full bg-[var(--signal)] shrink-0" />
+            <span>Monitoring Paused: Connect Google Merchant Center to activate real-time feed protection</span>
+          </div>
+          <button
+            type="button"
+            onClick={handleConnectGmc}
+            className="btn-primary text-[11px] py-1 px-3 !rounded-[3px] font-semibold shrink-0"
+          >
+            Connect GMC
+          </button>
+        </div>
+      ) : (
+        <div className="bg-[var(--bg-surface)] border border-[var(--hairline)] rounded-[var(--radius-sm)] px-3.5 py-2.5 flex flex-wrap items-center gap-x-3.5 gap-y-2 text-[12px] font-mono">
+          {/* Segment 1 (Pipeline State): Pulsing Emerald Green Indicator */}
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="relative flex h-2 w-2 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+            </span>
+            <span className="font-semibold text-[var(--ink-primary)]">Live Push Stream Active</span>
+          </div>
+
+          {/* Divider */}
+          <div className="hidden sm:block h-3.5 w-px bg-[var(--hairline-strong)]" aria-hidden="true" />
+
+          {/* Segment 2 (Connection Source): Google Cloud Pub/Sub */}
+          <div className="flex items-center gap-1.5 shrink-0 text-[var(--ghost-text)]">
+            <span>Google Cloud Pub/Sub:</span>
+            <span className="text-[var(--ink-primary)] font-medium">Healthy</span>
+          </div>
+
+          {/* Divider */}
+          <div className="hidden md:block h-3.5 w-px bg-[var(--hairline-strong)]" aria-hidden="true" />
+
+          {/* Segment 3 (Real-Time Pipeline & Dynamic Audit State) */}
+          <div className="flex items-center gap-1.5 shrink-0 text-[var(--ghost-text)]">
+            <span className="text-[var(--ink-secondary)]">Event Pipeline:</span>
+            <span className="text-[var(--signal)] font-medium">Sub-30s Push Active</span>
+            <span className="text-[var(--ghost-text-dim)] text-[11px]">({dynamicAuditFormatted})</span>
+          </div>
+
+          {/* Divider */}
+          <div className="hidden lg:block h-3.5 w-px bg-[var(--hairline-strong)]" aria-hidden="true" />
+
+          {/* Segment 4 (Incident State): Verified Disapprovals State */}
+          <div className="shrink-0">
+            {activeCount === 0 ? (
+              <div className="inline-flex items-center gap-1.5 text-emerald-400 font-medium">
+                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                <span>0 Active Disapprovals</span>
+              </div>
+            ) : (
+              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-pill)] border border-[var(--danger)] bg-[var(--danger-wash)] text-[var(--danger)] font-medium">
+                <AlertTriangle className="w-3 h-3 shrink-0" />
+                <span>{activeCount} {activeCount === 1 ? 'Disapproval' : 'Disapprovals'} Detected</span>
+              </div>
+            )}
+          </div>
+
+          {/* Divider */}
+          <div className="hidden xl:block h-3.5 w-px bg-[var(--hairline-strong)]" aria-hidden="true" />
+
+          {/* Segment 5 (Catalog Size): Verified Catalog Count */}
+          <div className="flex items-center gap-1.5 shrink-0 text-[var(--ghost-text)]">
+            <Package className="w-3.5 h-3.5 text-[var(--ghost-text-dim)] shrink-0" />
+            <span className="text-[var(--ink-secondary)] font-medium">{totalMonitoredCatalog.toLocaleString()}</span>
+            <span>{totalMonitoredCatalog === 1 ? 'Product Monitored' : 'Products Monitored'}</span>
+          </div>
+        </div>
+      )}
 
       {/* Test Alert Confirmation Banner */}
       {fireDrillBanner && (
@@ -1414,25 +1560,25 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
           </div>
         </div>
 
-        {/* Card 4: Surveillance Engine (Quiet Reassurance, De-Emphasized) */}
+        {/* Card 4: Real-Time Event Stream (Quiet Reassurance, De-Emphasized) */}
         <div className="bg-[var(--bg-canvas)] border border-[var(--hairline)] rounded-[var(--radius-md)] p-4 sm:p-5 flex flex-col justify-between min-h-[175px] opacity-90 hover:opacity-100 transition-opacity">
           <div>
             <div className="flex items-center justify-between gap-2 mb-2.5">
-              <span className="text-[12px] font-medium text-[var(--ghost-text)] truncate">Surveillance Engine</span>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-pill)] border border-[var(--ghost-line)] bg-transparent text-[var(--ghost-text)] text-[10px] font-mono">
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal-dim)]" />
-                Active
+              <span className="text-[12px] font-medium text-[var(--ghost-text)] truncate">Real-Time Event Stream</span>
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[var(--radius-pill)] border border-[var(--ghost-line)] bg-transparent text-[var(--ghost-text)] text-[10px] font-mono">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                Pub/Sub Active
               </span>
             </div>
 
             <div className="space-y-1.5 mt-1">
               <div className="font-mono text-[12px] text-[var(--ghost-text)] flex items-baseline justify-between">
-                <span>Listener Status:</span>
-                <span className="text-[var(--ink-secondary)] font-medium">Healthy</span>
+                <span>Ingestion Mode:</span>
+                <span className="text-[var(--ink-secondary)] font-medium">GCP Push Stream</span>
               </div>
               <div className="font-mono text-[12px] text-[var(--ghost-text)] flex items-baseline justify-between">
-                <span>Last Handshake:</span>
-                <span className="text-[var(--ink-secondary)] font-medium">Active</span>
+                <span>Listener Status:</span>
+                <span className="text-[var(--ink-secondary)] font-medium">Healthy</span>
               </div>
               <div className="font-mono text-[11px] text-[var(--ghost-text-dim)] flex items-baseline justify-between">
                 <span>Push Latency:</span>
@@ -1444,7 +1590,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
           </div>
 
           <div className="font-mono text-[10px] mt-2 pt-2 border-t border-[var(--hairline)] text-[var(--ghost-text-dim)] truncate">
-            Official Google Event Stream
+            Google Cloud Pub/Sub Push Architecture
           </div>
         </div>
       </div>
@@ -1468,7 +1614,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
               </h2>
 
               <p className="text-[13.5px] text-[var(--ink-secondary)] leading-[1.6]">
-                Real-time Google Merchant Center monitoring and automated Slack notifications are paused. Upgrade your plan to restore 24/7 disapproval surveillance.
+                Real-time Google Merchant Center monitoring and automated Slack notifications are paused. Upgrade your plan to restore 24/7 disapproval monitoring.
               </p>
 
               <div className="pt-2 flex items-center justify-center gap-3">

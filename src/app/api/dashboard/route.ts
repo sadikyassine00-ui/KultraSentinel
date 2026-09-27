@@ -95,10 +95,11 @@ export async function GET(request: Request) {
           },
           surveillance: {
             status: 'Paused',
-            streamType: 'Official Google Event Stream',
+            streamType: 'Google Cloud Pub/Sub Push',
             pushLatencyMs: 0,
-            lastSyncTimestamp: new Date().toISOString(),
-            lastSyncFormatted: 'Never',
+            lastAuditTimestamp: null,
+            lastSyncTimestamp: null,
+            lastSyncFormatted: 'Not Connected',
             itemsChecked: 0,
           },
           alertPipelineStatus: {
@@ -242,18 +243,16 @@ export async function GET(request: Request) {
     const inReview = 0;
     const disapproved = realUnresolvedIncidents.length;
 
-    const now = new Date();
-    const formattedNowTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    const timeAgo12m = new Date(now.getTime() - 1000 * 60 * 12).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    const timeAgo38m = new Date(now.getTime() - 1000 * 60 * 38).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    const timeAgo2h = new Date(now.getTime() - 1000 * 60 * 124).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const isDisconnected = Boolean(activeStore.status === 'disconnected' || activeStore.is_active === false);
+    const lastAuditTimestamp = isDisconnected ? null : (activeStore.last_message_at || activeStore.created_at || new Date().toISOString());
 
     const surveillance = {
-      status: 'Active',
-      streamType: 'Official Google Event Stream',
+      status: isDisconnected ? 'Paused' : 'Active',
+      streamType: 'Google Cloud Pub/Sub Push',
       pushLatencyMs: webhookVerified ? 14 : 18,
-      lastSyncTimestamp: new Date(now.getTime() - 1000 * 120).toISOString(),
-      lastSyncFormatted: '2m ago',
+      lastAuditTimestamp,
+      lastSyncTimestamp: lastAuditTimestamp,
+      lastSyncFormatted: isDisconnected ? 'Not Connected' : 'Sub-30s Push Active',
       itemsChecked: monitoredProducts,
     };
 

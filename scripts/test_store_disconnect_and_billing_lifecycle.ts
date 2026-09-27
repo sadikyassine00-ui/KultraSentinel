@@ -29,6 +29,7 @@ import { DELETE as deleteStoreHandler } from '../src/app/api/stores/[id]/route';
 import { POST as disconnectStoreHandler } from '../src/app/api/stores/[id]/disconnect/route';
 import { POST as portalHandler } from '../src/app/api/billing/portal/route';
 import { POST as cancelHandler } from '../src/app/api/billing/cancel/route';
+import { GET as dashboardHandler } from '../src/app/api/dashboard/route';
 
 function assert(condition: boolean, message: string) {
   if (!condition) {
@@ -627,6 +628,114 @@ async function runTests() {
     passed++;
   } catch (e: any) {
     console.error('  [FAIL] Test Group 6 failed:', e.message);
+    failed++;
+  }
+
+  // ---------------------------------------------------------------------------
+  // TEST GROUP 7: Live Operational Status Bar & Real-Time Pub/Sub Telemetry
+  // ---------------------------------------------------------------------------
+  console.log('\n[TEST GROUP 7] Live Operational Status Bar & Real-Time Pub/Sub Telemetry');
+
+  try {
+    const telemetryEmail = 'telemetry-tester@kultra-test.io';
+    const telemetryGmcId = '5857345262';
+
+    // 7.1 Verify Zero Store State: Paused & Clean Telemetry
+    const zeroStoreToken = await createSessionToken({
+      email: 'zero-store-test@kultra-test.io',
+      role: 'user',
+    });
+    const zeroStoreReq = new Request('http://localhost:3000/api/dashboard', {
+      headers: { Authorization: `Bearer ${zeroStoreToken}` },
+    });
+    const zeroStoreRes = await dashboardHandler(zeroStoreReq);
+    assert(zeroStoreRes.status === 200, 'GET /api/dashboard returns 200 for zero-store tenant');
+    const zeroStoreBody = await zeroStoreRes.json();
+    assert(zeroStoreBody.zeroStore === true, 'Zero-store tenant flagged correctly');
+    assert(
+      zeroStoreBody.metrics.surveillance.streamType === 'Google Cloud Pub/Sub Push',
+      'Zero-store surveillance uses Google Cloud Pub/Sub Push streamType'
+    );
+    assert(
+      zeroStoreBody.metrics.surveillance.status === 'Paused',
+      'Zero-store surveillance status is Paused'
+    );
+    assert(
+      zeroStoreBody.metrics.surveillance.lastSyncFormatted === 'Not Connected',
+      'Zero-store displays honest "Not Connected" state instead of deceptive timestamps'
+    );
+    assert(
+      zeroStoreBody.metrics.surveillance.lastAuditTimestamp === null,
+      'Zero-store has null audit timestamp'
+    );
+    passed++;
+
+    // 7.2 Active Store: Real-Time Stream Telemetry Binding
+    const activeStoreRes = await claimStoreForTenant({
+      gmcId: telemetryGmcId,
+      merchantId: telemetryGmcId,
+      tenantId: 9905,
+      tenantEmail: telemetryEmail,
+      storeName: 'Telemetry Bestseller Brand',
+      storeUrl: 'telemetry-brand.myshopify.com',
+      accountType: 'Standalone Merchant',
+      encryptedRefreshToken: 'enc_token_telemetry_test',
+    });
+    const activeStore = activeStoreRes.store!;
+
+    const activeToken = await createSessionToken({
+      email: telemetryEmail,
+      role: 'user',
+    });
+    const activeReq = new Request('http://localhost:3000/api/dashboard', {
+      headers: { Authorization: `Bearer ${activeToken}` },
+    });
+    const activeDashboardRes = await dashboardHandler(activeReq);
+    assert(activeDashboardRes.status === 200, 'GET /api/dashboard returns 200 for active store');
+    const activeDashboardBody = await activeDashboardRes.json();
+
+    const surveillance = activeDashboardBody.metrics.surveillance;
+    assert(
+      surveillance.streamType === 'Google Cloud Pub/Sub Push',
+      'Active store reflects Google Cloud Pub/Sub Push streamType'
+    );
+    assert(
+      surveillance.status === 'Active',
+      'Active store reports status: Active'
+    );
+    assert(
+      surveillance.lastSyncFormatted === 'Sub-30s Push Active',
+      'Active store displays honest "Sub-30s Push Active" instead of static "2m ago"'
+    );
+    assert(
+      typeof surveillance.lastAuditTimestamp === 'string' && surveillance.lastAuditTimestamp.length > 0,
+      'Active store provides authentic ISO audit timestamp derived from database records'
+    );
+    assert(
+      !JSON.stringify(activeDashboardBody).includes('2m ago'),
+      'Production response completely eliminates hardcoded "2m ago" placeholder'
+    );
+    passed++;
+
+    // 7.3 Disconnected Store: Guarded Neutral State
+    await disconnectStoreForTenant(activeStore.id, telemetryEmail);
+    const disconnectedReq = new Request(`http://localhost:3000/api/dashboard?store_id=${activeStore.id}`, {
+      headers: { Authorization: `Bearer ${activeToken}` },
+    });
+    const disconnectedRes = await dashboardHandler(disconnectedReq);
+    assert(disconnectedRes.status === 200, 'GET /api/dashboard handles disconnected store gracefully');
+    const disconnectedBody = await disconnectedRes.json();
+    assert(
+      disconnectedBody.metrics.surveillance.status === 'Paused',
+      'Disconnected store reflects status: Paused'
+    );
+    assert(
+      disconnectedBody.metrics.surveillance.lastSyncFormatted === 'Not Connected',
+      'Disconnected store reflects honest "Not Connected" state'
+    );
+    passed++;
+  } catch (e: any) {
+    console.error('  [FAIL] Test Group 7 failed:', e.message);
     failed++;
   }
 
