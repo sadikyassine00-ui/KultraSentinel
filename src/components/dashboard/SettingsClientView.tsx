@@ -14,8 +14,10 @@ import {
   Activity,
   ArrowRight,
   ShieldAlert,
+  Trash2,
+  AlertTriangle,
+  X,
 } from 'lucide-react';
-import { openPaddleOverlayCheckout } from '@/lib/paddle/client';
 import { PaddleCheckoutModal } from '@/components/billing/PaddleCheckoutOverlay';
 import { FleetLimitModal } from '@/components/dashboard/FleetLimitModal';
 import { PRICING_TIERS } from '@/config/pricing';
@@ -37,6 +39,10 @@ interface BillingState {
   renewalOrExpirationDate?: string;
   formattedRenewalOrExpiration?: string;
   isUrgent?: boolean;
+  scheduledCancellationDate?: string | null;
+  hasPaddleSubscription?: boolean;
+  paddleSubscriptionId?: string | null;
+  paddleCustomerId?: string | null;
   quotas?: {
     gmcAccountsConnected: number;
     gmcAccountsLimit: number | 'unlimited';
@@ -71,6 +77,20 @@ export default function SettingsClientView({
   const [showSuccessBanner, setShowSuccessBanner] = useState(checkoutSuccess);
   const [isFleetModalOpen, setIsFleetModalOpen] = useState(false);
   const [quotaWarning, setQuotaWarning] = useState<string | null>(null);
+
+  // Self-serve Paddle Portal & Cancellation states
+  const [loadingPortal, setLoadingPortal] = useState(false);
+  const [portalError, setPortalError] = useState<string | null>(null);
+  const [cancellingSubscription, setCancellingSubscription] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelFeedback, setCancelFeedback] = useState<string | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+
+  // Store Disconnection states
+  const [disconnectingStoreId, setDisconnectingStoreId] = useState<string | number | null>(null);
+  const [confirmDisconnectStoreId, setConfirmDisconnectStoreId] = useState<string | number | null>(null);
+  const [disconnectError, setDisconnectError] = useState<string | null>(null);
+  const [disconnectSuccess, setDisconnectSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     if (quotaExceeded === 'agency') {
@@ -133,9 +153,82 @@ export default function SettingsClientView({
       };
     }
   }, [checkoutSuccess, isPaidActive, isSuperAdmin, fetchBillingData]);
+
   const handleCheckout = (plan: 'solo' | 'agency') => {
     setCheckoutError(null);
     setCheckoutModalPlan(plan);
+  };
+
+  const handleManageSubscription = async () => {
+    setLoadingPortal(true);
+    setPortalError(null);
+    try {
+      const res = await fetch('/api/billing/portal', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        window.location.href = data.url;
+      } else {
+        setPortalError(data.error || 'Failed to generate customer portal session.');
+      }
+    } catch {
+      setPortalError('Network error connecting to billing portal. Please try again.');
+    } finally {
+      setLoadingPortal(false);
+    }
+  };
+
+  const handleConfirmCancel = async () => {
+    setCancellingSubscription(true);
+    setCancelError(null);
+    try {
+      const res = await fetch('/api/billing/cancel', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        setShowCancelModal(false);
+        const dateStr = data.scheduledCancellationDate
+          ? new Date(data.scheduledCancellationDate).toLocaleDateString(undefined, {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+            })
+          : 'the end of your current billing period';
+        setCancelFeedback(
+          `Subscription cancellation scheduled. Your Google Merchant Center monitoring and instant alert protection remain fully armed until ${dateStr}.`
+        );
+        await fetchBillingData();
+      } else {
+        setCancelError(data.error || 'Failed to schedule cancellation.');
+      }
+    } catch {
+      setCancelError('Network error communicating with billing service.');
+    } finally {
+      setCancellingSubscription(false);
+    }
+  };
+
+  const handleDisconnectStore = async (storeId: string | number) => {
+    setDisconnectingStoreId(storeId);
+    setDisconnectError(null);
+    setDisconnectSuccess(null);
+    try {
+      const res = await fetch(`/api/stores/${storeId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setConfirmDisconnectStoreId(null);
+        setStores((prev) => prev.filter((s) => String(s.id) !== String(storeId)));
+        setDisconnectSuccess('Store disconnected and Google OAuth access revoked successfully.');
+        setTimeout(() => setDisconnectSuccess(null), 5000);
+        await fetchBillingData();
+      } else {
+        const data = await res.json();
+        setDisconnectError(data.error || 'Failed to disconnect store. Please try again.');
+      }
+    } catch {
+      setDisconnectError('Network error disconnecting store. Please try again.');
+    } finally {
+      setDisconnectingStoreId(null);
+    }
   };
 
   if (loading) {
@@ -198,7 +291,50 @@ export default function SettingsClientView({
         </button>
       </div>
 
-      {/* Success Notification Banner: only shown when subscription is authentically confirmed in database */}
+      {/* Cancellation Scheduled Banner */}
+      {cancelFeedback && (
+        <div className="p-4 rounded-[var(--radius-md)] bg-[var(--signal-wash)] border border-[var(--signal-dim)] flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Check className="w-5 h-5 text-[var(--signal)] shrink-0" />
+            <div>
+              <div className="text-[13.5px] font-semibold text-[var(--ink-primary)]">
+                Cancellation Scheduled
+              </div>
+              <div className="text-[12.5px] text-[var(--ink-secondary)] mt-0.5">
+                {cancelFeedback}
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setCancelFeedback(null)}
+            className="text-[var(--ghost-text)] hover:text-[var(--ink-primary)] text-[12px] font-mono p-1"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Portal Error Banner */}
+      {portalError && (
+        <div className="p-4 rounded-[var(--radius-md)] bg-[var(--danger-wash)] border border-[var(--danger)] flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-[var(--danger)] shrink-0" />
+            <div className="text-[13px] text-[var(--danger)]">
+              {portalError}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setPortalError(null)}
+            className="text-[var(--ghost-text)] hover:text-[var(--ink-primary)] text-[12px] font-mono p-1"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Success Notification Banner */}
       {showSuccessBanner && isPaidActive && (
         <div className="p-4 rounded-[var(--radius-md)] bg-[var(--signal-wash)] border border-[var(--signal-dim)] flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -222,7 +358,7 @@ export default function SettingsClientView({
         </div>
       )}
 
-      {/* Awaiting Webhook Confirmation Banner: shown when returning from checkout before webhook has completed */}
+      {/* Awaiting Webhook Confirmation Banner */}
       {showSuccessBanner && !isPaidActive && !isSuperAdmin && (
         <div className="p-4 rounded-[var(--radius-md)] bg-[var(--bg-surface-2)] border border-[var(--signal-dim)] flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -264,6 +400,30 @@ export default function SettingsClientView({
 
       {activeTab === 'billing' ? (
         <div className="space-y-6">
+          {/* Active Scheduled Cancellation Notice */}
+          {billing?.scheduledCancellationDate && !isSuperAdmin && (
+            <div className="p-4 rounded-[var(--radius-md)] bg-[var(--bg-surface)] border border-[var(--hairline-strong)] flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="tag-pill tag-ghost text-[10.5px] py-0.5 font-medium">
+                    CANCELLATION SCHEDULED
+                  </span>
+                </div>
+                <p className="text-[13px] text-[var(--ink-secondary)]">
+                  Your subscription is scheduled to cancel on{' '}
+                  <strong className="text-[var(--ink-primary)]">
+                    {new Date(billing.scheduledCancellationDate).toLocaleDateString(undefined, {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                    })}
+                  </strong>. 
+                  Full disapproval surveillance and instant Slack alerts remain active through the end of your prepaid period.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* 1. Primary "Current Plan" Summary Card */}
           <div className="bg-[var(--bg-surface)] border border-[var(--hairline)] rounded-[var(--radius-md)] p-6 sm:p-7">
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-6 border-b border-[var(--hairline)]">
@@ -333,7 +493,47 @@ export default function SettingsClientView({
               </div>
             </div>
 
-            {/* Account Quotas & Entitlements (§2 Account Quotas and Feature Visibility) */}
+            {/* Self-Serve Subscription Management & Cancellation Bar */}
+            {isPaidActive && !isSuperAdmin && (
+              <div className="pt-5 pb-5 border-b border-[var(--hairline)] flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    disabled={loadingPortal}
+                    onClick={handleManageSubscription}
+                    className="btn-secondary text-[12.5px] py-1.5 px-3.5 !rounded-[3px] inline-flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    {loadingPortal ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Connecting to Paddle...</span>
+                      </>
+                    ) : (
+                      <>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Manage Subscription &amp; Payment Methods</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {!billing?.scheduledCancellationDate ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowCancelModal(true)}
+                    className="text-[12px] text-[var(--ghost-text)] hover:text-[var(--danger)] hover:underline underline-offset-4 transition-colors"
+                  >
+                    Cancel subscription
+                  </button>
+                ) : (
+                  <span className="font-mono text-[11px] text-[var(--ghost-text-dim)]">
+                    Cancellation scheduled
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Account Quotas & Entitlements */}
             <div className="pt-6">
               <div className="text-[12.5px] font-semibold text-[var(--ghost-text)] mb-3">
                 Current Plan Entitlements &amp; Quotas
@@ -401,7 +601,7 @@ export default function SettingsClientView({
             </div>
           </div>
 
-          {/* 2. Conversion and Upgrade Actions (§2 Conversion and Upgrade Actions) */}
+          {/* 2. Conversion and Upgrade Actions */}
           {!isSuperAdmin && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -540,7 +740,7 @@ export default function SettingsClientView({
                 Connected Google Merchant Center Stores
               </h3>
               <p className="text-[13px] text-[var(--ghost-text)] mt-0.5">
-                Review active store connections and alert endpoints.
+                Review active store connections, revoke OAuth credentials, and manage alert endpoints.
               </p>
             </div>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius-pill)] border border-[var(--signal-dim)] bg-[var(--signal-wash)]">
@@ -550,6 +750,21 @@ export default function SettingsClientView({
               </span>
             </div>
           </div>
+
+          {/* Disconnect Feedback */}
+          {disconnectSuccess && (
+            <div className="p-3.5 rounded-[var(--radius-sm)] bg-[var(--signal-wash)] border border-[var(--signal-dim)] flex items-center gap-2.5 text-[12.5px] text-[var(--ink-primary)]">
+              <Check className="w-4 h-4 text-[var(--signal)] shrink-0" />
+              <span>{disconnectSuccess}</span>
+            </div>
+          )}
+
+          {disconnectError && (
+            <div className="p-3.5 rounded-[var(--radius-sm)] bg-[var(--danger-wash)] border border-[var(--danger)] flex items-center gap-2.5 text-[12.5px] text-[var(--danger)]">
+              <AlertTriangle className="w-4 h-4 text-[var(--danger)] shrink-0" />
+              <span>{disconnectError}</span>
+            </div>
+          )}
 
           {quotaWarning && (
             <div className="p-3.5 bg-[var(--signal-wash)] border border-[var(--signal-dim)] rounded-[var(--radius-sm)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -567,58 +782,188 @@ export default function SettingsClientView({
             </div>
           )}
 
-          <div className="space-y-3">
-            {stores.map((s) => (
-              <div
-                key={s.id}
-                className="flex items-center justify-between p-4 rounded-[var(--radius-sm)] bg-[var(--bg-canvas)] border border-[var(--hairline)]"
-              >
-                <div>
-                  <div className="text-[13.5px] font-medium text-[var(--ink-primary)]">
-                    {s.name}
-                  </div>
-                  <div className="font-mono text-[11px] text-[var(--ghost-text)] mt-0.5">
-                    GMC Account ID: #{s.gmcId}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="tag-pill tag-signal text-[10px]">
-                    Telemetry Active
-                  </span>
-                </div>
-              </div>
-            ))}
-
-            <div className="pt-3">
+          {stores.length === 0 ? (
+            <div className="p-8 text-center rounded-[var(--radius-sm)] bg-[var(--bg-canvas)] border border-[var(--hairline)]">
+              <p className="text-[13px] text-[var(--ghost-text)] mb-4">
+                No Google Merchant Center accounts are currently linked.
+              </p>
               <button
                 type="button"
                 onClick={() => {
-                  if (isSuperAdmin) {
-                    window.location.href = '/api/auth/merchant/connect';
-                    return;
-                  }
-                  if (isAgency && stores.length >= 5) {
-                    setIsFleetModalOpen(true);
-                    return;
-                  }
-                  if (!isAgency && stores.length >= 1) {
-                    setQuotaWarning('Solo Plan quota reached: Maximum 1 connected Google Merchant Center store allowed. Upgrade to Agency Fleet to connect up to 5 stores.');
-                    setActiveTab('billing');
-                    return;
-                  }
                   window.location.href = '/api/auth/merchant/connect';
                 }}
-                className="btn-secondary text-[12.5px] py-2 px-4 !rounded-[3px] inline-flex items-center gap-2"
+                className="btn-primary text-[12.5px] py-2 px-4 !rounded-[3px] inline-flex items-center gap-2"
               >
-                <span>+ Connect another Google Merchant Center</span>
+                <span>Connect Google Merchant Center</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {stores.map((s) => (
+                <div
+                  key={s.id}
+                  className="p-4 rounded-[var(--radius-sm)] bg-[var(--bg-canvas)] border border-[var(--hairline)]"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <div className="text-[13.5px] font-medium text-[var(--ink-primary)]">
+                        {s.name}
+                      </div>
+                      <div className="font-mono text-[11px] text-[var(--ghost-text)] mt-0.5">
+                        GMC Account ID: #{s.gmcId}
+                      </div>
+                    </div>
+
+                    {confirmDisconnectStoreId !== s.id && (
+                      <div className="flex items-center gap-2.5">
+                        <span className="tag-pill tag-signal text-[10px]">
+                          Telemetry Active
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDisconnectStoreId(s.id)}
+                          className="btn-secondary text-[11.5px] py-1 px-2.5 text-[var(--ghost-text)] hover:text-[var(--danger)] hover:border-[var(--danger)] !rounded-[3px] inline-flex items-center gap-1.5 transition-colors"
+                          title="Revoke Google OAuth token and disconnect store"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Disconnect</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {confirmDisconnectStoreId === s.id && (
+                    <div className="mt-3 pt-3 border-t border-[var(--hairline)]">
+                      <div className="p-3 rounded-[var(--radius-sm)] bg-[var(--danger-wash)] border border-[var(--danger)] space-y-2.5">
+                        <div className="text-[12px] text-[var(--danger)] font-medium leading-snug">
+                          Disconnect GMC #{s.gmcId}? This immediately invalidates your granted OAuth tokens on Google servers, halts Pub/Sub alert ingestion, and purges telemetry credentials.
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            disabled={disconnectingStoreId === s.id}
+                            onClick={() => handleDisconnectStore(s.id)}
+                            className="py-1.5 px-3 rounded-[var(--radius-sm)] bg-[var(--danger)] text-[#111214] font-semibold text-[11.5px] hover:opacity-90 transition-opacity disabled:opacity-50 inline-flex items-center gap-1.5"
+                          >
+                            {disconnectingStoreId === s.id && <RefreshCw className="w-3 h-3 animate-spin" />}
+                            <span>{disconnectingStoreId === s.id ? 'Revoking Access...' : 'Yes, Revoke & Disconnect'}</span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={disconnectingStoreId === s.id}
+                            onClick={() => setConfirmDisconnectStoreId(null)}
+                            className="btn-secondary text-[11.5px] py-1 px-2.5 !rounded-[3px]"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              <div className="pt-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isSuperAdmin) {
+                      window.location.href = '/api/auth/merchant/connect';
+                      return;
+                    }
+                    if (isAgency && stores.length >= 5) {
+                      setIsFleetModalOpen(true);
+                      return;
+                    }
+                    if (!isAgency && stores.length >= 1) {
+                      setQuotaWarning('Solo Plan quota reached: Maximum 1 connected Google Merchant Center store allowed. Upgrade to Agency Fleet to connect up to 5 stores.');
+                      setActiveTab('billing');
+                      return;
+                    }
+                    window.location.href = '/api/auth/merchant/connect';
+                  }}
+                  className="btn-secondary text-[12.5px] py-2 px-4 !rounded-[3px] inline-flex items-center gap-2"
+                >
+                  <span>+ Connect another Google Merchant Center</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* In-App Self-Serve Paddle Cancellation Modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
+          <div className="bg-[var(--bg-surface)] border border-[var(--hairline-strong)] rounded-[var(--radius-md)] max-w-md w-full p-6 space-y-4 shadow-2xl relative">
+            <button
+              type="button"
+              onClick={() => {
+                if (!cancellingSubscription) {
+                  setShowCancelModal(false);
+                  setCancelError(null);
+                }
+              }}
+              className="absolute top-4 right-4 text-[var(--ghost-text)] hover:text-[var(--ink-primary)] p-1"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div>
+              <span className="font-mono text-[10.5px] text-[var(--danger)] uppercase tracking-wider">
+                SUBSCRIPTION RETENTION
+              </span>
+              <h3 className="font-serif text-[20px] font-semibold text-[var(--ink-primary)] mt-1">
+                Cancel Automatic Renewal
+              </h3>
+            </div>
+
+            <p className="text-[13px] text-[var(--ghost-text)] leading-[1.55]">
+              Your subscription will remain active and Google Merchant Center disapproval monitoring will continue through{' '}
+              <strong className="text-[var(--ink-primary)]">
+                {billing?.formattedRenewalOrExpiration || 'the end of your current prepaid billing cycle'}
+              </strong>. 
+              No further charges will be made.
+            </p>
+
+            <div className="p-3 rounded-[var(--radius-sm)] bg-[var(--bg-surface-2)] border border-[var(--hairline)] text-[12px] text-[var(--ink-secondary)]">
+              Your client retainers remain protected through the prepaid period. Disapproval surveillance and sub-30s Slack alerts will only be silenced after the expiration date.
+            </div>
+
+            {cancelError && (
+              <div className="p-2.5 rounded-[var(--radius-sm)] bg-[var(--danger-wash)] border border-[var(--danger)] text-[12px] text-[var(--danger)]">
+                {cancelError}
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                disabled={cancellingSubscription}
+                onClick={() => {
+                  setShowCancelModal(false);
+                  setCancelError(null);
+                }}
+                className="btn-secondary text-[12px] py-1.5 px-3.5 !rounded-[3px] disabled:opacity-50"
+              >
+                Keep Plan Active
+              </button>
+              <button
+                type="button"
+                disabled={cancellingSubscription}
+                onClick={handleConfirmCancel}
+                className="py-1.5 px-4 rounded-[var(--radius-sm)] bg-[var(--danger)] text-[#111214] font-semibold text-[12px] hover:opacity-90 transition-opacity disabled:opacity-50 inline-flex items-center gap-1.5"
+              >
+                {cancellingSubscription && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                <span>{cancellingSubscription ? 'Cancelling...' : 'Confirm Cancellation'}</span>
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Branded, Mobile-Responsive Paddle Checkout Modal (§2, §3, GEMINI.md) */}
+      {/* Branded Paddle Checkout Modal */}
       <PaddleCheckoutModal
         isOpen={Boolean(checkoutModalPlan)}
         plan={checkoutModalPlan || 'solo'}

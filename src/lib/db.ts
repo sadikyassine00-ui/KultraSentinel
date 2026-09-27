@@ -85,7 +85,7 @@ export interface Store {
   last_message_at: string;
   open_disapprovals: number;
   total_caught: number;
-  status: 'active' | 'orphaned' | 'suspended';
+  status: 'active' | 'orphaned' | 'suspended' | 'disconnected';
   created_at: string;
 }
 
@@ -190,7 +190,7 @@ export interface UserSession {
 const inMemorySessions = new Map<string, UserSession>();
 const inMemoryProcessedPaddleEvents = new Map<string, { eventType: string; processedAt: number }>();
 
-const inMemoryTenants: Tenant[] = [
+export const inMemoryTenants: Tenant[] = [
   {
     id: 1,
     user_id: 'usr_apex_9102',
@@ -1577,7 +1577,6 @@ export async function getStoreByIdAndTenant(id: number | string, tenantEmail: st
 export const getStoreForTenant = getStoreByIdAndTenant;
 
 export async function getStoresForTenant(tenantEmail: string): Promise<Store[]> {
-
   const cleanEmail = tenantEmail.toLowerCase().trim();
   const sql = getDb();
   if (sql) {
@@ -1586,6 +1585,7 @@ export async function getStoresForTenant(tenantEmail: string): Promise<Store[]> 
       const rows = await sql`
         SELECT * FROM stores 
         WHERE LOWER(tenant_email) = ${cleanEmail}
+          AND (status IS NULL OR status != 'disconnected')
         ORDER BY created_at DESC;
       `;
       return rows as unknown as Store[];
@@ -1595,7 +1595,7 @@ export async function getStoresForTenant(tenantEmail: string): Promise<Store[]> 
   }
 
   return inMemoryStores.filter(
-    (s) => s.tenant_email.toLowerCase().trim() === cleanEmail
+    (s) => s.tenant_email.toLowerCase().trim() === cleanEmail && s.status !== 'disconnected'
   );
 }
 
@@ -1637,6 +1637,71 @@ export async function updateStoreForTenant(
   return null;
 }
 
+export async function disconnectStoreForTenant(id: number | string, tenantEmail: string): Promise<boolean> {
+  const cleanEmail = tenantEmail.toLowerCase().trim();
+  const sql = getDb();
+  if (sql) {
+    try {
+      await ensureSchema();
+      // Purge cached incidents associated with this store to ensure complete data purging
+      await sql`
+        DELETE FROM incidents
+        WHERE store_id = ${String(id)} OR gmc_id IN (
+          SELECT gmc_id FROM stores WHERE id = ${String(id)} AND LOWER(tenant_email) = ${cleanEmail}
+        );
+      `;
+      // Update store: clear refresh tokens, set status to disconnected, halt Pub/Sub alerts
+      const rows = await sql`
+        UPDATE stores
+        SET
+          encrypted_refresh_token = NULL,
+          status = 'disconnected',
+          is_active = FALSE,
+          alert_status = 'degraded',
+          pubsub_topic = 'unlinked'
+        WHERE id = ${String(id)} AND LOWER(tenant_email) = ${cleanEmail}
+        RETURNING id;
+      `;
+      // Update tenant's connected_stores count
+      await sql`
+        UPDATE tenants
+        SET connected_stores = (
+          SELECT COUNT(*)::int FROM stores
+          WHERE LOWER(tenant_email) = ${cleanEmail} AND (status IS NULL OR status != 'disconnected')
+        )
+        WHERE LOWER(email) = ${cleanEmail};
+      `;
+      return rows.length > 0;
+    } catch (err) {
+      console.warn('[Neon DB] Error disconnecting store for tenant:', err);
+    }
+  }
+
+  const store = inMemoryStores.find(
+    (s) => String(s.id) === String(id) && s.tenant_email.toLowerCase().trim() === cleanEmail
+  );
+  if (store) {
+    store.encrypted_refresh_token = null;
+    store.status = 'disconnected';
+    store.is_active = false;
+    store.alert_status = 'degraded';
+    store.pubsub_topic = 'unlinked';
+    for (let i = inMemoryIncidents.length - 1; i >= 0; i--) {
+      if (String(inMemoryIncidents[i].store_id) === String(id) || inMemoryIncidents[i].gmc_id === store.gmc_id) {
+        inMemoryIncidents.splice(i, 1);
+      }
+    }
+    const tenant = inMemoryTenants.find((t) => t.email.toLowerCase().trim() === cleanEmail);
+    if (tenant) {
+      tenant.connected_stores = inMemoryStores.filter(
+        (s) => s.tenant_email.toLowerCase().trim() === cleanEmail && s.status !== 'disconnected'
+      ).length;
+    }
+    return true;
+  }
+  return false;
+}
+
 export async function deleteStoreForTenant(id: number | string, tenantEmail: string): Promise<boolean> {
   const cleanEmail = tenantEmail.toLowerCase().trim();
   const sql = getDb();
@@ -1655,6 +1720,15 @@ export async function deleteStoreForTenant(id: number | string, tenantEmail: str
         WHERE id = ${String(id)} AND LOWER(tenant_email) = ${cleanEmail}
         RETURNING id;
       `;
+      // Update tenant connected_stores count
+      await sql`
+        UPDATE tenants
+        SET connected_stores = (
+          SELECT COUNT(*)::int FROM stores
+          WHERE LOWER(tenant_email) = ${cleanEmail} AND (status IS NULL OR status != 'disconnected')
+        )
+        WHERE LOWER(email) = ${cleanEmail};
+      `;
       return rows.length > 0;
     } catch (err) {
       console.warn('[Neon DB] Error deleting store for tenant:', err);
@@ -1670,6 +1744,12 @@ export async function deleteStoreForTenant(id: number | string, tenantEmail: str
       if (String(inMemoryIncidents[i].store_id) === String(id) || inMemoryIncidents[i].gmc_id === removed.gmc_id) {
         inMemoryIncidents.splice(i, 1);
       }
+    }
+    const tenant = inMemoryTenants.find((t) => t.email.toLowerCase().trim() === cleanEmail);
+    if (tenant) {
+      tenant.connected_stores = inMemoryStores.filter(
+        (s) => s.tenant_email.toLowerCase().trim() === cleanEmail && s.status !== 'disconnected'
+      ).length;
     }
     return true;
   }
@@ -1743,6 +1823,7 @@ export async function claimStoreForTenant(params: {
   storeUrl: string;
   encryptedRefreshToken?: string;
   accountType?: 'Standalone Merchant' | 'MCA Child';
+  merchantId?: string;
 }): Promise<{ success: boolean; store?: Store; error?: string; collision?: boolean }> {
   const cleanEmail = params.tenantEmail.toLowerCase().trim();
   const sql = getDb();
@@ -1781,7 +1862,8 @@ export async function claimStoreForTenant(params: {
             tenant_id = COALESCE(${targetTenantId}, tenant_id),
             encrypted_refresh_token = COALESCE(${params.encryptedRefreshToken || null}, encrypted_refresh_token),
             last_message_at = NOW(),
-            status = 'active'
+            status = 'active',
+            is_active = TRUE
           WHERE gmc_id = ${params.gmcId} AND LOWER(tenant_email) = ${cleanEmail}
           RETURNING *;
         `;
@@ -1797,7 +1879,7 @@ export async function claimStoreForTenant(params: {
         await sql`
           UPDATE tenants
           SET 
-            connected_stores = (SELECT COUNT(*)::int FROM stores WHERE LOWER(tenant_email) = ${cleanEmail}),
+            connected_stores = (SELECT COUNT(*)::int FROM stores WHERE LOWER(tenant_email) = ${cleanEmail} AND (status IS NULL OR status != 'disconnected')),
             oauth_status = 'connected',
             last_active = NOW()
           WHERE LOWER(email) = ${cleanEmail};
@@ -1811,12 +1893,12 @@ export async function claimStoreForTenant(params: {
         INSERT INTO stores (
           gmc_id, tenant_id, tenant_email, account_type, store_url, store_name,
           encrypted_refresh_token, alert_status, webhook_verified, pubsub_topic,
-          last_message_at, open_disapprovals, total_caught, status, created_at
+          last_message_at, open_disapprovals, total_caught, status, is_active, created_at
         ) VALUES (
           ${params.gmcId}, ${targetTenantId}, ${cleanEmail}, ${params.accountType || 'Standalone Merchant'},
           ${params.storeUrl}, ${params.storeName}, ${params.encryptedRefreshToken || null},
           'active', FALSE, ${`projects/kultra-sentinel/topics/gmc-${params.gmcId}`},
-          NOW(), 0, 0, 'active', NOW()
+          NOW(), 0, 0, 'active', TRUE, NOW()
         )
         RETURNING *;
       `;
@@ -1832,7 +1914,7 @@ export async function claimStoreForTenant(params: {
       await sql`
         UPDATE tenants
         SET 
-          connected_stores = (SELECT COUNT(*)::int FROM stores WHERE LOWER(tenant_email) = ${cleanEmail}),
+          connected_stores = (SELECT COUNT(*)::int FROM stores WHERE LOWER(tenant_email) = ${cleanEmail} AND (status IS NULL OR status != 'disconnected')),
           oauth_status = 'connected',
           last_active = NOW()
         WHERE LOWER(email) = ${cleanEmail};
@@ -1859,6 +1941,7 @@ export async function claimStoreForTenant(params: {
     if (params.encryptedRefreshToken) existingMem.encrypted_refresh_token = params.encryptedRefreshToken;
     existingMem.last_message_at = new Date().toISOString();
     existingMem.status = 'active';
+    existingMem.is_active = true;
 
     try {
       const { activateTrialOnFirstStoreConnect } = await import('./subscription');
@@ -1886,6 +1969,7 @@ export async function claimStoreForTenant(params: {
     open_disapprovals: 0,
     total_caught: 0,
     status: 'active',
+    is_active: true,
     created_at: new Date().toISOString(),
   };
   inMemoryStores.push(newStore);
