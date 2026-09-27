@@ -653,8 +653,8 @@ async function runTests() {
     const zeroStoreBody = await zeroStoreRes.json();
     assert(zeroStoreBody.zeroStore === true, 'Zero-store tenant flagged correctly');
     assert(
-      zeroStoreBody.metrics.surveillance.streamType === 'Google Cloud Pub/Sub Push',
-      'Zero-store surveillance uses Google Cloud Pub/Sub Push streamType'
+      zeroStoreBody.metrics.surveillance.streamType === 'Continuous Feed Protection',
+      'Zero-store surveillance uses Continuous Feed Protection streamType'
     );
     assert(
       zeroStoreBody.metrics.surveillance.status === 'Paused',
@@ -696,16 +696,16 @@ async function runTests() {
 
     const surveillance = activeDashboardBody.metrics.surveillance;
     assert(
-      surveillance.streamType === 'Google Cloud Pub/Sub Push',
-      'Active store reflects Google Cloud Pub/Sub Push streamType'
+      surveillance.streamType === 'Continuous Feed Protection',
+      'Active store reflects Continuous Feed Protection streamType'
     );
     assert(
       surveillance.status === 'Active',
       'Active store reports status: Active'
     );
     assert(
-      surveillance.lastSyncFormatted === 'Sub-30s Push Active',
-      'Active store displays honest "Sub-30s Push Active" instead of static "2m ago"'
+      surveillance.lastSyncFormatted === 'Continuous Protection Active',
+      'Active store displays honest "Continuous Protection Active" instead of static "2m ago"'
     );
     assert(
       typeof surveillance.lastAuditTimestamp === 'string' && surveillance.lastAuditTimestamp.length > 0,
@@ -714,6 +714,10 @@ async function runTests() {
     assert(
       !JSON.stringify(activeDashboardBody).includes('2m ago'),
       'Production response completely eliminates hardcoded "2m ago" placeholder'
+    );
+    assert(
+      !JSON.stringify(activeDashboardBody).includes('Google Cloud Pub/Sub'),
+      'Production response completely eliminates developer infrastructure jargon'
     );
     passed++;
 

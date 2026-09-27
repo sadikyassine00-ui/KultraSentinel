@@ -95,7 +95,7 @@ export async function GET(request: Request) {
           },
           surveillance: {
             status: 'Paused',
-            streamType: 'Google Cloud Pub/Sub Push',
+            streamType: 'Continuous Feed Protection',
             pushLatencyMs: 0,
             lastAuditTimestamp: null,
             lastSyncTimestamp: null,
@@ -248,11 +248,11 @@ export async function GET(request: Request) {
 
     const surveillance = {
       status: isDisconnected ? 'Paused' : 'Active',
-      streamType: 'Google Cloud Pub/Sub Push',
+      streamType: 'Continuous Feed Protection',
       pushLatencyMs: webhookVerified ? 14 : 18,
       lastAuditTimestamp,
       lastSyncTimestamp: lastAuditTimestamp,
-      lastSyncFormatted: isDisconnected ? 'Not Connected' : 'Sub-30s Push Active',
+      lastSyncFormatted: isDisconnected ? 'Not Connected' : 'Continuous Protection Active',
       itemsChecked: monitoredProducts,
     };
 
