@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAnySession } from '@/lib/auth';
-import { getStoreByIdAndTenant, upsertIncident, findTenantByEmail } from '@/lib/db';
+import { getStoreByIdAndTenant, upsertIncident, findTenantByEmail, updateIncidentNotificationStatus } from '@/lib/db';
 import { evaluateSubscription } from '@/lib/subscription';
 import { dispatchFireDrillSlackNotification } from '@/lib/slack';
 
@@ -92,15 +92,17 @@ export async function POST(request: Request, context: RouteContext) {
     const title = (typeof body.title === 'string' && body.title.trim()) ? body.title.trim() : 'Apex Carbon Runner - Size 10.5 (Demo Item)';
     const issueCode = (typeof body.issueCode === 'string' && body.issueCode.trim()) ? body.issueCode.trim() : 'item_disapproved: missing_required_attribute [gtin]';
 
-    // 1. Insert temporary demo incident flagged as is_simulated: true and is_test: true (15-min auto-purge)
+    // 1. Insert temporary demo incident flagged as is_simulated: true and is_test: true
     const incidentResult = await upsertIncident({
       storeId: store.id,
       gmcId: store.gmc_id || store.merchant_id || 'DEMO-GMC',
       sku,
+      external_product_id: sku,
       title,
       issueCode,
       severity: 'critical',
       tenant_email: session.email,
+      notification_status: 'pending',
       is_simulated: true,
       is_test: true,
       details: {
@@ -124,6 +126,13 @@ export async function POST(request: Request, context: RouteContext) {
         severity: 'critical',
       },
     });
+
+    // 3. Authoritatively record notification delivery status in Neon Postgres
+    await updateIncidentNotificationStatus(
+      incidentResult.incident.id,
+      slackResult.success ? 'delivered' : 'failed',
+      slackResult.error
+    );
 
     return NextResponse.json({
       success: true,

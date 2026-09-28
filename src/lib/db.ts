@@ -96,11 +96,14 @@ export interface Incident {
   tenant_email?: string;
   sku: string;
   offer_id?: string;
+  external_product_id?: string;
   title: string;
   product_title?: string;
   issue_code: string;
   severity: 'critical' | 'warning';
   status: 'unresolved' | 'resolved' | 'pending_verification' | 'acknowledged' | 'dismissed' | 'DISMISSED';
+  notification_status?: 'pending' | 'delivered' | 'failed' | 'skipped' | string;
+  notification_error?: string | null;
   first_detected_at: string;
   last_detected_at: string;
   detected_at?: string;
@@ -702,19 +705,25 @@ export async function ensureSchema(): Promise<boolean> {
 
     await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS tenant_email TEXT;`;
     await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS offer_id TEXT;`;
+    await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS external_product_id TEXT;`;
     await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS product_title TEXT;`;
+    await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS notification_status TEXT DEFAULT 'pending';`;
+    await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS notification_error TEXT;`;
     await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS detected_at TIMESTAMPTZ DEFAULT NOW();`;
     await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS is_simulated BOOLEAN DEFAULT FALSE;`;
     await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS is_test BOOLEAN DEFAULT FALSE;`;
     await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS dismissed_at TIMESTAMPTZ;`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_incidents_store_id ON incidents(store_id);`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_incidents_status ON incidents(status);`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_incidents_first_detected ON incidents(first_detected_at DESC);`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_incidents_external_product_id ON incidents(external_product_id);`;
     await sql`ALTER TABLE stores ADD COLUMN IF NOT EXISTS total_skus INT DEFAULT 0;`;
     await sql`ALTER TABLE telemetry_events ADD COLUMN IF NOT EXISTS is_test BOOLEAN DEFAULT FALSE;`;
     await sql`ALTER TABLE dispatch_logs ADD COLUMN IF NOT EXISTS is_test BOOLEAN DEFAULT FALSE;`;
 
-    // Purge any synthetic demo incidents and mock data (Directive §3)
+    // Non-destructive data migration: backfill external_product_id and recalculate store metrics without deleting audit logs
     try {
-      await sql`DELETE FROM incidents WHERE sku IN ('DEMO-RUNNER-402', 'APX-TR-402', 'OW-8842-BLK-M') OR offer_id IN ('DEMO-RUNNER-402', 'APX-TR-402', 'OW-8842-BLK-M') OR gmc_id = 'DEMO-GMC';`;
-      await sql`DELETE FROM telemetry_events WHERE details->>'simulated' = 'true' OR details->>'is_test' = 'true';`;
+      await sql`UPDATE incidents SET external_product_id = sku WHERE external_product_id IS NULL AND sku IS NOT NULL;`;
       await sql`
         UPDATE stores s
         SET open_disapprovals = (
@@ -2156,14 +2165,38 @@ export function hasOpenIncident(storeId: number | string, sku: string, issueCode
   );
 }
 
+export async function hasOpenIncidentDb(storeId: number | string, sku: string, issueCode: string): Promise<boolean> {
+  const cleanStoreId = String(storeId ?? '').trim();
+  const sql = getDb();
+  if (sql) {
+    try {
+      const rows = await sql`
+        SELECT id FROM incidents
+        WHERE store_id::text = ${cleanStoreId}
+          AND sku = ${sku}
+          AND issue_code = ${issueCode}
+          AND status = 'unresolved'
+        LIMIT 1;
+      `;
+      return rows.length > 0;
+    } catch (err) {
+      console.warn('[Neon DB] hasOpenIncidentDb check error:', err);
+    }
+  }
+  return hasOpenIncident(storeId, sku, issueCode);
+}
+
 export async function upsertIncident(data: {
   storeId: number | string;
   gmcId: string;
   sku: string;
+  external_product_id?: string;
   title: string;
   issueCode: string;
   severity: 'critical' | 'warning';
   tenant_email?: string;
+  notification_status?: 'pending' | 'delivered' | 'failed' | 'skipped' | string;
+  notification_error?: string | null;
   is_simulated?: boolean;
   is_test?: boolean;
   details?: Record<string, unknown>;
@@ -2171,100 +2204,74 @@ export async function upsertIncident(data: {
   const isTestOrSim = Boolean(
     data.is_simulated ||
     data.is_test ||
-    (data.sku && (data.sku.startsWith('DEMO-') || data.sku === 'APX-TR-402' || data.sku === 'OW-8842-BLK-M'))
+    (data.details && (data.details.simulated || data.details.is_test))
   );
 
-  // Ultra-fast in-memory state mutation (0ms)
-  const existingMem = inMemoryIncidents.find(
-    (i) =>
-      String(i.store_id) === String(data.storeId) &&
-      i.sku === data.sku &&
-      i.issue_code === data.issueCode &&
-      i.status === 'unresolved'
-  );
+  const cleanStoreId = String(data.storeId ?? '').trim();
+  const extProductId = data.external_product_id || data.sku;
+  const initialNotificationStatus = data.notification_status || 'pending';
+  const now = new Date().toISOString();
 
-  let resultIncident: Incident;
+  let resultIncident: Incident | null = null;
   let isNew = false;
 
-  if (existingMem) {
-    existingMem.last_detected_at = new Date().toISOString();
-    existingMem.title = data.title;
-    existingMem.severity = data.severity;
-    if (data.details) existingMem.details = data.details;
-    if (isTestOrSim) {
-      existingMem.is_simulated = true;
-      existingMem.is_test = true;
-    }
-    resultIncident = existingMem;
-  } else {
-    isNew = true;
-    const now = new Date().toISOString();
-    const maxExistingId = inMemoryIncidents.reduce((max, inc) => Math.max(max, Number(inc.id) || 0), 0);
-    const generatedId = maxExistingId > 0 ? maxExistingId + 1 : 1;
-    const newIncident: Incident = {
-      id: generatedId,
-      store_id: data.storeId,
-      gmc_id: data.gmcId,
-      tenant_email: data.tenant_email,
-      sku: data.sku,
-      offer_id: data.sku,
-      title: data.title,
-      product_title: data.title,
-      issue_code: data.issueCode,
-      severity: data.severity,
-      status: 'unresolved',
-      first_detected_at: now,
-      last_detected_at: now,
-      detected_at: now,
-      resolved_at: null,
-      details: data.details || null,
-      is_simulated: isTestOrSim,
-      is_test: isTestOrSim,
-      created_at: now,
-    };
-    inMemoryIncidents.push(newIncident);
-    resultIncident = newIncident;
-
-    // Platform-Wide Test Isolation: Never mutate store counters for test/simulated events
-    if (!isTestOrSim) {
-      const memStore = inMemoryStores.find((s) => String(s.id) === String(data.storeId));
-      if (memStore) {
-        memStore.open_disapprovals += 1;
-        memStore.total_caught += 1;
-        memStore.last_message_at = now;
-      }
-    }
-  }
-
-  // Resilient database persistence
+  // Authoritative Neon Postgres persistence (Directive 1)
   const sql = getDb();
   if (sql) {
     try {
-      if (!isNew) {
-        await sql`
+      await ensureSchema();
+
+      // 1. Authoritative check in Neon Postgres for existing unresolved incident
+      const existingRows = await sql`
+        SELECT * FROM incidents
+        WHERE store_id::text = ${cleanStoreId}
+          AND sku = ${data.sku}
+          AND issue_code = ${data.issueCode}
+          AND status = 'unresolved'
+        LIMIT 1;
+      `;
+
+      if (existingRows.length > 0) {
+        // Incident already exists and is active -> update it (non-destructive)
+        isNew = false;
+        const existing = existingRows[0];
+        const updatedRows = await sql`
           UPDATE incidents
-          SET last_detected_at = NOW(), title = ${data.title}, severity = ${data.severity}, details = ${JSON.stringify(data.details || {})}
-          WHERE store_id = ${String(data.storeId)} AND sku = ${data.sku} AND issue_code = ${data.issueCode} AND status = 'unresolved';
+          SET last_detected_at = NOW(),
+              title = ${data.title},
+              product_title = ${data.title},
+              severity = ${data.severity},
+              external_product_id = COALESCE(external_product_id, ${extProductId}),
+              notification_status = COALESCE(${data.notification_status || null}, notification_status),
+              notification_error = ${data.notification_error !== undefined ? data.notification_error : null},
+              details = ${JSON.stringify(data.details || {})}
+          WHERE id = ${existing.id}
+          RETURNING *;
         `;
+        if (updatedRows.length > 0) {
+          resultIncident = updatedRows[0] as unknown as Incident;
+        }
       } else {
+        // Brand new incident -> insert immediately into Neon Postgres (zero data loss)
+        isNew = true;
         const insertedRows = await sql`
           INSERT INTO incidents (
-            store_id, gmc_id, tenant_email, sku, offer_id, title, product_title, issue_code, severity, status,
+            store_id, gmc_id, tenant_email, sku, offer_id, external_product_id,
+            title, product_title, issue_code, severity, status,
+            notification_status, notification_error,
             is_simulated, is_test, first_detected_at, last_detected_at, detected_at, details
           ) VALUES (
-            ${String(data.storeId)}, ${data.gmcId}, ${data.tenant_email || null}, ${data.sku}, ${data.sku},
+            ${Number(data.storeId) || 0}, ${data.gmcId}, ${data.tenant_email || null},
+            ${data.sku}, ${data.sku}, ${extProductId},
             ${data.title}, ${data.title}, ${data.issueCode},
-            ${data.severity}, 'unresolved', ${isTestOrSim}, ${isTestOrSim}, NOW(), NOW(), NOW(), ${JSON.stringify(data.details || {})}
+            ${data.severity}, 'unresolved',
+            ${initialNotificationStatus}, ${data.notification_error ?? null},
+            ${isTestOrSim}, ${isTestOrSim}, NOW(), NOW(), NOW(), ${JSON.stringify(data.details || {})}
           )
           RETURNING *;
         `;
         if (insertedRows.length > 0) {
           resultIncident = insertedRows[0] as unknown as Incident;
-          // Synchronize in-memory mirror ID with generated database serial primary key
-          const memRecord = inMemoryIncidents.find((i) => i === resultIncident || (i.sku === data.sku && String(i.store_id) === String(data.storeId)));
-          if (memRecord) {
-            memRecord.id = resultIncident.id;
-          }
         }
 
         // Platform-Wide Test Isolation: Never mutate store counters for test/simulated events
@@ -2272,7 +2279,7 @@ export async function upsertIncident(data: {
           await sql`
             UPDATE stores
             SET open_disapprovals = open_disapprovals + 1, total_caught = total_caught + 1, last_message_at = NOW()
-            WHERE id = ${String(data.storeId)};
+            WHERE id::text = ${cleanStoreId};
           `;
         }
       }
@@ -2281,13 +2288,122 @@ export async function upsertIncident(data: {
     }
   }
 
-  return { incident: resultIncident, isNew };
+  // Synchronize with in-memory mirror for local resilience
+  const existingMem = inMemoryIncidents.find(
+    (i) =>
+      String(i.store_id) === cleanStoreId &&
+      i.sku === data.sku &&
+      i.issue_code === data.issueCode &&
+      i.status === 'unresolved'
+  );
+
+  if (resultIncident) {
+    if (existingMem) {
+      Object.assign(existingMem, resultIncident);
+    } else {
+      inMemoryIncidents.unshift(resultIncident);
+    }
+  } else {
+    // Neon offline fallback
+    if (existingMem) {
+      isNew = false;
+      existingMem.last_detected_at = now;
+      existingMem.title = data.title;
+      existingMem.severity = data.severity;
+      existingMem.external_product_id = extProductId;
+      if (data.notification_status) existingMem.notification_status = data.notification_status;
+      if (data.notification_error !== undefined) existingMem.notification_error = data.notification_error;
+      if (data.details) existingMem.details = data.details;
+      resultIncident = existingMem;
+    } else {
+      isNew = true;
+      const maxExistingId = inMemoryIncidents.reduce((max, inc) => Math.max(max, Number(inc.id) || 0), 0);
+      const generatedId = maxExistingId > 0 ? maxExistingId + 1 : 1;
+      const newIncident: Incident = {
+        id: generatedId,
+        store_id: data.storeId,
+        gmc_id: data.gmcId,
+        tenant_email: data.tenant_email,
+        sku: data.sku,
+        offer_id: data.sku,
+        external_product_id: extProductId,
+        title: data.title,
+        product_title: data.title,
+        issue_code: data.issueCode,
+        severity: data.severity,
+        status: 'unresolved',
+        notification_status: initialNotificationStatus,
+        notification_error: data.notification_error ?? null,
+        first_detected_at: now,
+        last_detected_at: now,
+        detected_at: now,
+        resolved_at: null,
+        dismissed_at: null,
+        details: data.details || null,
+        is_simulated: isTestOrSim,
+        is_test: isTestOrSim,
+        created_at: now,
+      };
+      inMemoryIncidents.unshift(newIncident);
+      resultIncident = newIncident;
+
+      if (!isTestOrSim) {
+        const memStore = inMemoryStores.find((s) => String(s.id) === cleanStoreId);
+        if (memStore) {
+          memStore.open_disapprovals += 1;
+          memStore.total_caught += 1;
+          memStore.last_message_at = now;
+        }
+      }
+    }
+  }
+
+  return { incident: resultIncident!, isNew };
+}
+
+export async function updateIncidentNotificationStatus(
+  incidentId: number | string,
+  notificationStatus: 'pending' | 'delivered' | 'failed' | 'skipped' | string,
+  notificationError?: string | null
+): Promise<boolean> {
+  const cleanId = String(incidentId ?? '').trim();
+  if (!cleanId) return false;
+
+  const sql = getDb();
+  if (sql) {
+    try {
+      await sql`
+        UPDATE incidents
+        SET notification_status = ${notificationStatus},
+            notification_error = ${notificationError || null}
+        WHERE id::text = ${cleanId};
+      `;
+      const mem = inMemoryIncidents.find((i) => String(i.id) === cleanId);
+      if (mem) {
+        mem.notification_status = notificationStatus;
+        mem.notification_error = notificationError || null;
+      }
+      return true;
+    } catch (err) {
+      console.warn('[Neon DB] Error updating incident notification status:', err);
+    }
+  }
+
+  const mem = inMemoryIncidents.find((i) => String(i.id) === cleanId);
+  if (mem) {
+    mem.notification_status = notificationStatus;
+    mem.notification_error = notificationError || null;
+    return true;
+  }
+  return false;
 }
 
 export async function resolveIncident(storeId: number | string, sku: string): Promise<boolean> {
   let resolvedAny = false;
+  const cleanStoreId = String(storeId ?? '').trim();
+
   inMemoryIncidents.forEach((i) => {
-    if (String(i.store_id) === String(storeId) && i.sku === sku && i.status !== 'resolved') {
+    if (String(i.store_id) === cleanStoreId && i.sku === sku && i.status !== 'resolved') {
       i.status = 'resolved';
       i.resolved_at = new Date().toISOString();
       resolvedAny = true;
@@ -2295,7 +2411,7 @@ export async function resolveIncident(storeId: number | string, sku: string): Pr
   });
 
   if (resolvedAny) {
-    const memStore = inMemoryStores.find((s) => String(s.id) === String(storeId));
+    const memStore = inMemoryStores.find((s) => String(s.id) === cleanStoreId);
     if (memStore) {
       memStore.open_disapprovals = Math.max(0, memStore.open_disapprovals - 1);
       memStore.last_message_at = new Date().toISOString();
@@ -2307,15 +2423,18 @@ export async function resolveIncident(storeId: number | string, sku: string): Pr
     try {
       const updated = await sql`
         UPDATE incidents
-        SET status = 'resolved', resolved_at = NOW()
-        WHERE store_id = ${String(storeId)} AND sku = ${sku} AND status != 'resolved'
+        SET status = 'resolved',
+            resolved_at = NOW(),
+            last_detected_at = NOW()
+        WHERE store_id::text = ${cleanStoreId} AND sku = ${sku} AND status != 'resolved'
         RETURNING id;
       `;
       if (updated.length > 0) {
+        resolvedAny = true;
         await sql`
           UPDATE stores
           SET open_disapprovals = GREATEST(0, open_disapprovals - ${updated.length}), last_message_at = NOW()
-          WHERE id = ${String(storeId)};
+          WHERE id::text = ${cleanStoreId};
         `;
       }
     } catch (err) {
@@ -2326,8 +2445,75 @@ export async function resolveIncident(storeId: number | string, sku: string): Pr
   return resolvedAny;
 }
 
+export async function resolveIncidentById(
+  incidentId: number | string,
+  tenantEmail: string
+): Promise<{ success: boolean; incident?: Incident; error?: string }> {
+  const cleanId = String(incidentId ?? '').trim();
+  if (!cleanId || cleanId === 'undefined' || cleanId === 'null') {
+    return { success: false, error: 'A valid unique incident identifier is required' };
+  }
+  const cleanEmail = tenantEmail.toLowerCase().trim();
+  const sql = getDb();
+  if (sql) {
+    try {
+      await ensureSchema();
+      const existing = await sql`
+        SELECT i.* FROM incidents i
+        JOIN stores s ON s.id::text = i.store_id::text
+        WHERE i.id::text = ${cleanId}
+          AND LOWER(s.tenant_email) = ${cleanEmail}
+        LIMIT 1;
+      `;
+      if (existing.length === 0) {
+        return { success: false, error: 'Incident not found or unauthorized' };
+      }
+      const inc = existing[0] as unknown as Incident;
+      const isSimulated = Boolean(inc.is_simulated || inc.is_test || inc.sku === 'DEMO-RUNNER-402');
+
+      const updated = await sql`
+        UPDATE incidents
+        SET status = 'resolved',
+            resolved_at = NOW(),
+            last_detected_at = NOW()
+        WHERE id::text = ${cleanId}
+        RETURNING *;
+      `;
+
+      if (inc.status === 'unresolved' && !isSimulated) {
+        await sql`
+          UPDATE stores
+          SET open_disapprovals = GREATEST(0, open_disapprovals - 1)
+          WHERE id::text = ${String(inc.store_id)};
+        `;
+      }
+
+      const memInc = inMemoryIncidents.find((i) => String(i.id) === cleanId);
+      if (memInc) {
+        memInc.status = 'resolved';
+        memInc.resolved_at = new Date().toISOString();
+      }
+
+      return {
+        success: true,
+        incident: (updated[0] || inc) as unknown as Incident,
+      };
+    } catch (err) {
+      console.warn('[Neon DB] Error resolving incident by ID:', err);
+    }
+  }
+
+  const idx = inMemoryIncidents.findIndex((i) => String(i.id) === cleanId);
+  if (idx !== -1) {
+    const inc = inMemoryIncidents[idx];
+    inc.status = 'resolved';
+    inc.resolved_at = new Date().toISOString();
+    return { success: true, incident: inc };
+  }
+  return { success: false, error: 'Incident not found' };
+}
+
 export async function getStoreIncidentCountInWindow(storeId: number | string, windowSeconds: number): Promise<number> {
-  // Ultra-fast in-memory calculation (0ms) guaranteeing zero overhead inside ingestion loop
   const threshold = Date.now() - windowSeconds * 1000;
   return inMemoryIncidents.filter(
     (i) => String(i.store_id) === String(storeId) && new Date(i.first_detected_at).getTime() >= threshold
@@ -2335,18 +2521,19 @@ export async function getStoreIncidentCountInWindow(storeId: number | string, wi
 }
 
 /**
- * 15-minute auto-purge for simulated fire drill incidents (§4)
+ * Non-destructive 15-minute transition for simulated fire drill incidents (§4)
+ * Marks expired simulated drills as resolved without deleting rows from audit history.
  */
 export async function purgeExpiredSimulatedIncidents(storeId?: number | string): Promise<number> {
   const cutoff = Date.now() - 15 * 60 * 1000;
-  let purgedCount = 0;
+  let resolvedCount = 0;
 
-  for (let i = inMemoryIncidents.length - 1; i >= 0; i--) {
-    const inc = inMemoryIncidents[i];
+  for (const inc of inMemoryIncidents) {
     if (inc.is_simulated && (!storeId || String(inc.store_id) === String(storeId))) {
-      if (new Date(inc.created_at).getTime() < cutoff) {
-        inMemoryIncidents.splice(i, 1);
-        purgedCount++;
+      if (new Date(inc.created_at).getTime() < cutoff && inc.status === 'unresolved') {
+        inc.status = 'resolved';
+        inc.resolved_at = new Date().toISOString();
+        resolvedCount++;
       }
     }
   }
@@ -2355,65 +2542,83 @@ export async function purgeExpiredSimulatedIncidents(storeId?: number | string):
   if (sql) {
     try {
       if (storeId) {
-        const deleted = await sql`
-          DELETE FROM incidents
+        const updated = await sql`
+          UPDATE incidents
+          SET status = 'resolved', resolved_at = NOW()
           WHERE is_simulated = TRUE
-            AND store_id = ${String(storeId)}
+            AND status = 'unresolved'
+            AND store_id::text = ${String(storeId)}
             AND created_at < NOW() - INTERVAL '15 minutes'
           RETURNING id;
         `;
-        purgedCount = Math.max(purgedCount, deleted.length);
+        resolvedCount = Math.max(resolvedCount, updated.length);
       } else {
-        const deleted = await sql`
-          DELETE FROM incidents
+        const updated = await sql`
+          UPDATE incidents
+          SET status = 'resolved', resolved_at = NOW()
           WHERE is_simulated = TRUE
+            AND status = 'unresolved'
             AND created_at < NOW() - INTERVAL '15 minutes'
           RETURNING id;
         `;
-        purgedCount = Math.max(purgedCount, deleted.length);
+        resolvedCount = Math.max(resolvedCount, updated.length);
       }
     } catch (err) {
-      console.warn('[Neon DB] Error purging expired simulated incidents:', err);
+      console.warn('[Neon DB] Error soft-resolving expired simulated incidents:', err);
     }
   }
 
-  return purgedCount;
+  return resolvedCount;
 }
 
 export async function getIncidentsByStore(storeId: number | string, tenantEmail: string): Promise<Incident[]> {
-  await purgeExpiredSimulatedIncidents(storeId);
   const cleanEmail = tenantEmail.toLowerCase().trim();
+  const cleanStoreId = String(storeId ?? '').trim();
   const sql = getDb();
   if (sql) {
     try {
       await ensureSchema();
       // Composite authorization: verify store ownership first
       const storeRows = await sql`
-        SELECT id FROM stores WHERE id = ${String(storeId)} AND LOWER(tenant_email) = ${cleanEmail} LIMIT 1;
+        SELECT id FROM stores WHERE id::text = ${cleanStoreId} AND LOWER(tenant_email) = ${cleanEmail} LIMIT 1;
       `;
       if (storeRows.length === 0) {
         return [];
       }
 
+      // Fetch persistent incident history ordered chronologically by detection time descending (Directive 2)
+      // Displays full audit trail including active, resolved, and dismissed incidents
       const rows = await sql`
         SELECT * FROM incidents
-        WHERE store_id = ${String(storeId)}
-        ORDER BY last_detected_at DESC;
+        WHERE store_id::text = ${cleanStoreId}
+        ORDER BY first_detected_at DESC, id DESC;
       `;
-      return rows as unknown as Incident[];
+
+      const dbIncidents = rows as unknown as Incident[];
+      // Keep in-memory mirror warm and synchronized with persisted records
+      for (const dbInc of dbIncidents) {
+        const idx = inMemoryIncidents.findIndex((i) => String(i.id) === String(dbInc.id));
+        if (idx !== -1) {
+          inMemoryIncidents[idx] = dbInc;
+        } else {
+          inMemoryIncidents.push(dbInc);
+        }
+      }
+
+      return dbIncidents;
     } catch (err) {
       console.warn('[Neon DB] Error fetching incidents by store:', err);
     }
   }
 
   const memStore = inMemoryStores.find(
-    (s) => String(s.id) === String(storeId) && s.tenant_email.toLowerCase().trim() === cleanEmail
+    (s) => String(s.id) === cleanStoreId && s.tenant_email.toLowerCase().trim() === cleanEmail
   );
   if (!memStore) return [];
 
   return inMemoryIncidents
-    .filter((i) => String(i.store_id) === String(storeId))
-    .sort((a, b) => new Date(b.last_detected_at).getTime() - new Date(a.last_detected_at).getTime());
+    .filter((i) => String(i.store_id) === cleanStoreId)
+    .sort((a, b) => new Date(b.first_detected_at || b.created_at).getTime() - new Date(a.first_detected_at || a.created_at).getTime());
 }
 
 export async function recordDLQMessage(data: {

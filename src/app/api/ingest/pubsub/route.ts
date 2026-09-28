@@ -11,6 +11,7 @@ import {
   recordDLQMessage,
   recordDispatchLog,
   findTenantByEmail,
+  updateIncidentNotificationStatus,
 } from '@/lib/db';
 import { evaluateSubscription } from '@/lib/subscription';
 import { dispatchDisapprovalSlackNotification } from '@/lib/slack';
@@ -216,16 +217,14 @@ export async function POST(request: Request) {
 
     // 7. Incident Lifecycle State Logic (Auto-resolution)
     if (status === 'approved' || status === 'resolved') {
-      after(async () => {
-        try {
-          await Promise.allSettled([
-            markMessageProcessed(messageId),
-            resolveIncident(store.id, sku),
-          ]);
-        } catch (workerErr) {
-          console.error('[PubSub Ingestion Worker Error (Resolve)]', workerErr);
-        }
-      });
+      try {
+        await Promise.allSettled([
+          markMessageProcessed(messageId),
+          resolveIncident(store.id, sku),
+        ]);
+      } catch (resolveErr) {
+        console.warn('[PubSub Ingestion] Auto-resolve error:', resolveErr);
+      }
 
       return NextResponse.json(
         {
@@ -240,10 +239,17 @@ export async function POST(request: Request) {
       );
     }
 
-    // 8. Disapproval / Demotion: check in-memory status for immediate response
-    const isNew = !hasOpenIncident(store.id, sku, issueCode);
+    // 8. Test / Simulation Flag Determination
+    const isTestOrSim = Boolean(
+      eventData.is_test ||
+      eventData.is_simulated ||
+      eventData.test ||
+      sku.startsWith('DEMO-') ||
+      sku === 'APX-TR-402' ||
+      sku === 'OW-8842-BLK-M'
+    );
 
-    // 9. Outbound Alert Dispatch & Spike Guard (Stage 6)
+    // 9. Outbound Alert Configuration & Spike Guard (Stage 6)
     const destination = store.webhook_url || store.slack_webhook_url || process.env.SLACK_WEBHOOK_URL;
     let dispatchOutcome = 'skipped_no_destination';
     let alertCard: Record<string, unknown> | null = null;
@@ -291,125 +297,122 @@ export async function POST(request: Request) {
       }
     }
 
-    // Helper for non-blocking outbound webhook execution inside after()
-    const dispatchAlert = async () => {
-      if (!destination) return;
-      if (volumeInWindow >= 10 && alertCard) {
-        const startTime = performance.now();
-        try {
-          const dispatchRes = await fetch(destination, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(alertCard),
-            signal: AbortSignal.timeout(3000), // Strict 3s timeout guard
-          });
-          const latency_ms = Math.round(performance.now() - startTime);
+    const initialNotificationStatus = !destination ? 'skipped' : 'pending';
 
-          if (!dispatchRes.ok) {
-            if (dispatchRes.status === 404 || dispatchRes.status === 410) {
-              await markStoreAlertStatus(store.id, 'degraded');
-            }
-
-            await recordDispatchLog({
-              dispatch_id: `dsp-${Date.now()}`,
-              tenant_email: store.tenant_email,
-              store_url: store.store_url,
-              store_name: store.store_name || store.store_url,
-              gmc_id: store.gmc_id,
-              destination,
-              delivery_status: dispatchRes.status,
-              status_label: dispatchRes.status === 404 ? 'Invalid Webhook' : 'Rate Limited',
-              latency_ms,
-              payload: alertCard,
-            });
-          } else {
-            await recordDispatchLog({
-              dispatch_id: `dsp-${Date.now()}`,
-              tenant_email: store.tenant_email,
-              store_url: store.store_url,
-              store_name: store.store_name || store.store_url,
-              gmc_id: store.gmc_id,
-              destination,
-              delivery_status: 200,
-              status_label: 'Delivered',
-              latency_ms,
-              payload: alertCard,
-            });
-          }
-        } catch (dispatchErr: unknown) {
-          const latency_ms = Math.round(performance.now() - startTime);
-          console.warn('[PubSub Ingestion] Outbound dispatch error:', dispatchErr);
-          await recordDispatchLog({
-            dispatch_id: `dsp-${Date.now()}`,
-            tenant_email: store.tenant_email,
-            store_url: store.store_url,
-            store_name: store.store_name || store.store_url,
-            gmc_id: store.gmc_id,
-            destination,
-            delivery_status: 502,
-            status_label: 'Invalid Webhook',
-            latency_ms,
-            payload: { error: 'Network failure during delivery', alertCard },
-          });
-        }
-      } else {
-        // Standard Actionable Alert Card with Dynamic Store Attribution and Plain-English Error Translation (§3)
-        await dispatchDisapprovalSlackNotification({
-          store,
-          incident: {
-            sku,
-            title,
-            price: eventData.price || eventData.sale_price || null,
-            issueCode,
-            severity,
-          },
-          triggerType: 'Live Google Alert',
-          appUrl: process.env.NEXT_PUBLIC_APP_URL || 'https://usekultra.com',
-        });
-      }
-    };
-
-    const isTestOrSim = Boolean(
-      eventData.is_test ||
-      eventData.is_simulated ||
-      eventData.test ||
-      sku.startsWith('DEMO-') ||
-      sku === 'APX-TR-402' ||
-      sku === 'OW-8842-BLK-M'
-    );
-
-    // 10. Schedule All Downstream Execution inside Next.js 15 after()
-    after(async () => {
-      try {
-        const tasks: Promise<unknown>[] = [
-          markMessageProcessed(messageId),
-          upsertIncident({
-            storeId: store.id,
-            gmcId: merchantId,
-            sku,
-            title,
-            issueCode,
-            severity,
-            is_simulated: isTestOrSim,
-            is_test: isTestOrSim,
-            details: eventData,
-          }),
-        ];
-
-        // Platform-Wide Test Isolation: Never trigger live alert cascades for test/simulated events
-        if (!isTestOrSim) {
-          tasks.push(dispatchAlert());
-        }
-
-        await Promise.allSettled(tasks);
-      } catch (workerErr) {
-        console.error('[PubSub Ingestion Worker Error (Incident)]', workerErr);
-      }
+    // 10. Immediate Authoritative Neon Postgres Persistence (Directive 1: zero data loss)
+    const { incident: persistedIncident, isNew } = await upsertIncident({
+      storeId: store.id,
+      gmcId: merchantId,
+      sku,
+      external_product_id: sku,
+      title,
+      issueCode,
+      severity,
+      tenant_email: store.tenant_email,
+      notification_status: initialNotificationStatus,
+      is_simulated: isTestOrSim,
+      is_test: isTestOrSim,
+      details: eventData,
     });
+
+    // Mark message processed immediately
+    await markMessageProcessed(messageId);
+
+    // 11. Downstream Alert Execution & Notification Delivery Tracking
+    if (!isTestOrSim && destination) {
+      after(async () => {
+        try {
+          if (volumeInWindow >= 10 && alertCard) {
+            const startDispatch = performance.now();
+            try {
+              const dispatchRes = await fetch(destination, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(alertCard),
+                signal: AbortSignal.timeout(3000), // Strict 3s timeout guard
+              });
+              const latency_ms = Math.round(performance.now() - startDispatch);
+
+              if (dispatchRes.ok) {
+                await updateIncidentNotificationStatus(persistedIncident.id, 'delivered');
+                await recordDispatchLog({
+                  dispatch_id: `dsp-${Date.now()}`,
+                  tenant_email: store.tenant_email,
+                  store_url: store.store_url,
+                  store_name: store.store_name || store.store_url,
+                  gmc_id: store.gmc_id,
+                  destination,
+                  delivery_status: 200,
+                  status_label: 'Delivered',
+                  latency_ms,
+                  payload: alertCard,
+                });
+              } else {
+                await updateIncidentNotificationStatus(persistedIncident.id, 'failed', `HTTP ${dispatchRes.status}`);
+                if (dispatchRes.status === 404 || dispatchRes.status === 410) {
+                  await markStoreAlertStatus(store.id, 'degraded');
+                }
+                await recordDispatchLog({
+                  dispatch_id: `dsp-${Date.now()}`,
+                  tenant_email: store.tenant_email,
+                  store_url: store.store_url,
+                  store_name: store.store_name || store.store_url,
+                  gmc_id: store.gmc_id,
+                  destination,
+                  delivery_status: dispatchRes.status,
+                  status_label: dispatchRes.status === 404 ? 'Invalid Webhook' : 'Rate Limited',
+                  latency_ms,
+                  payload: alertCard,
+                });
+              }
+            } catch (dispatchErr: unknown) {
+              const err = dispatchErr as Error;
+              const latency_ms = Math.round(performance.now() - startDispatch);
+              await updateIncidentNotificationStatus(persistedIncident.id, 'failed', err.message || 'Network timeout');
+              await recordDispatchLog({
+                dispatch_id: `dsp-${Date.now()}`,
+                tenant_email: store.tenant_email,
+                store_url: store.store_url,
+                store_name: store.store_name || store.store_url,
+                gmc_id: store.gmc_id,
+                destination,
+                delivery_status: 502,
+                status_label: 'Invalid Webhook',
+                latency_ms,
+                payload: { error: 'Network failure during delivery', alertCard },
+              });
+            }
+          } else {
+            const slackRes = await dispatchDisapprovalSlackNotification({
+              store,
+              incident: {
+                sku,
+                title,
+                price: eventData.price || eventData.sale_price || null,
+                issueCode,
+                severity,
+              },
+              triggerType: 'Live Google Alert',
+              appUrl: process.env.NEXT_PUBLIC_APP_URL || 'https://usekultra.com',
+            });
+
+            if (slackRes.success) {
+              await updateIncidentNotificationStatus(persistedIncident.id, 'delivered');
+            } else {
+              await updateIncidentNotificationStatus(persistedIncident.id, 'failed', slackRes.error || slackRes.outcome);
+            }
+          }
+        } catch (workerErr: unknown) {
+          const err = workerErr as Error;
+          console.error('[PubSub Ingestion Downstream Notification Error]', err);
+          await updateIncidentNotificationStatus(persistedIncident.id, 'failed', err.message || 'Worker error');
+        }
+      });
+    }
 
     const latencyMs = Math.round(performance.now() - startTime);
 
-    // Guaranteed SLA: return 200 OK rapidly
+    // Guaranteed SLA: return 200 OK rapidly with authoritative persisted state
     return NextResponse.json(
       {
         ok: true,

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import {
@@ -100,8 +100,11 @@ interface TranslatedIssue {
 
 interface IncidentItem {
   id: number | string;
+  store_id?: number | string;
   sku: string;
+  external_product_id?: string;
   title: string;
+  product_title?: string;
   issue_code: string;
   plainEnglish?: TranslatedIssue;
   isAccountLevel?: boolean;
@@ -110,6 +113,8 @@ interface IncidentItem {
   thumbnailUrl?: string | null;
   severity: 'CRITICAL_DISAPPROVAL' | 'DEMOTION';
   status: string;
+  notification_status?: string;
+  notification_error?: string | null;
   first_detected_at: string;
   last_detected_at: string;
   resolved_at?: string | null;
@@ -156,11 +161,18 @@ interface Props {
   justConnected?: boolean;
   impersonateEmail?: string | null;
   initialError?: string | null;
+  initialData?: DashboardApiResponse | null;
 }
 
-export default function TenantTriageCenter({ initialStoreId, justConnected = false, impersonateEmail, initialError }: Props) {
-  const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<DashboardApiResponse | null>(null);
+export default function TenantTriageCenter({
+  initialStoreId,
+  justConnected = false,
+  impersonateEmail,
+  initialError,
+  initialData = null,
+}: Props) {
+  const [loading, setLoading] = useState(!initialData);
+  const [data, setData] = useState<DashboardApiResponse | null>(initialData);
   const [error, setError] = useState<string | null>(initialError || null);
 
   // Ingest URL error parameter client-side for dynamic navigation
@@ -350,12 +362,17 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
     }
   }, [justConnected, impersonateEmail]);
 
+  const isFirstMount = useRef(true);
   useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      if (initialData) return;
+    }
     // Flush previous store incidents and show loading skeleton immediately on store switch
     setData(null);
     setLoading(true);
     fetchDashboardData(initialStoreId);
-  }, [fetchDashboardData, initialStoreId]);
+  }, [fetchDashboardData, initialStoreId, initialData]);
 
 
   const handleConnectGmc = () => {
@@ -1974,15 +1991,25 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
             <tbody className="divide-y divide-[var(--hairline)] font-sans">
               {incidents.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="py-8 px-4 text-center font-mono text-[12px] text-[var(--ghost-text)]">
-                    No incident history recorded. All Google Merchant Center products are compliant.
+                  <td colSpan={4} className="py-12 px-4 text-center">
+                    <div className="flex flex-col items-center justify-center max-w-sm mx-auto space-y-2">
+                      <div className="w-10 h-10 rounded-full bg-[var(--signal-wash)] border border-[var(--signal-dim)] flex items-center justify-center mb-1">
+                        <CheckCircle2 className="w-5 h-5 text-[var(--signal)]" />
+                      </div>
+                      <div className="text-[14px] font-semibold text-[var(--ink-primary)]">
+                        Zero Disapprovals Logged
+                      </div>
+                      <div className="text-[12px] text-[var(--ghost-text)] leading-relaxed">
+                        No catalog disapprovals or policy violations have been logged for this store. Real-time Pub/Sub monitoring is actively surveillance-checking incoming feed updates.
+                      </div>
+                    </div>
                   </td>
                 </tr>
               ) : (
                 [...incidents]
                   .sort((a, b) => {
-                    const timeA = new Date(a.last_detected_at || a.first_detected_at).getTime();
-                    const timeB = new Date(b.last_detected_at || b.first_detected_at).getTime();
+                    const timeA = new Date(a.first_detected_at || a.last_detected_at).getTime();
+                    const timeB = new Date(b.first_detected_at || b.last_detected_at).getTime();
                     return (isNaN(timeB) ? 0 : timeB) - (isNaN(timeA) ? 0 : timeA);
                   })
                   .map((inc) => {
@@ -2005,7 +2032,7 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                         ? 'Dismissed'
                         : 'Resolved';
 
-                    const rawDate = inc.dismissed_at || inc.resolved_at || inc.last_detected_at || inc.first_detected_at;
+                    const rawDate = inc.first_detected_at || inc.last_detected_at;
                     const dateObj = rawDate ? new Date(rawDate) : null;
                     const formattedDate = dateObj && !isNaN(dateObj.getTime())
                       ? `${dateObj.toLocaleDateString([], { month: 'short', day: 'numeric' })} at ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
@@ -2018,12 +2045,20 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                           isSim ? 'bg-[rgba(242,169,59,0.02)]' : ''
                         }`}
                       >
-                        {/* Timestamp */}
+                        {/* Timestamp & Resolution Lifecycle */}
                         <td className="py-3 px-4 font-mono text-[11.5px] text-[var(--ghost-text)] whitespace-nowrap align-top">
                           <div>{formattedDate}</div>
-                          {inc.dismissed_at && (
+                          {inc.resolved_at ? (
+                            <div className="text-[10px] text-[var(--ghost-text-dim)] mt-0.5">
+                              {inc.downtimeDuration || 'Resolved'}
+                            </div>
+                          ) : inc.dismissed_at ? (
                             <div className="text-[10px] text-[var(--ghost-text-dim)] mt-0.5">
                               Dismissed
+                            </div>
+                          ) : (
+                            <div className="text-[10px] text-[var(--danger)] mt-0.5 font-medium">
+                              Active Alert
                             </div>
                           )}
                         </td>
@@ -2033,13 +2068,13 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                           <div className="font-medium text-[13px] text-[var(--ink-primary)] truncate max-w-[220px]">
                             {isAcctLevel
                               ? (activeStore?.store_name ? `${activeStore.store_name} Account` : 'Merchant Account')
-                              : (inc.title || 'Product Listing')}
+                              : (inc.product_title || inc.title || 'Product Listing')}
                           </div>
                           <div className="font-mono text-[11px] text-[var(--ghost-text)] mt-0.5 flex items-center gap-1.5 flex-wrap">
                             <span>
                               {isAcctLevel
                                 ? `GMC: ${activeStore?.gmc_id || activeStore?.merchant_id || 'Account'}`
-                                : `SKU: ${inc.sku}`}
+                                : `SKU: ${inc.external_product_id || inc.sku}`}
                             </span>
                             {isSim && (
                               <span className="font-mono text-[9.5px] text-[var(--signal)] bg-[var(--signal-wash)] px-1.5 py-0.2 rounded-[var(--radius-sm)] border border-[var(--signal-dim)]">
@@ -2063,24 +2098,42 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
                           </div>
                         </td>
 
-                        {/* Status Pill */}
+                        {/* Status & Notification Delivery Badges */}
                         <td className="py-3 px-4 text-right whitespace-nowrap align-top">
                           {normalizedStatus === 'Active' ? (
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--danger)] bg-[var(--danger-wash)] text-[var(--danger)] text-[10.5px] font-mono font-medium">
                               <span className="w-1.5 h-1.5 rounded-full bg-[var(--danger)]" />
-                              Active
+                              Active Alert
                             </span>
                           ) : normalizedStatus === 'Dismissed' ? (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--ghost-line)] bg-transparent text-[var(--ghost-text)] text-[10.5px] font-mono font-medium">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--ghost-line)] bg-transparent text-[var(--ghost-text-dim)] text-[10.5px] font-mono font-medium">
                               <span className="w-1.5 h-1.5 rounded-full bg-[var(--ghost-text-dim)]" />
                               Dismissed
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--signal-dim)] bg-[var(--signal-wash)] text-[var(--signal)] text-[10.5px] font-mono font-medium">
-                              <span className="w-1.5 h-1.5 rounded-full bg-[var(--signal)]" />
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--ghost-line)] bg-[var(--bg-canvas)] text-[var(--ghost-text)] text-[10.5px] font-mono font-medium">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[var(--ghost-text)]" />
                               Resolved
                             </span>
                           )}
+
+                          {/* Notification Delivery Status Proof */}
+                          {inc.notification_status === 'delivered' ? (
+                            <div className="font-mono text-[9.5px] text-[var(--ghost-text-dim)] mt-1 flex items-center justify-end gap-1">
+                              <span className="w-1 h-1 rounded-full bg-[var(--signal)]" />
+                              <span>Slack Delivered</span>
+                            </div>
+                          ) : inc.notification_status === 'failed' ? (
+                            <div className="font-mono text-[9.5px] text-[var(--danger)] mt-1 flex items-center justify-end gap-1" title={inc.notification_error || 'Delivery failed'}>
+                              <span className="w-1 h-1 rounded-full bg-[var(--danger)]" />
+                              <span>Slack Failed</span>
+                            </div>
+                          ) : inc.notification_status === 'pending' ? (
+                            <div className="font-mono text-[9.5px] text-[var(--ghost-text-dim)] mt-1 flex items-center justify-end gap-1">
+                              <span className="w-1 h-1 rounded-full bg-[var(--ghost-line)]" />
+                              <span>Slack Queued</span>
+                            </div>
+                          ) : null}
                         </td>
                       </tr>
                     );

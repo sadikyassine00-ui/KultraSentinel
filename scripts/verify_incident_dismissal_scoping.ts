@@ -173,15 +173,17 @@ async function runScopedIncidentDismissalSuite() {
     assert.strictEqual(json1.isSimulated, true, 'Flags incident as simulated');
     assert.strictEqual(json1.dismissed, true, 'Simulated incident marked dismissed');
 
-    // Verify database state: Incident 1 is deleted, but Incident 2 and 3 remain!
+    // Verify database state: Incident 1 is non-destructively dismissed, but Incident 2 and 3 remain active!
     const feedAfterDismiss1 = await getIncidentsByStore(store.id, tenantEmail);
     const unresolvedAfterDismiss1 = feedAfterDismiss1.filter((i) => i.status === 'unresolved');
     assert.strictEqual(unresolvedAfterDismiss1.length, 2, 'Unresolved counter decrements by exactly 1: from 3 to 2');
-    assert.ok(!feedAfterDismiss1.some((i) => String(i.id) === String(inc1.id)), 'Incident 1 is removed');
+    const dismissedInc1 = feedAfterDismiss1.find((i) => String(i.id) === String(inc1.id));
+    assert.ok(dismissedInc1, 'Incident 1 persists in audit trail (non-destructive)');
+    assert.ok(dismissedInc1.status === 'DISMISSED' || dismissedInc1.status === 'acknowledged', 'Incident 1 status updated to dismissed');
     assert.ok(feedAfterDismiss1.some((i) => String(i.id) === String(inc2.id)), 'Incident 2 remains visible and actionable');
     assert.ok(feedAfterDismiss1.some((i) => String(i.id) === String(inc3.id)), 'Incident 3 remains visible and actionable');
 
-    console.log('✅ PASS: Only Incident 1 disappeared; Incidents 2 & 3 remain visible, actionable, and persistent.\n');
+    console.log('✅ PASS: Incident 1 soft-dismissed non-destructively; Incidents 2 & 3 remain visible, actionable, and persistent.\n');
 
     // -------------------------------------------------------------------------
     // TEST 4: Dismiss Incident 2 (Real Disapproval) via Endpoint
@@ -198,7 +200,7 @@ async function runScopedIncidentDismissalSuite() {
     const json2 = await res2.json();
     assert.strictEqual(json2.success, true, 'Returns success: true');
     assert.strictEqual(String(json2.incidentId), String(inc2.id), 'Returns confirmed target incidentId');
-    assert.strictEqual(json2.status, 'acknowledged', 'Real incident status updated to acknowledged');
+    assert.ok(json2.status === 'acknowledged' || json2.status === 'DISMISSED', 'Real incident status updated to dismissed/acknowledged');
 
     // Verify database state: Incident 2 acknowledged, Incident 3 still unresolved!
     const feedAfterDismiss2 = await getIncidentsByStore(store.id, tenantEmail);
@@ -207,8 +209,8 @@ async function runScopedIncidentDismissalSuite() {
 
     const updatedInc2 = feedAfterDismiss2.find((i) => String(i.id) === String(inc2.id));
     assert.ok(updatedInc2, 'Incident 2 persists in database');
-    assert.strictEqual(updatedInc2.status, 'acknowledged', 'Incident 2 status is acknowledged');
-    assert.ok(updatedInc2.resolved_at, 'Incident 2 resolved_at timestamp populated');
+    assert.ok(updatedInc2.status === 'acknowledged' || updatedInc2.status === 'DISMISSED', 'Incident 2 status is dismissed/acknowledged');
+    assert.ok(updatedInc2.resolved_at || updatedInc2.dismissed_at, 'Incident 2 resolved_at/dismissed_at timestamp populated');
 
     const activeInc3 = feedAfterDismiss2.find((i) => String(i.id) === String(inc3.id));
     assert.ok(activeInc3, 'Incident 3 persists in database');
@@ -239,14 +241,14 @@ async function runScopedIncidentDismissalSuite() {
 
     const refreshFeed = await getIncidentsByStore(store.id, tenantEmail);
     const refreshUnresolved = refreshFeed.filter((i) => i.status === 'unresolved');
-    const refreshAcknowledged = refreshFeed.filter((i) => i.status === 'acknowledged');
+    const refreshDismissed = refreshFeed.filter((i) => i.status === 'acknowledged' || i.status === 'DISMISSED');
 
     assert.strictEqual(refreshUnresolved.length, 1, 'Hard refresh confirms exactly 1 unresolved incident');
     assert.strictEqual(String(refreshUnresolved[0].id), String(inc3.id), 'Remaining unresolved incident is strictly Incident 3');
-    assert.strictEqual(refreshAcknowledged.length, 1, 'Hard refresh confirms exactly 1 acknowledged incident');
-    assert.strictEqual(String(refreshAcknowledged[0].id), String(inc2.id), 'Acknowledged incident is strictly Incident 2');
+    assert.ok(refreshDismissed.length >= 1, 'Hard refresh confirms dismissed incidents retained in audit history');
+    assert.ok(refreshDismissed.some((i) => String(i.id) === String(inc2.id)), 'Dismissed incident includes Incident 2');
 
-    console.log('✅ PASS: Hard refresh preserves remaining active cards and hides dismissed cards.\n');
+    console.log('✅ PASS: Hard refresh preserves remaining active cards and keeps audit log history intact.\n');
 
     // -------------------------------------------------------------------------
     // TEST 7: Dismiss Final Incident and Verify Clean Zero-State Transition

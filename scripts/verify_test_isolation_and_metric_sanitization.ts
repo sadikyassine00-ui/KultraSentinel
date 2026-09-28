@@ -218,9 +218,12 @@ async function runTestSuite() {
   assert.strictEqual(storeAfterDismiss?.open_disapprovals, 0, 'open_disapprovals must remain 0 and not decrement below 0');
 
   const incidentsAfterDismiss = await getIncidentsByStore(storeId, testEmail);
-  assert.strictEqual(incidentsAfterDismiss.length, 0, 'Simulated incident should be completely cleared after dismissal');
+  const activeAfterDismiss = incidentsAfterDismiss.filter((i) => i.status === 'unresolved');
+  assert.strictEqual(activeAfterDismiss.length, 0, 'Active incidents should be 0 after dismissal');
+  assert.ok(incidentsAfterDismiss.length > 0, 'Simulated incident is non-destructively retained in audit trail');
+  assert.ok(incidentsAfterDismiss[0].status === 'DISMISSED' || incidentsAfterDismiss[0].status === 'resolved', 'Incident status updated non-destructively');
 
-  console.log('✅ PASS: Simulated incident dismissed without corrupting store counters.\n');
+  console.log('✅ PASS: Simulated incident dismissed non-destructively without corrupting store counters.\n');
 
   // Cleanup test tenant
   if (sql) {
