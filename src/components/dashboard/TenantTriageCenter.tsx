@@ -160,7 +160,6 @@ interface Props {
 
 export default function TenantTriageCenter({ initialStoreId, justConnected = false, impersonateEmail, initialError }: Props) {
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState<DashboardApiResponse | null>(null);
   const [error, setError] = useState<string | null>(initialError || null);
 
@@ -348,7 +347,6 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
       setError(e.message || 'Error communicating with monitoring engine');
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }, [justConnected, impersonateEmail]);
 
@@ -359,10 +357,6 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
     fetchDashboardData(initialStoreId);
   }, [fetchDashboardData, initialStoreId]);
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await fetchDashboardData(data?.activeStore?.id ? String(data.activeStore.id) : null);
-  };
 
   const handleConnectGmc = () => {
     window.location.href = '/api/auth/merchant/connect';
@@ -1242,16 +1236,6 @@ export default function TenantTriageCenter({ initialStoreId, justConnected = fal
           {inlineFeedback && (
             <span className="font-mono text-[11px] text-[var(--signal)] font-medium mr-1">{inlineFeedback}</span>
           )}
-          <button
-            type="button"
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="btn-secondary text-[12px] py-1.5 px-2.5 !rounded-[3px] inline-flex items-center gap-1.5 border-[var(--hairline-strong)] hover:border-[var(--signal-dim)] hover:text-[var(--ink-primary)] disabled:opacity-50 transition-colors"
-            title="Refresh feed status"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 text-[var(--ghost-text)] ${refreshing ? 'animate-spin text-[var(--signal)]' : ''}`} />
-            <span className="hidden sm:inline">{refreshing ? 'Refreshing...' : 'Refresh'}</span>
-          </button>
           <button
             type="button"
             onClick={handleRunFireDrill}

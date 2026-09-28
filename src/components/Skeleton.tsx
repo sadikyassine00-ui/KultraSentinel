@@ -292,7 +292,7 @@ export function IncidentHistoryTableSkeleton({ rowCount = 5 }: { rowCount?: numb
 /**
  * Complete Full Customer / Agency Dashboard Page Skeleton (Zero CLS).
  * Matches exact geometry of TenantTriageCenter:
- * - Operational Header Bar (Store Context & 3 Action Buttons)
+ * - Operational Header Bar (Store Context & 2 Action Buttons)
  * - Live Status Ribbon Skeleton
  * - Core Metrics Grid Skeleton
  * - Active Incident Triage Area Placeholder
@@ -308,7 +308,6 @@ export function CustomerDashboardSkeleton() {
           <Skeleton className="h-5 w-24 rounded-[var(--radius-pill)]" />
         </div>
         <div className="flex items-center gap-2">
-          <Skeleton className="h-8 w-20 rounded-[var(--radius-sm)]" />
           <Skeleton className="h-8 w-32 rounded-[var(--radius-sm)]" />
           <Skeleton className="h-8 w-36 rounded-[var(--radius-sm)]" />
         </div>
